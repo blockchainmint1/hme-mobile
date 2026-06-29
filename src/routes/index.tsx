@@ -38,14 +38,44 @@ function Home() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bio, setBio] = useState<{ available: boolean; enabled: boolean }>({
+    available: false,
+    enabled: false,
+  });
 
   useEffect(() => {
     setExists(hasWallet());
+    getBiometricStatus().then(setBio).catch(() => undefined);
   }, []);
 
   useEffect(() => {
     if (unlocked) navigate({ to: "/wallet" });
   }, [unlocked, navigate]);
+
+  const tryBiometric = useCallback(async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const pw = await unlockWithBiometric();
+      if (!pw) {
+        setBusy(false);
+        return;
+      }
+      const ok = await unlock(pw);
+      if (!ok) setError("Stored biometric password no longer matches. Use your password.");
+      else navigate({ to: "/wallet" });
+    } finally {
+      setBusy(false);
+    }
+  }, [unlock, navigate]);
+
+  // Auto-prompt biometrics once on landing if it's enabled.
+  useEffect(() => {
+    if (exists && bio.enabled && !unlocked) {
+      void tryBiometric();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exists, bio.enabled]);
 
   async function onUnlock(e: React.FormEvent) {
     e.preventDefault();
