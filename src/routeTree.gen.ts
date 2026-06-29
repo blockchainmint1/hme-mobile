@@ -9,38 +9,206 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WalletRouteImport } from './routes/wallet'
+import { Route as ManifestoRouteImport } from './routes/manifesto'
+import { Route as ImportRouteImport } from './routes/import'
+import { Route as CreateRouteImport } from './routes/create'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WalletIndexRouteImport } from './routes/wallet.index'
+import { Route as WalletSettingsRouteImport } from './routes/wallet.settings'
+import { Route as WalletSendRouteImport } from './routes/wallet.send'
+import { Route as WalletReceiveRouteImport } from './routes/wallet.receive'
+import { Route as WalletBackupRouteImport } from './routes/wallet.backup'
+import { Route as LegalTermsRouteImport } from './routes/legal.terms'
+import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 
+const WalletRoute = WalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ManifestoRoute = ManifestoRouteImport.update({
+  id: '/manifesto',
+  path: '/manifesto',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImportRoute = ImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WalletIndexRoute = WalletIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletSettingsRoute = WalletSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletSendRoute = WalletSendRouteImport.update({
+  id: '/send',
+  path: '/send',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletReceiveRoute = WalletReceiveRouteImport.update({
+  id: '/receive',
+  path: '/receive',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletBackupRoute = WalletBackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
+  getParentRoute: () => WalletRoute,
+} as any)
+const LegalTermsRoute = LegalTermsRouteImport.update({
+  id: '/legal/terms',
+  path: '/legal/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
+  id: '/legal/privacy',
+  path: '/legal/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/create': typeof CreateRoute
+  '/import': typeof ImportRoute
+  '/manifesto': typeof ManifestoRoute
+  '/wallet': typeof WalletRouteWithChildren
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/wallet/backup': typeof WalletBackupRoute
+  '/wallet/receive': typeof WalletReceiveRoute
+  '/wallet/send': typeof WalletSendRoute
+  '/wallet/settings': typeof WalletSettingsRoute
+  '/wallet/': typeof WalletIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/create': typeof CreateRoute
+  '/import': typeof ImportRoute
+  '/manifesto': typeof ManifestoRoute
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/wallet/backup': typeof WalletBackupRoute
+  '/wallet/receive': typeof WalletReceiveRoute
+  '/wallet/send': typeof WalletSendRoute
+  '/wallet/settings': typeof WalletSettingsRoute
+  '/wallet': typeof WalletIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/create': typeof CreateRoute
+  '/import': typeof ImportRoute
+  '/manifesto': typeof ManifestoRoute
+  '/wallet': typeof WalletRouteWithChildren
+  '/legal/privacy': typeof LegalPrivacyRoute
+  '/legal/terms': typeof LegalTermsRoute
+  '/wallet/backup': typeof WalletBackupRoute
+  '/wallet/receive': typeof WalletReceiveRoute
+  '/wallet/send': typeof WalletSendRoute
+  '/wallet/settings': typeof WalletSettingsRoute
+  '/wallet/': typeof WalletIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/create'
+    | '/import'
+    | '/manifesto'
+    | '/wallet'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/wallet/backup'
+    | '/wallet/receive'
+    | '/wallet/send'
+    | '/wallet/settings'
+    | '/wallet/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/create'
+    | '/import'
+    | '/manifesto'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/wallet/backup'
+    | '/wallet/receive'
+    | '/wallet/send'
+    | '/wallet/settings'
+    | '/wallet'
+  id:
+    | '__root__'
+    | '/'
+    | '/create'
+    | '/import'
+    | '/manifesto'
+    | '/wallet'
+    | '/legal/privacy'
+    | '/legal/terms'
+    | '/wallet/backup'
+    | '/wallet/receive'
+    | '/wallet/send'
+    | '/wallet/settings'
+    | '/wallet/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CreateRoute: typeof CreateRoute
+  ImportRoute: typeof ImportRoute
+  ManifestoRoute: typeof ManifestoRoute
+  WalletRoute: typeof WalletRouteWithChildren
+  LegalPrivacyRoute: typeof LegalPrivacyRoute
+  LegalTermsRoute: typeof LegalTermsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wallet': {
+      id: '/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof WalletRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manifesto': {
+      id: '/manifesto'
+      path: '/manifesto'
+      fullPath: '/manifesto'
+      preLoaderRoute: typeof ManifestoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/import': {
+      id: '/import'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof ImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create': {
+      id: '/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +216,86 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wallet/': {
+      id: '/wallet/'
+      path: '/'
+      fullPath: '/wallet/'
+      preLoaderRoute: typeof WalletIndexRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/settings': {
+      id: '/wallet/settings'
+      path: '/settings'
+      fullPath: '/wallet/settings'
+      preLoaderRoute: typeof WalletSettingsRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/send': {
+      id: '/wallet/send'
+      path: '/send'
+      fullPath: '/wallet/send'
+      preLoaderRoute: typeof WalletSendRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/receive': {
+      id: '/wallet/receive'
+      path: '/receive'
+      fullPath: '/wallet/receive'
+      preLoaderRoute: typeof WalletReceiveRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/backup': {
+      id: '/wallet/backup'
+      path: '/backup'
+      fullPath: '/wallet/backup'
+      preLoaderRoute: typeof WalletBackupRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/legal/terms': {
+      id: '/legal/terms'
+      path: '/legal/terms'
+      fullPath: '/legal/terms'
+      preLoaderRoute: typeof LegalTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal/privacy': {
+      id: '/legal/privacy'
+      path: '/legal/privacy'
+      fullPath: '/legal/privacy'
+      preLoaderRoute: typeof LegalPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface WalletRouteChildren {
+  WalletBackupRoute: typeof WalletBackupRoute
+  WalletReceiveRoute: typeof WalletReceiveRoute
+  WalletSendRoute: typeof WalletSendRoute
+  WalletSettingsRoute: typeof WalletSettingsRoute
+  WalletIndexRoute: typeof WalletIndexRoute
+}
+
+const WalletRouteChildren: WalletRouteChildren = {
+  WalletBackupRoute: WalletBackupRoute,
+  WalletReceiveRoute: WalletReceiveRoute,
+  WalletSendRoute: WalletSendRoute,
+  WalletSettingsRoute: WalletSettingsRoute,
+  WalletIndexRoute: WalletIndexRoute,
+}
+
+const WalletRouteWithChildren =
+  WalletRoute._addFileChildren(WalletRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CreateRoute: CreateRoute,
+  ImportRoute: ImportRoute,
+  ManifestoRoute: ManifestoRoute,
+  WalletRoute: WalletRouteWithChildren,
+  LegalPrivacyRoute: LegalPrivacyRoute,
+  LegalTermsRoute: LegalTermsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
