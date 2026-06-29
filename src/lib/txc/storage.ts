@@ -37,6 +37,17 @@ function b64encode(bytes: Uint8Array): string {
   return btoa(s);
 }
 
+// WebCrypto wants ArrayBufferView<ArrayBuffer>, not the broader ArrayBufferLike
+// that Uint8Array carries. Copy into a fresh ArrayBuffer to satisfy the types.
+function toAB(u: Uint8Array): ArrayBuffer {
+  const out = new ArrayBuffer(u.byteLength);
+  new Uint8Array(out).set(u);
+  return out;
+}
+
+  return btoa(s);
+}
+
 function b64decode(s: string): Uint8Array {
   const bin = atob(s);
   const out = new Uint8Array(bin.length);
