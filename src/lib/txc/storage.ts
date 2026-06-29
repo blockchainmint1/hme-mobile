@@ -45,8 +45,7 @@ function toAB(u: Uint8Array): ArrayBuffer {
   return out;
 }
 
-  return btoa(s);
-}
+
 
 function b64decode(s: string): Uint8Array {
   const bin = atob(s);
