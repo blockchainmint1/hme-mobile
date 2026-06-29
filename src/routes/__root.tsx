@@ -80,7 +80,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "TXC Wallet" },
+      { name: "format-detection", content: "telephone=no" },
       { title: "TXC Mobile Wallet" },
       {
         name: "description",
@@ -130,13 +135,17 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <WalletProvider>
-        <div className="flex min-h-screen flex-col">
-          <div className="flex-1">
-            <Outlet />
+        {/* Mobile-only frame: on phones it fills the screen; on larger screens
+            we center a phone-width column so the app always feels like a mobile app. */}
+        <div className="min-h-[100dvh] w-full bg-black sm:bg-neutral-950 sm:py-6">
+          <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:min-h-[calc(100dvh-3rem)] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-white/10 overflow-hidden">
+            <div className="flex-1 pt-[env(safe-area-inset-top)]">
+              <Outlet />
+            </div>
+            <SiteFooter />
           </div>
-          <SiteFooter />
         </div>
-        <Toaster richColors closeButton />
+        <Toaster richColors closeButton position="top-center" />
       </WalletProvider>
     </QueryClientProvider>
   );
