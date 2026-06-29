@@ -53,13 +53,19 @@ async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey>
     ["deriveKey"],
   );
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+    {
+      name: "PBKDF2",
+      salt: salt.buffer.slice(salt.byteOffset, salt.byteOffset + salt.byteLength) as ArrayBuffer,
+      iterations: PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
     baseKey,
     { name: "AES-GCM", length: 256 },
     false,
     ["encrypt", "decrypt"],
   );
 }
+
 
 export async function saveWallet(
   unlocked: UnlockedWallet,

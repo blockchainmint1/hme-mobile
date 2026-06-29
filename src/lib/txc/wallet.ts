@@ -142,7 +142,7 @@ export function buildAndSignTx(args: {
       if (!u.witnessScriptHex) throw new Error("witnessScriptHex required for BIP84 input");
       base.witnessUtxo = {
         script: Buffer.from(u.witnessScriptHex, "hex"),
-        value: u.value,
+        value: BigInt(u.value),
       };
     } else if (kind === "bip49") {
       if (!u.witnessScriptHex) throw new Error("witnessScriptHex required for BIP49 input");
@@ -150,7 +150,7 @@ export function buildAndSignTx(args: {
       const inner = payments.p2wpkh({ pubkey: Buffer.from(node.publicKey), network: TXC_NETWORK });
       base.witnessUtxo = {
         script: Buffer.from(u.witnessScriptHex, "hex"),
-        value: u.value,
+        value: BigInt(u.value),
       };
       base.redeemScript = inner.output as Buffer;
     } else {
@@ -160,8 +160,9 @@ export function buildAndSignTx(args: {
     psbt.addInput(base);
   }
 
-  for (const o of outputs) psbt.addOutput({ address: o.address, value: o.valueSats });
-  if (changeSats > 0) psbt.addOutput({ address: changeAddress, value: changeSats });
+  for (const o of outputs) psbt.addOutput({ address: o.address, value: BigInt(o.valueSats) });
+  if (changeSats > 0) psbt.addOutput({ address: changeAddress, value: BigInt(changeSats) });
+
 
   // Sign every input with its derived key.
   inputs.forEach((u, i) => {
