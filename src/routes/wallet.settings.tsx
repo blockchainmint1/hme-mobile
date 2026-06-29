@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Fingerprint } from "lucide-react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +19,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { MEMPOOL_BASE, DERIVATION_PATHS } from "@/lib/txc/network";
+import { unlockWallet } from "@/lib/txc/storage";
+import {
+  disableBiometric,
+  enableBiometric,
+  getBiometricStatus,
+} from "@/lib/native/biometric";
 
 export const Route = createFileRoute("/wallet/settings")({
   head: () => ({ meta: [{ title: "Settings — TEXITcoin Wallet" }] }),
