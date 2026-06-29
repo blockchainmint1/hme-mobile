@@ -119,10 +119,16 @@ function Home() {
                 autoComplete="current-password"
               />
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <Button type="submit" disabled={busy || !password}>
                   {busy ? "Unlocking..." : "Unlock"}
                 </Button>
+                {bio.enabled && (
+                  <Button type="button" variant="secondary" onClick={tryBiometric} disabled={busy}>
+                    <Fingerprint className="h-4 w-4 mr-1.5" />
+                    Use biometrics
+                  </Button>
+                )}
                 <Button asChild variant="ghost">
                   <Link to="/import">Import a different wallet</Link>
                 </Button>
