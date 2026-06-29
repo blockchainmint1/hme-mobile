@@ -15,6 +15,9 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { WalletProvider } from "../lib/txc/wallet-context";
 import { SiteFooter } from "../components/SiteFooter";
 import { Toaster } from "../components/ui/sonner";
+import { ThemeProvider } from "../lib/theme";
+
+const THEME_INIT_SCRIPT = `(function(){try{var k='txc.theme';var t=localStorage.getItem(k)||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){document.documentElement.classList.add('dark');}})();`;
 
 function NotFoundComponent() {
   return (
@@ -117,8 +120,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
@@ -134,19 +138,21 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WalletProvider>
-        {/* Mobile-only frame: on phones it fills the screen; on larger screens
-            we center a phone-width column so the app always feels like a mobile app. */}
-        <div className="min-h-[100dvh] w-full bg-black sm:bg-neutral-950 sm:py-6">
-          <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:min-h-[calc(100dvh-3rem)] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-white/10 overflow-hidden">
-            <div className="flex-1 pt-[env(safe-area-inset-top)]">
-              <Outlet />
+      <ThemeProvider>
+        <WalletProvider>
+          {/* Mobile-only frame: on phones it fills the screen; on larger screens
+              we center a phone-width column so the app always feels like a mobile app. */}
+          <div className="min-h-[100dvh] w-full bg-muted/40 sm:py-6">
+            <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:min-h-[calc(100dvh-3rem)] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-border overflow-hidden">
+              <div className="flex-1 pt-[env(safe-area-inset-top)]">
+                <Outlet />
+              </div>
+              <SiteFooter />
             </div>
-            <SiteFooter />
           </div>
-        </div>
-        <Toaster richColors closeButton position="top-center" />
-      </WalletProvider>
+          <Toaster richColors closeButton position="top-center" />
+        </WalletProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
