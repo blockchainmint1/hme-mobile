@@ -27,9 +27,11 @@ function WalletLayout() {
       <header className="border-b border-border/60 bg-card/40 backdrop-blur supports-[backdrop-filter]:bg-card/30 sticky top-0 z-10">
         <div className="mx-auto max-w-3xl px-4 py-3 flex items-center justify-between gap-3">
           <Link to="/wallet" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-700 flex items-center justify-center">
-              <span className="text-white font-bold text-sm">T</span>
-            </div>
+            <img
+              src={txcIcon.url}
+              alt="TEXITcoin"
+              className="w-8 h-8 rounded-lg"
+            />
             <span className="font-semibold">TEXITcoin</span>
           </Link>
           <nav className="hidden sm:flex items-center gap-1">
