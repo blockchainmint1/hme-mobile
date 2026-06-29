@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Fingerprint } from "lucide-react";
+import { Fingerprint, Palette } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -84,6 +85,18 @@ function SettingsPage() {
         ← Back
       </Link>
       <h1 className="mt-3 text-2xl font-bold">Settings</h1>
+
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" /> Appearance
+          </CardTitle>
+          <CardDescription>Light, dark, or follow your system setting.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ThemeToggle />
+        </CardContent>
+      </Card>
 
       <Card className="mt-5">
         <CardHeader>

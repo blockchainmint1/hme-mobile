@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Lock, Home, Send, QrCode, Settings as Cog, Shield } from "lucide-react";
+import { ThemeIconButton } from "@/components/ThemeToggle";
 import txcIcon from "@/assets/txc-icon-512.png.asset.json";
 
 export const Route = createFileRoute("/wallet")({
@@ -61,10 +62,13 @@ function WalletLayout() {
               </Link>
             </Button>
           </nav>
-          <Button variant="ghost" size="sm" onClick={lock} title="Lock wallet">
-            <Lock className="h-4 w-4" />
-            <span className="sr-only">Lock</span>
-          </Button>
+          <div className="flex items-center gap-1">
+            <ThemeIconButton />
+            <Button variant="ghost" size="sm" onClick={lock} title="Lock wallet">
+              <Lock className="h-4 w-4" />
+              <span className="sr-only">Lock</span>
+            </Button>
+          </div>
         </div>
         <nav className="sm:hidden border-t border-border/60 mx-auto max-w-3xl px-2 py-1 flex justify-around text-xs">
           <Link to="/wallet" className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded hover:bg-accent">
