@@ -1,10 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Fingerprint } from "lucide-react";
 import { hasWallet } from "@/lib/txc/storage";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  getBiometricStatus,
+  unlockWithBiometric,
+} from "@/lib/native/biometric";
 import txcIcon from "@/assets/txc-icon-512.png.asset.json";
 
 export const Route = createFileRoute("/")({
@@ -33,14 +38,44 @@ function Home() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [bio, setBio] = useState<{ available: boolean; enabled: boolean }>({
+    available: false,
+    enabled: false,
+  });
 
   useEffect(() => {
     setExists(hasWallet());
+    getBiometricStatus().then(setBio).catch(() => undefined);
   }, []);
 
   useEffect(() => {
     if (unlocked) navigate({ to: "/wallet" });
   }, [unlocked, navigate]);
+
+  const tryBiometric = useCallback(async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const pw = await unlockWithBiometric();
+      if (!pw) {
+        setBusy(false);
+        return;
+      }
+      const ok = await unlock(pw);
+      if (!ok) setError("Stored biometric password no longer matches. Use your password.");
+      else navigate({ to: "/wallet" });
+    } finally {
+      setBusy(false);
+    }
+  }, [unlock, navigate]);
+
+  // Auto-prompt biometrics once on landing if it's enabled.
+  useEffect(() => {
+    if (exists && bio.enabled && !unlocked) {
+      void tryBiometric();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exists, bio.enabled]);
 
   async function onUnlock(e: React.FormEvent) {
     e.preventDefault();
@@ -84,10 +119,16 @@ function Home() {
                 autoComplete="current-password"
               />
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <Button type="submit" disabled={busy || !password}>
                   {busy ? "Unlocking..." : "Unlock"}
                 </Button>
+                {bio.enabled && (
+                  <Button type="button" variant="secondary" onClick={tryBiometric} disabled={busy}>
+                    <Fingerprint className="h-4 w-4 mr-1.5" />
+                    Use biometrics
+                  </Button>
+                )}
                 <Button asChild variant="ghost">
                   <Link to="/import">Import a different wallet</Link>
                 </Button>
