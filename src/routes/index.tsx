@@ -5,6 +5,7 @@ import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import txcIcon from "@/assets/txc-icon-512.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
