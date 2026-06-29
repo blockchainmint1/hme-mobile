@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { generateMnemonic } from "@/lib/txc/wallet";
 import { saveWallet } from "@/lib/txc/storage";
 import { useWallet } from "@/lib/txc/wallet-context";
@@ -7,10 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
+
+const DRAFT_MNEMONIC_KEY = "txc.create.mnemonic";
+
+function getOrCreateDraftMnemonic() {
+  const existing = sessionStorage.getItem(DRAFT_MNEMONIC_KEY);
+  if (existing) return existing;
+  const next = generateMnemonic(256);
+  sessionStorage.setItem(DRAFT_MNEMONIC_KEY, next);
+  return next;
+}
 
 export const Route = createFileRoute("/create")({
   head: () => ({
@@ -25,13 +34,17 @@ export const Route = createFileRoute("/create")({
 function CreatePage() {
   const navigate = useNavigate();
   const { loadFromMemory } = useWallet();
-  const mnemonic = useMemo(() => generateMnemonic(256), []);
+  const [mnemonic, setMnemonic] = useState("");
   const words = mnemonic.split(" ");
   const [confirmedBackup, setConfirmedBackup] = useState(false);
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setMnemonic(getOrCreateDraftMnemonic());
+  }, []);
 
   async function finalize(e: React.FormEvent) {
     e.preventDefault();
@@ -48,11 +61,16 @@ function CreatePage() {
       setError("Please confirm you wrote down the seed phrase.");
       return;
     }
+    if (!mnemonic) {
+      setError("Seed phrase is still generating. Try again in a moment.");
+      return;
+    }
     setBusy(true);
     try {
       const u = { mnemonic, passphrase: "", kind: "bip84" as const, label: "Main wallet" };
       await saveWallet(u, password);
       await loadFromMemory(u);
+      sessionStorage.removeItem(DRAFT_MNEMONIC_KEY);
       navigate({ to: "/wallet" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save wallet");
@@ -75,19 +93,26 @@ function CreatePage() {
 
       <Card className="mt-6 border-amber-700/40 bg-amber-950/10">
         <CardContent className="pt-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {words.map((w, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 rounded-md border border-border/60 bg-background/60 px-3 py-2 font-mono text-sm"
-              >
-                <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
-                <span>{w}</span>
-              </div>
-            ))}
-          </div>
+          {mnemonic ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {words.map((w, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 rounded-md border border-border/60 bg-background/60 px-3 py-2 font-mono text-sm"
+                >
+                  <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
+                  <span>{w}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-md border border-border/60 bg-background/60 px-3 py-8 text-center text-sm text-muted-foreground">
+              Generating seed phrase…
+            </div>
+          )}
           <button
             type="button"
+            disabled={!mnemonic}
             onClick={async () => {
               const ok = await copyToClipboard(mnemonic);
               if (ok) {
@@ -96,7 +121,7 @@ function CreatePage() {
                 toast.error("Could not copy. Long-press a word to select, or write it down by hand.");
               }
             }}
-            className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
           >
             <Copy className="h-3.5 w-3.5" /> Copy to clipboard
           </button>
@@ -134,17 +159,19 @@ function CreatePage() {
                 className="mt-1"
               />
             </div>
-            <label className="flex items-start gap-2 text-sm">
-              <Checkbox
+            <div className="flex items-start gap-3 text-sm">
+              <input
+                id="backup-confirmed"
+                type="checkbox"
                 checked={confirmedBackup}
-                onCheckedChange={(c) => setConfirmedBackup(c === true)}
-                className="mt-0.5"
+                onChange={(e) => setConfirmedBackup(e.currentTarget.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded-md border border-input bg-background accent-primary"
               />
-              <span>
+              <Label htmlFor="backup-confirmed" className="flex-1 leading-relaxed">
                 I wrote down all 24 words in order. I understand that losing them means losing my
                 coins, and that the password alone cannot recover them.
-              </span>
-            </label>
+              </Label>
+            </div>
 
             {error && (
               <div className="flex items-start gap-2 text-sm text-destructive">
@@ -152,7 +179,7 @@ function CreatePage() {
               </div>
             )}
 
-            <Button type="submit" disabled={busy} className="w-full">
+            <Button type="submit" disabled={busy || !mnemonic} className="w-full">
               {busy ? "Saving..." : "Open my wallet"}
             </Button>
           </form>

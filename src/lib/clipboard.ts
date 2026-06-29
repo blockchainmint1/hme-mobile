@@ -7,6 +7,19 @@
  * the modern API first, then fall back to a hidden textarea + execCommand.
  */
 export async function copyToClipboard(text: string): Promise<boolean> {
+  // Native iOS / Android path — uses the OS clipboard directly inside the
+  // Capacitor app, which is more reliable than WebView clipboard APIs.
+  try {
+    const { isNative } = await import("@/lib/native/platform");
+    if (isNative()) {
+      const { Clipboard } = await import("@capacitor/clipboard");
+      await Clipboard.write({ string: text });
+      return true;
+    }
+  } catch {
+    // fall through to web paths
+  }
+
   // Modern path
   try {
     if (
