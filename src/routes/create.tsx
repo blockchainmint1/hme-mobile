@@ -24,7 +24,7 @@ export const Route = createFileRoute("/create")({
 function CreatePage() {
   const navigate = useNavigate();
   const { loadFromMemory } = useWallet();
-  const mnemonic = useMemo(() => generateMnemonic(128), []);
+  const mnemonic = useMemo(() => generateMnemonic(256), []);
   const words = mnemonic.split(" ");
   const [confirmedBackup, setConfirmedBackup] = useState(false);
   const [password, setPassword] = useState("");
@@ -67,7 +67,7 @@ function CreatePage() {
       </Link>
       <h1 className="mt-4 text-3xl font-bold">Back up your seed phrase</h1>
       <p className="mt-2 text-muted-foreground">
-        These 12 words are the only way to recover your TEXITcoin. Write them down on paper and
+        These 24 words are the only way to recover your TEXITcoin. Write them down on paper and
         store them somewhere safe. Never share them. Never type them into a website you don't
         trust.
       </p>
@@ -136,7 +136,7 @@ function CreatePage() {
                 className="mt-0.5"
               />
               <span>
-                I wrote down all 12 words in order. I understand that losing them means losing my
+                I wrote down all 24 words in order. I understand that losing them means losing my
                 coins, and that the password alone cannot recover them.
               </span>
             </label>
