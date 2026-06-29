@@ -87,9 +87,13 @@ function CreatePage() {
           </div>
           <button
             type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(mnemonic);
-              toast.success("Seed copied. Paste into a paper-only backup, then clear clipboard.");
+            onClick={async () => {
+              const ok = await copyToClipboard(mnemonic);
+              if (ok) {
+                toast.success("Seed copied. Paste into a paper-only backup, then clear clipboard.");
+              } else {
+                toast.error("Could not copy. Long-press a word to select, or write it down by hand.");
+              }
             }}
             className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
           >
