@@ -55,9 +55,11 @@ function Home() {
   return (
     <main className="mx-auto max-w-3xl px-4 pt-16 pb-12">
       <header className="text-center mb-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-700 mb-5 shadow-lg shadow-amber-900/40">
-          <span className="font-bold text-2xl text-white">T</span>
-        </div>
+        <img
+          src={txcIcon.url}
+          alt="TEXITcoin"
+          className="w-16 h-16 rounded-2xl mb-5 shadow-lg shadow-amber-900/40"
+        />
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">TEXITcoin Wallet</h1>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
           A self-custodial wallet for TEXITcoin (TXC). Your seed phrase stays on your device,

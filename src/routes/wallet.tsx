@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Lock, Home, Send, QrCode, Settings as Cog, Shield } from "lucide-react";
+import txcIcon from "@/assets/txc-icon-512.png.asset.json";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
