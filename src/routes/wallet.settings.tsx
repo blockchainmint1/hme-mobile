@@ -35,6 +35,48 @@ function SettingsPage() {
   const { unlocked, forget } = useWallet();
   const navigate = useNavigate();
   const [confirmText, setConfirmText] = useState("");
+  const [bio, setBio] = useState({ available: false, enabled: false });
+  const [bioBusy, setBioBusy] = useState(false);
+  const [bioError, setBioError] = useState<string | null>(null);
+  const [bioPassword, setBioPassword] = useState("");
+  const [showBioPassword, setShowBioPassword] = useState(false);
+
+  useEffect(() => {
+    getBiometricStatus().then(setBio).catch(() => undefined);
+  }, []);
+
+  async function onToggleBiometric(next: boolean) {
+    setBioError(null);
+    if (!next) {
+      setBioBusy(true);
+      await disableBiometric();
+      setBio((s) => ({ ...s, enabled: false }));
+      setBioBusy(false);
+      return;
+    }
+    setShowBioPassword(true);
+  }
+
+  async function confirmEnableBiometric(e: React.FormEvent) {
+    e.preventDefault();
+    setBioError(null);
+    setBioBusy(true);
+    try {
+      const w = await unlockWallet(bioPassword);
+      if (!w) {
+        setBioError("Wrong password.");
+        return;
+      }
+      await enableBiometric(bioPassword);
+      setBio((s) => ({ ...s, enabled: true }));
+      setShowBioPassword(false);
+      setBioPassword("");
+    } catch (err) {
+      setBioError(err instanceof Error ? err.message : "Could not enable biometrics.");
+    } finally {
+      setBioBusy(false);
+    }
+  }
 
   return (
     <main className="mx-auto max-w-xl px-4 py-8">
@@ -42,6 +84,64 @@ function SettingsPage() {
         ← Back
       </Link>
       <h1 className="mt-3 text-2xl font-bold">Settings</h1>
+
+      <Card className="mt-5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Fingerprint className="h-5 w-5" /> Biometric unlock
+          </CardTitle>
+          <CardDescription>
+            {bio.available
+              ? "Unlock with Face ID / fingerprint instead of typing your password. Your password is still required to reveal your seed phrase or delete the wallet."
+              : "Face ID / fingerprint unlock is only available in the installed iOS or Android app."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="bio-toggle" className="text-sm">
+              Enable biometric unlock
+            </Label>
+            <Switch
+              id="bio-toggle"
+              checked={bio.enabled}
+              disabled={!bio.available || bioBusy}
+              onCheckedChange={onToggleBiometric}
+            />
+          </div>
+          {showBioPassword && (
+            <form onSubmit={confirmEnableBiometric} className="space-y-2 pt-2 border-t border-border/40">
+              <Label htmlFor="bio-pw" className="text-sm">
+                Confirm your wallet password
+              </Label>
+              <Input
+                id="bio-pw"
+                type="password"
+                value={bioPassword}
+                autoFocus
+                onChange={(e) => setBioPassword(e.target.value)}
+                placeholder="Wallet password"
+              />
+              {bioError && <p className="text-sm text-destructive">{bioError}</p>}
+              <div className="flex gap-2">
+                <Button type="submit" disabled={bioBusy || !bioPassword}>
+                  {bioBusy ? "Verifying..." : "Enable"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowBioPassword(false);
+                    setBioPassword("");
+                    setBioError(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="mt-5">
         <CardHeader>
