@@ -1,10 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { Fingerprint } from "lucide-react";
 import { hasWallet } from "@/lib/txc/storage";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  getBiometricStatus,
+  unlockWithBiometric,
+} from "@/lib/native/biometric";
 import txcIcon from "@/assets/txc-icon-512.png.asset.json";
 
 export const Route = createFileRoute("/")({
