@@ -209,7 +209,8 @@ function SettingsPage() {
                 <AlertDialogCancel onClick={() => setConfirmText("")}>Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   disabled={confirmText !== "DELETE"}
-                  onClick={() => {
+                  onClick={async () => {
+                    await disableBiometric();
                     forget();
                     navigate({ to: "/" });
                   }}
