@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/lib/clipboard";
 
 export const Route = createFileRoute("/wallet/receive")({
   head: () => ({ meta: [{ title: "Receive — TEXITcoin Wallet" }] }),
@@ -49,9 +50,10 @@ function ReceivePage() {
               <code className="font-mono text-sm text-center break-all px-2">{address}</code>
               <Button
                 variant="secondary"
-                onClick={() => {
-                  navigator.clipboard.writeText(address);
-                  toast.success("Address copied");
+                onClick={async () => {
+                  const ok = await copyToClipboard(address);
+                  if (ok) toast.success("Address copied");
+                  else toast.error("Could not copy. Long-press the address to select it.");
                 }}
               >
                 <Copy className="h-4 w-4 mr-2" /> Copy address
