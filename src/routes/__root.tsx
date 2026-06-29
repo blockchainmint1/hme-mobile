@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { WalletProvider } from "../lib/txc/wallet-context";
 import { SiteFooter } from "../components/SiteFooter";
+import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -129,6 +130,7 @@ function RootComponent() {
           </div>
           <SiteFooter />
         </div>
+        <Toaster richColors closeButton />
       </WalletProvider>
     </QueryClientProvider>
   );
