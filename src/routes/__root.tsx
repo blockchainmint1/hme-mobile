@@ -81,20 +81,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "TEXITcoin Wallet" },
+      { title: "TXC Mobile Wallet" },
       {
         name: "description",
         content:
           "Self-custodial TEXITcoin (TXC) wallet. Send, receive, and hold your own keys. Part of the honest.money ecosystem.",
       },
       { name: "theme-color", content: "#0b0f14" },
-      { property: "og:title", content: "TEXITcoin Wallet" },
+      { property: "og:title", content: "TXC Mobile Wallet" },
       {
         property: "og:description",
         content: "Self-custodial TEXITcoin (TXC) wallet. Hold your own keys.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "TXC Mobile Wallet" },
+      { name: "description", content: "TXC Wallet App is a mobile application for managing digital assets." },
+      { property: "og:description", content: "TXC Wallet App is a mobile application for managing digital assets." },
+      { name: "twitter:description", content: "TXC Wallet App is a mobile application for managing digital assets." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e5412ff3-3f36-4086-9590-b2e64dae9c49/id-preview-32bb6bc2--633f1235-4607-4b38-ad25-8b0c6b359acb.lovable.app-1782729338829.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e5412ff3-3f36-4086-9590-b2e64dae9c49/id-preview-32bb6bc2--633f1235-4607-4b38-ad25-8b0c6b359acb.lovable.app-1782729338829.png" },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
