@@ -7,10 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
+
+const DRAFT_MNEMONIC_KEY = "txc.create.mnemonic";
+
+function getOrCreateDraftMnemonic() {
+  const existing = sessionStorage.getItem(DRAFT_MNEMONIC_KEY);
+  if (existing) return existing;
+  const next = generateMnemonic(256);
+  sessionStorage.setItem(DRAFT_MNEMONIC_KEY, next);
+  return next;
+}
 
 export const Route = createFileRoute("/create")({
   head: () => ({
@@ -34,7 +43,7 @@ function CreatePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMnemonic(generateMnemonic(256));
+    setMnemonic(getOrCreateDraftMnemonic());
   }, []);
 
   async function finalize(e: React.FormEvent) {
@@ -61,6 +70,7 @@ function CreatePage() {
       const u = { mnemonic, passphrase: "", kind: "bip84" as const, label: "Main wallet" };
       await saveWallet(u, password);
       await loadFromMemory(u);
+      sessionStorage.removeItem(DRAFT_MNEMONIC_KEY);
       navigate({ to: "/wallet" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save wallet");
@@ -150,11 +160,12 @@ function CreatePage() {
               />
             </div>
             <div className="flex items-start gap-3 text-sm">
-              <Checkbox
+              <input
                 id="backup-confirmed"
+                type="checkbox"
                 checked={confirmedBackup}
-                onCheckedChange={(c) => setConfirmedBackup(c === true)}
-                className="mt-0.5 h-5 w-5 rounded-md"
+                onChange={(e) => setConfirmedBackup(e.currentTarget.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded-md border border-input bg-background accent-primary"
               />
               <Label htmlFor="backup-confirmed" className="flex-1 leading-relaxed">
                 I wrote down all 24 words in order. I understand that losing them means losing my
