@@ -89,8 +89,9 @@ export async function saveWallet(
     JSON.stringify({ m: unlocked.mnemonic, p: unlocked.passphrase }),
   );
   const ct = new Uint8Array(
-    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, payload),
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv: toAB(iv) }, key, toAB(payload)),
   );
+
   const env: StoredWalletEnvelope = {
     v: 1,
     kind: unlocked.kind,
@@ -121,10 +122,11 @@ export async function unlockWallet(password: string): Promise<UnlockedWallet | n
   try {
     const key = await deriveKey(password, b64decode(env.salt));
     const pt = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: b64decode(env.iv) },
+      { name: "AES-GCM", iv: toAB(b64decode(env.iv)) },
       key,
-      b64decode(env.ciphertext),
+      toAB(b64decode(env.ciphertext)),
     );
+
     const parsed = JSON.parse(new TextDecoder().decode(pt)) as { m: string; p: string };
     return { mnemonic: parsed.m, passphrase: parsed.p, kind: env.kind, label: env.label };
   } catch {
