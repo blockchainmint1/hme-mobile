@@ -35,6 +35,24 @@ function WalletHome() {
     staleTime: 60_000,
   });
 
+  const allPricesFn = useServerFn(getAllPricesUsd);
+  const allPrices = useQuery({
+    queryKey: ["all-prices"],
+    queryFn: () => allPricesFn(),
+    staleTime: 60_000,
+  });
+
+  const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
+
+  const evmBalances = useQueries({
+    queries: EVM_CHAIN_LIST.map((c) => ({
+      queryKey: ["evm-balance", c.id, evmAddress],
+      enabled: !!evmAddress,
+      queryFn: () => evmClient(c.id).getBalance({ address: evmAddress! }),
+      staleTime: 30_000,
+    })),
+  });
+
   const txs = useQuery({
     queryKey: ["txs", account.data?.external.map((a) => a.address).join(",")],
     enabled: !!account.data,
