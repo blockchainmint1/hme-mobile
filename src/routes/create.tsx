@@ -109,46 +109,92 @@ function CreatePage() {
         trust.
       </p>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4 text-primary" /> Add your own randomness
-          </CardTitle>
-          <CardDescription>
-            Scribble in the pad to mix your own entropy into the seed below.
-            Touching the pad immediately generates a new seed phrase — any
-            words you already wrote down will no longer be valid.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScribblePad
-            onStart={() => {
-              try {
-                // Any touch invalidates the prior phrase. Regenerate from
-                // fresh secure randomness right away so the user sees new
-                // words the instant they tap.
-                draftMnemonic = generateMnemonic(256);
-                setMnemonic(draftMnemonic);
-                setConfirmedBackup(false);
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Could not regenerate seed");
-              }
-            }}
-            onEntropy={(bytes) => {
-              try {
-                draftMnemonic = generateMnemonicFromUserEntropy(bytes, 256);
-                setMnemonic(draftMnemonic);
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Could not mix entropy");
-              }
-            }}
-          />
-        </CardContent>
-      </Card>
+      {!locked ? (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="h-4 w-4 text-primary" /> Add your own randomness
+            </CardTitle>
+            <CardDescription>
+              Scribble in the pad to mix your own entropy into the seed. Your
+              words stay hidden until you lock it in — that way you can't
+              accidentally write down a phrase that's about to change.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScribblePad
+              onStart={() => {
+                try {
+                  draftMnemonic = generateMnemonic(256);
+                  setMnemonic(draftMnemonic);
+                  setConfirmedBackup(false);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Could not regenerate seed");
+                }
+              }}
+              onEntropy={(bytes) => {
+                try {
+                  draftMnemonic = generateMnemonicFromUserEntropy(bytes, 256);
+                  setMnemonic(draftMnemonic);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Could not mix entropy");
+                }
+              }}
+              onProgress={setScribbleProgress}
+            />
+            <Button
+              type="button"
+              onClick={() => setLocked(true)}
+              disabled={!mnemonic || scribbleProgress < 1}
+              className="mt-4 w-full gap-2"
+            >
+              <Lock className="h-4 w-4" />
+              {scribbleProgress < 1 ? "Keep scribbling to fill the bar…" : "Lock in & reveal seed phrase"}
+            </Button>
+            <p className="mt-2 text-xs text-muted-foreground text-center">
+              Your randomness is always combined with secure device randomness —
+              scribbling can only make the seed stronger, never weaker.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="mt-6">
+          <CardContent className="flex items-center justify-between gap-3 py-4">
+            <div className="flex items-center gap-2 text-sm">
+              <Check className="h-4 w-4 text-primary" />
+              <span className="font-medium">Randomness locked in</span>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                try {
+                  draftMnemonic = generateMnemonic(256);
+                  setMnemonic(draftMnemonic);
+                  setConfirmedBackup(false);
+                  setScribbleProgress(0);
+                  setLocked(false);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Could not regenerate seed");
+                }
+              }}
+              className="gap-1.5"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Redo
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="mt-6 border-amber-700/40 bg-amber-950/10">
         <CardContent className="pt-6">
-          {mnemonic ? (
+          {!locked ? (
+            <div className="rounded-md border border-dashed border-border/60 bg-background/40 px-3 py-10 text-center text-sm text-muted-foreground">
+              <Lock className="mx-auto mb-2 h-5 w-5 opacity-60" />
+              Your seed phrase will appear here once you lock in the scribble above.
+            </div>
+          ) : mnemonic ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {words.map((w, i) => (
                 <div
@@ -169,23 +215,26 @@ function CreatePage() {
               Generating seed phrase…
             </div>
           )}
-          <button
-            type="button"
-            disabled={!mnemonic}
-            onClick={async () => {
-              const ok = await copyToClipboard(mnemonic);
-              if (ok) {
-                toast.success("Seed copied. Paste into a paper-only backup, then clear clipboard.");
-              } else {
-                toast.error("Could not copy. Long-press a word to select, or write it down by hand.");
-              }
-            }}
-            className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
-          >
-            <Copy className="h-3.5 w-3.5" /> Copy to clipboard
-          </button>
+          {locked && (
+            <button
+              type="button"
+              disabled={!mnemonic}
+              onClick={async () => {
+                const ok = await copyToClipboard(mnemonic);
+                if (ok) {
+                  toast.success("Seed copied. Paste into a paper-only backup, then clear clipboard.");
+                } else {
+                  toast.error("Could not copy. Long-press a word to select, or write it down by hand.");
+                }
+              }}
+              className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              <Copy className="h-3.5 w-3.5" /> Copy to clipboard
+            </button>
+          )}
         </CardContent>
       </Card>
+
 
 
       <Card className="mt-6">
