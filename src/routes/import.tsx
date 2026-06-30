@@ -168,10 +168,8 @@ function ImportPage() {
     e.preventDefault();
     setError(null);
     setCandidates(null);
-    if (!hydrated) {
-      setError("Wallet tools are still loading. Try again in a second.");
-      return;
-    }
+    void hydrated;
+
     const m = normalizeMnemonic(phrase);
     if (!validateMnemonic(m)) {
       setError("That doesn't look like a valid 12 or 24-word seed phrase.");
