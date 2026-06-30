@@ -95,10 +95,11 @@ function Home() {
           alt="TEXITcoin"
           className="w-16 h-16 rounded-2xl mb-5 shadow-lg shadow-amber-900/40"
         />
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">TEXITcoin Wallet</h1>
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">HME Wallet</h1>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
-          A self-custodial wallet for TEXITcoin (TXC). Your seed phrase stays on your device,
-          encrypted with your password.
+          A self-custodial wallet for TEXITcoin (TXC), Iskander Coin (ISK), Zero
+          Chill Units (ZCU), and EVM Stablecoins. Your seed phrase stays on your
+          device, encrypted with your password.
         </p>
       </header>
 
