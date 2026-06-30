@@ -168,10 +168,8 @@ function ImportPage() {
     e.preventDefault();
     setError(null);
     setCandidates(null);
-    if (!hydrated) {
-      setError("Wallet tools are still loading. Try again in a second.");
-      return;
-    }
+    void hydrated;
+
     const m = normalizeMnemonic(phrase);
     if (!validateMnemonic(m)) {
       setError("That doesn't look like a valid 12 or 24-word seed phrase.");
@@ -342,7 +340,7 @@ function ImportPage() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              disabled={!hydrated || busy}
+              disabled={busy}
               className="font-mono"
               autoFocus
             />
@@ -356,7 +354,7 @@ function ImportPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"
-                  disabled={!hydrated || busy}
+                  disabled={busy}
                   className="mt-1"
                 />
               </div>
@@ -368,7 +366,7 @@ function ImportPage() {
                   value={password2}
                   onChange={(e) => setPassword2(e.target.value)}
                   autoComplete="new-password"
-                  disabled={!hydrated || busy}
+                  disabled={busy}
                   className="mt-1"
                 />
               </div>
@@ -393,7 +391,7 @@ function ImportPage() {
                   onChange={(e) => setPassphrase(e.target.value)}
                   placeholder="Leave blank if you didn't set one"
                   autoComplete="off"
-                  disabled={!hydrated || busy}
+                  disabled={busy}
                   className="mt-1"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -402,6 +400,7 @@ function ImportPage() {
                 </p>
               </div>
             </details>
+
 
             {error && (
               <div
@@ -415,10 +414,8 @@ function ImportPage() {
             )}
 
 
-            <Button type="submit" disabled={busy || !hydrated} className="w-full">
-              {!hydrated ? (
-                "Loading wallet tools…"
-              ) : busy ? (
+            <Button type="submit" disabled={busy} className="w-full">
+              {busy ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {status || "Working…"}
