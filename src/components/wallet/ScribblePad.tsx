@@ -14,9 +14,11 @@ const TARGET_BYTES = 512;
  */
 export function ScribblePad({
   onEntropy,
+  onStart,
   onProgress,
 }: {
   onEntropy: (bytes: Uint8Array) => void;
+  onStart?: () => void;
   onProgress?: (ratio: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
