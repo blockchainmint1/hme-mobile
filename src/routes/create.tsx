@@ -87,9 +87,6 @@ function CreatePage() {
       setError("Seed phrase is still generating. Try again in a moment.");
       return;
     }
-      setError("Seed phrase is still generating. Try again in a moment.");
-      return;
-    }
     setBusy(true);
     try {
       const u = { mnemonic, passphrase: "", kind: "bip84" as const, label: "Main wallet" };
