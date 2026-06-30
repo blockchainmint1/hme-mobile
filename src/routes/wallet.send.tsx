@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { TXC_NETWORK } from "@/lib/txc/network";
 import { address as addrLib } from "bitcoinjs-lib";
+import { ContactPicker } from "@/components/ContactPicker";
 
 export const Route = createFileRoute("/wallet/send")({
   head: () => ({ meta: [{ title: "Send — HME Wallet" }] }),
@@ -187,6 +188,9 @@ function SendPage() {
                   autoComplete="off"
                   spellCheck={false}
                 />
+                <div className="mt-2">
+                  <ContactPicker chain="txc" onPick={setTo} />
+                </div>
               </div>
               <div>
                 <Label htmlFor="amount">Amount (TXC)</Label>
