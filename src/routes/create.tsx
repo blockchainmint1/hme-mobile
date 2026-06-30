@@ -288,8 +288,8 @@ function CreatePage() {
               </div>
             )}
 
-            <Button type="submit" disabled={busy || !mnemonic} className="w-full">
-              {busy ? "Saving..." : "Open my wallet"}
+            <Button type="submit" disabled={busy || !mnemonic || !locked} className="w-full">
+              {busy ? "Saving..." : !locked ? "Lock in your scribble first" : "Open my wallet"}
             </Button>
           </form>
         </CardContent>
