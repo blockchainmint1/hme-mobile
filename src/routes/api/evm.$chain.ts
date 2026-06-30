@@ -45,10 +45,56 @@ const ALLOWED = new Set([
 
 type RpcCall = { jsonrpc: "2.0"; id: number | string; method: string; params?: unknown };
 
+/**
+ * Returns true if the request originates from our own web app or from the
+ * Capacitor-wrapped mobile shell. Blocks anonymous internet callers from
+ * draining the Alchemy quota through our key.
+ */
+function isAllowedCaller(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  const referer = request.headers.get("referer");
+  const host = request.headers.get("host") ?? "";
+  const source = origin ?? (referer ? new URL(referer).origin : null);
+  // No Origin/Referer at all → not a browser fetch from a real page. Reject.
+  if (!source) return false;
+
+  let sourceHost = "";
+  try {
+    sourceHost = new URL(source).host;
+  } catch {
+    return false;
+  }
+
+  // Same-origin web requests.
+  if (sourceHost && sourceHost === host) return true;
+
+  // Capacitor / Ionic native shells use these origins on iOS / Android.
+  // capacitor://localhost (iOS), https://localhost (Android), ionic://localhost
+  if (source === "capacitor://localhost") return true;
+  if (source === "ionic://localhost") return true;
+  if (source === "https://localhost") return true;
+
+  // Allowlist our published web origins.
+  const ALLOWED_HOSTS = new Set([
+    "hme-mobile.lovable.app",
+    "mobile.honest.money",
+  ]);
+  if (ALLOWED_HOSTS.has(sourceHost)) return true;
+
+  // Lovable preview subdomains (used during development).
+  if (sourceHost.endsWith(".lovable.app")) return true;
+
+  return false;
+}
+
 export const Route = createFileRoute("/api/evm/$chain")({
   server: {
     handlers: {
       POST: async ({ request, params }) => {
+        if (!isAllowedCaller(request)) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
         const chain = params.chain;
         const builder = UPSTREAM[chain];
         if (!builder) return new Response("Unknown chain", { status: 404 });
