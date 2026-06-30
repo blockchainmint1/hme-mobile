@@ -34,14 +34,7 @@ export const Route = createFileRoute("/create")({
 function CreatePage() {
   const navigate = useNavigate();
   const { loadFromMemory } = useWallet();
-  const [mnemonic, setMnemonic] = useState<string>(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      return getOrCreateDraftMnemonic();
-    } catch {
-      return "";
-    }
-  });
+  const [mnemonic, setMnemonic] = useState("");
   const words = mnemonic ? mnemonic.split(" ") : [];
   const [confirmedBackup, setConfirmedBackup] = useState(false);
   const [password, setPassword] = useState("");
