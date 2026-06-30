@@ -9,6 +9,7 @@
  */
 import * as ecc from "@bitcoinerlab/secp256k1";
 import * as bip39 from "bip39";
+import { sha256 } from "@noble/hashes/sha256";
 import { BIP32Factory, type BIP32Interface } from "bip32";
 import { Buffer } from "buffer";
 import { ECPairFactory } from "ecpair";
@@ -21,6 +22,30 @@ if (typeof globalThis !== "undefined" && !(globalThis as { Buffer?: unknown }).B
 
 const bip32 = BIP32Factory(ecc);
 const ECPair = ECPairFactory(ecc);
+
+function bytesToBinary(bytes: Uint8Array | number[]): string {
+  return Array.from(bytes, (byte) => byte.toString(2).padStart(8, "0")).join("");
+}
+
+function secureRandomBytes(length: number): Uint8Array {
+  const crypto = globalThis.crypto;
+  if (!crypto?.getRandomValues) {
+    throw new Error("Secure random generator unavailable on this device.");
+  }
+  return crypto.getRandomValues(new Uint8Array(length));
+}
+
+function entropyToMnemonic(entropy: Uint8Array): string {
+  const wordlist = bip39.wordlists.english;
+  if (!wordlist?.length) throw new Error("Mnemonic word list unavailable.");
+
+  const entropyBits = bytesToBinary(entropy);
+  const checksumBits = bytesToBinary(sha256(entropy)).slice(0, entropy.length / 4);
+  const bits = `${entropyBits}${checksumBits}`;
+  const words = bits.match(/.{1,11}/g)?.map((chunk) => wordlist[parseInt(chunk, 2)]);
+  if (!words || words.some((word) => !word)) throw new Error("Failed to create seed phrase.");
+  return words.join(" ");
+}
 
 export type AddressKind = DerivationKind;
 
@@ -46,7 +71,8 @@ export interface UtxoInput {
 }
 
 export function generateMnemonic(strengthBits: 128 | 256 = 128): string {
-  return bip39.generateMnemonic(strengthBits);
+  if (strengthBits !== 128 && strengthBits !== 256) throw new TypeError("Invalid entropy strength");
+  return entropyToMnemonic(secureRandomBytes(strengthBits / 8));
 }
 
 export function validateMnemonic(phrase: string): boolean {

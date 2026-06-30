@@ -118,6 +118,10 @@ function CreatePage() {
                 </div>
               ))}
             </div>
+          ) : error ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-8 text-center text-sm text-destructive">
+              {error}
+            </div>
           ) : (
             <div className="rounded-md border border-border/60 bg-background/60 px-3 py-8 text-center text-sm text-muted-foreground">
               Generating seed phrase…
