@@ -11,7 +11,7 @@
  * deep-link to receive. The `/pay/$invoiceId` route is reachable directly
  * from the URL bar for testing.
  */
-import type { Router } from "@tanstack/react-router";
+import type { AnyRouter } from "@tanstack/react-router";
 import { isNative } from "./platform";
 
 export interface ParsedPayUrl {
@@ -50,7 +50,7 @@ export function parsePayUrl(raw: string): ParsedPayUrl | null {
  * Wire the Capacitor App plugin to push pay URLs into the router.
  * Returns an unsubscribe function. Safe to call on web (returns a noop).
  */
-export async function registerPayDeepLinkListener(router: Router): Promise<() => void> {
+export async function registerPayDeepLinkListener(router: AnyRouter): Promise<() => void> {
   if (!isNative()) return () => {};
   try {
     const { App } = await import("@capacitor/app");
