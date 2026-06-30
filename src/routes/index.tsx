@@ -15,16 +15,16 @@ import txcIcon from "@/assets/txc-icon-512.png.asset.json";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "TEXITcoin Wallet — self-custodial TXC" },
+      { title: "HME Wallet — self-custodial multi-chain" },
       {
         name: "description",
         content:
-          "Open a TEXITcoin wallet in seconds. Import an existing seed phrase from the old TXC Wallet app, or create a new one. Your keys stay on your device.",
+          "Open an HME wallet in seconds. A self-custodial wallet for TEXITcoin (TXC), Iskander Coin (ISK), Zero Chill Units (ZCU), and EVM Stablecoins. Your keys stay on your device.",
       },
-      { property: "og:title", content: "TEXITcoin Wallet — self-custodial TXC" },
+      { property: "og:title", content: "HME Wallet — self-custodial multi-chain" },
       {
         property: "og:description",
-        content: "Send and receive TXC. Import or create a wallet in seconds.",
+        content: "A self-custodial wallet for TEXITcoin (TXC), Iskander Coin (ISK), Zero Chill Units (ZCU), and EVM Stablecoins.",
       },
     ],
   }),
