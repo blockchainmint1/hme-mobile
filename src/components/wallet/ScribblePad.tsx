@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 
 /** Bytes of raw movement data to collect before we call it "enough". */
-const TARGET_BYTES = 192;
+const TARGET_BYTES = 64;
 
 /**
  * Captures pointer movement entropy. We accumulate (x, y, t, pressure) bytes
@@ -157,7 +157,8 @@ export function ScribblePad({
   // retargeted to the scrolling page, so canvas-only move handlers miss them.
   useEffect(() => {
     const c = canvasRef.current;
-    if (!c) return;
+    const pad = padRef.current;
+    if (!c || !pad) return;
 
     const pointerLooksLikeTouch = (e: PointerEvent) => e.pointerType === "touch" || e.pointerType === "pen";
 

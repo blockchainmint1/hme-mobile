@@ -77,7 +77,7 @@ function CreatePage() {
       return;
     }
     if (!locked) {
-      setError("Lock in your scribble first so the seed phrase stops changing.");
+      setError("Reveal and back up your seed phrase first.");
       return;
     }
     if (!confirmedBackup) {
@@ -123,7 +123,8 @@ function CreatePage() {
             <CardDescription>
               Scribble in the pad to mix your own entropy into the seed. Your
               words stay hidden until you lock it in — that way you can't
-              accidentally write down a phrase that's about to change.
+              accidentally write down a phrase that's about to change. You can
+              also skip this and use secure device randomness only.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -161,6 +162,25 @@ function CreatePage() {
             >
               <Lock className="h-4 w-4" />
               {scribbleProgress < 1 ? "Keep scribbling to fill the bar…" : "Lock in & reveal seed phrase"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                try {
+                  draftMnemonic = generateMnemonic(256);
+                  setMnemonic(draftMnemonic);
+                  setConfirmedBackup(false);
+                  scribbleBytesRef.current = null;
+                  setLocked(true);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Could not reveal seed");
+                }
+              }}
+              disabled={!mnemonic}
+              className="mt-2 w-full"
+            >
+              Skip scribble — use secure device randomness
             </Button>
             <p className="mt-2 text-xs text-muted-foreground text-center">
               Your randomness is always combined with secure device randomness —
@@ -204,7 +224,7 @@ function CreatePage() {
           {!locked ? (
             <div className="rounded-md border border-dashed border-border/60 bg-background/40 px-3 py-10 text-center text-sm text-muted-foreground">
               <Lock className="mx-auto mb-2 h-5 w-5 opacity-60" />
-              Your seed phrase will appear here once you lock in the scribble above.
+              Your seed phrase will appear here once you lock in or skip the scribble above.
             </div>
           ) : mnemonic ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -301,7 +321,7 @@ function CreatePage() {
             )}
 
             <Button type="submit" disabled={busy || !mnemonic || !locked} className="w-full">
-              {busy ? "Saving..." : !locked ? "Lock in your scribble first" : "Open my wallet"}
+              {busy ? "Saving..." : !locked ? "Reveal seed phrase first" : "Open my wallet"}
             </Button>
           </form>
         </CardContent>
