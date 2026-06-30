@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { generateMnemonic, generateMnemonicFromUserEntropy } from "@/lib/txc/wallet";
 import { saveWallet } from "@/lib/txc/storage";
 import { useWallet } from "@/lib/txc/wallet-context";
@@ -51,6 +51,7 @@ function CreatePage() {
   const [error, setError] = useState<string | null>(null);
   const [scribbleProgress, setScribbleProgress] = useState(0);
   const [locked, setLocked] = useState(false);
+  const scribbleBytesRef = useRef<Uint8Array | null>(null);
 
   // Pre-generate a draft so we have something to mix into when the user
   // first taps the pad — but we won't show it until they lock in.
@@ -132,23 +133,29 @@ function CreatePage() {
                   draftMnemonic = generateMnemonic(256);
                   setMnemonic(draftMnemonic);
                   setConfirmedBackup(false);
+                  scribbleBytesRef.current = null;
                 } catch (e) {
                   toast.error(e instanceof Error ? e.message : "Could not regenerate seed");
                 }
               }}
               onEntropy={(bytes) => {
-                try {
-                  draftMnemonic = generateMnemonicFromUserEntropy(bytes, 256);
-                  setMnemonic(draftMnemonic);
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Could not mix entropy");
-                }
+                scribbleBytesRef.current = bytes.length > 0 ? bytes : null;
               }}
               onProgress={setScribbleProgress}
             />
             <Button
               type="button"
-              onClick={() => setLocked(true)}
+              onClick={() => {
+                try {
+                  if (scribbleBytesRef.current?.length) {
+                    draftMnemonic = generateMnemonicFromUserEntropy(scribbleBytesRef.current, 256);
+                    setMnemonic(draftMnemonic);
+                  }
+                  setLocked(true);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Could not lock in randomness");
+                }
+              }}
               disabled={!mnemonic || scribbleProgress < 1}
               className="mt-4 w-full gap-2"
             >
@@ -178,6 +185,7 @@ function CreatePage() {
                   setMnemonic(draftMnemonic);
                   setConfirmedBackup(false);
                   setScribbleProgress(0);
+                  scribbleBytesRef.current = null;
                   setLocked(false);
                 } catch (e) {
                   toast.error(e instanceof Error ? e.message : "Could not regenerate seed");
