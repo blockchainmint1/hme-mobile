@@ -83,7 +83,7 @@ function CreatePage() {
       const u = { mnemonic, passphrase: "", kind: "bip84" as const, label: "Main wallet" };
       await saveWallet(u, password);
       await loadFromMemory(u);
-      sessionStorage.removeItem(DRAFT_MNEMONIC_KEY);
+      clearDraftMnemonic();
       navigate({ to: "/wallet" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save wallet");
