@@ -2,7 +2,7 @@
  * EVM chain registry and helpers. One address (m/44'/60'/0'/0/0) works on
  * every EVM network we support; only the RPC + native token differ.
  */
-import { createPublicClient, http, type PublicClient, formatEther } from "viem";
+import { createPublicClient, http, type PublicClient, type Chain, formatEther } from "viem";
 import { mainnet, base, bsc } from "viem/chains";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import type { BIP32Interface } from "bip32";
@@ -17,7 +17,7 @@ export interface EvmChainMeta {
   /** CoinMarketCap symbol used to price the native token. */
   priceSymbol: string;
   /** viem chain definition */
-  viemChain: typeof mainnet;
+  viemChain: Chain;
   /** Hex color used for tile accents. */
   accent: string;
   explorerTx: (hash: string) => string;
