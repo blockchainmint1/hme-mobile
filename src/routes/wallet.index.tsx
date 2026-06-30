@@ -138,7 +138,7 @@ function WalletHome() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold">
-                      {q.isLoading ? "..." : eth != null ? formatEth(bal) : "0"}
+                      {q.isLoading ? "..." : bal != null ? formatEth(bal) : "0"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {fiat != null ? formatFiat(fiat) : usd == null ? "—" : "$0.00"}
