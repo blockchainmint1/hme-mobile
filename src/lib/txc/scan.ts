@@ -3,7 +3,7 @@
  * Uses the BIP44 gap-limit convention (stop after 20 consecutive unused
  * addresses on each chain) which matches BlueWallet behavior.
  */
-import { Buffer } from "buffer";
+import { Buffer } from "buffer/";
 import type { BIP32Interface } from "bip32";
 import {
   deriveAddress,
