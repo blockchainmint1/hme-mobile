@@ -21,7 +21,10 @@ import { Route as WalletReceiveRouteImport } from './routes/wallet.receive'
 import { Route as WalletBackupRouteImport } from './routes/wallet.backup'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
+import { Route as WalletEvmChainRouteImport } from './routes/wallet.evm.$chain'
 import { Route as ApiEvmChainRouteImport } from './routes/api/evm.$chain'
+import { Route as WalletEvmChainSendRouteImport } from './routes/wallet.evm.$chain.send'
+import { Route as WalletEvmChainReceiveRouteImport } from './routes/wallet.evm.$chain.receive'
 
 const WalletRoute = WalletRouteImport.update({
   id: '/wallet',
@@ -83,10 +86,25 @@ const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
   path: '/legal/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WalletEvmChainRoute = WalletEvmChainRouteImport.update({
+  id: '/evm/$chain',
+  path: '/evm/$chain',
+  getParentRoute: () => WalletRoute,
+} as any)
 const ApiEvmChainRoute = ApiEvmChainRouteImport.update({
   id: '/api/evm/$chain',
   path: '/api/evm/$chain',
   getParentRoute: () => rootRouteImport,
+} as any)
+const WalletEvmChainSendRoute = WalletEvmChainSendRouteImport.update({
+  id: '/send',
+  path: '/send',
+  getParentRoute: () => WalletEvmChainRoute,
+} as any)
+const WalletEvmChainReceiveRoute = WalletEvmChainReceiveRouteImport.update({
+  id: '/receive',
+  path: '/receive',
+  getParentRoute: () => WalletEvmChainRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -103,6 +121,9 @@ export interface FileRoutesByFullPath {
   '/wallet/settings': typeof WalletSettingsRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/wallet/evm/$chain': typeof WalletEvmChainRouteWithChildren
+  '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
+  '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,6 +138,9 @@ export interface FileRoutesByTo {
   '/wallet/settings': typeof WalletSettingsRoute
   '/wallet': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/wallet/evm/$chain': typeof WalletEvmChainRouteWithChildren
+  '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
+  '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -133,6 +157,9 @@ export interface FileRoutesById {
   '/wallet/settings': typeof WalletSettingsRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/wallet/evm/$chain': typeof WalletEvmChainRouteWithChildren
+  '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
+  '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -150,6 +177,9 @@ export interface FileRouteTypes {
     | '/wallet/settings'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/wallet/evm/$chain'
+    | '/wallet/evm/$chain/receive'
+    | '/wallet/evm/$chain/send'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -164,6 +194,9 @@ export interface FileRouteTypes {
     | '/wallet/settings'
     | '/wallet'
     | '/api/evm/$chain'
+    | '/wallet/evm/$chain'
+    | '/wallet/evm/$chain/receive'
+    | '/wallet/evm/$chain/send'
   id:
     | '__root__'
     | '/'
@@ -179,6 +212,9 @@ export interface FileRouteTypes {
     | '/wallet/settings'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/wallet/evm/$chain'
+    | '/wallet/evm/$chain/receive'
+    | '/wallet/evm/$chain/send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -278,6 +314,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalPrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wallet/evm/$chain': {
+      id: '/wallet/evm/$chain'
+      path: '/evm/$chain'
+      fullPath: '/wallet/evm/$chain'
+      preLoaderRoute: typeof WalletEvmChainRouteImport
+      parentRoute: typeof WalletRoute
+    }
     '/api/evm/$chain': {
       id: '/api/evm/$chain'
       path: '/api/evm/$chain'
@@ -285,8 +328,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEvmChainRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wallet/evm/$chain/send': {
+      id: '/wallet/evm/$chain/send'
+      path: '/send'
+      fullPath: '/wallet/evm/$chain/send'
+      preLoaderRoute: typeof WalletEvmChainSendRouteImport
+      parentRoute: typeof WalletEvmChainRoute
+    }
+    '/wallet/evm/$chain/receive': {
+      id: '/wallet/evm/$chain/receive'
+      path: '/receive'
+      fullPath: '/wallet/evm/$chain/receive'
+      preLoaderRoute: typeof WalletEvmChainReceiveRouteImport
+      parentRoute: typeof WalletEvmChainRoute
+    }
   }
 }
+
+interface WalletEvmChainRouteChildren {
+  WalletEvmChainReceiveRoute: typeof WalletEvmChainReceiveRoute
+  WalletEvmChainSendRoute: typeof WalletEvmChainSendRoute
+}
+
+const WalletEvmChainRouteChildren: WalletEvmChainRouteChildren = {
+  WalletEvmChainReceiveRoute: WalletEvmChainReceiveRoute,
+  WalletEvmChainSendRoute: WalletEvmChainSendRoute,
+}
+
+const WalletEvmChainRouteWithChildren = WalletEvmChainRoute._addFileChildren(
+  WalletEvmChainRouteChildren,
+)
 
 interface WalletRouteChildren {
   WalletBackupRoute: typeof WalletBackupRoute
@@ -294,6 +365,7 @@ interface WalletRouteChildren {
   WalletSendRoute: typeof WalletSendRoute
   WalletSettingsRoute: typeof WalletSettingsRoute
   WalletIndexRoute: typeof WalletIndexRoute
+  WalletEvmChainRoute: typeof WalletEvmChainRouteWithChildren
 }
 
 const WalletRouteChildren: WalletRouteChildren = {
@@ -302,6 +374,7 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletSendRoute: WalletSendRoute,
   WalletSettingsRoute: WalletSettingsRoute,
   WalletIndexRoute: WalletIndexRoute,
+  WalletEvmChainRoute: WalletEvmChainRouteWithChildren,
 }
 
 const WalletRouteWithChildren =
