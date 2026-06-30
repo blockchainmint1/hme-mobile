@@ -33,7 +33,7 @@ export const Route = createFileRoute("/create")({
   head: () => ({
     meta: [
       { title: "Create wallet — HME Wallet" },
-      { name: "description", content: "Generate a new TEXITcoin wallet and back up the seed phrase." },
+      { name: "description", content: "Generate a new wallet and back up the seed phrase." },
     ],
   }),
   component: CreatePage,
