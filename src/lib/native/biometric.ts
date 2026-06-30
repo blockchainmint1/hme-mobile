@@ -120,3 +120,31 @@ export async function unlockWithBiometric(): Promise<string | null> {
     return null;
   }
 }
+
+/**
+ * Re-authenticate the user with biometrics before a sensitive action
+ * (e.g. broadcasting a payment). Resolves true on success or when
+ * biometrics is unavailable / not enabled on this device (the caller is
+ * expected to have its own confirmation UI in that case). Resolves false
+ * only when biometrics is available + enabled and the user cancels or
+ * fails the prompt.
+ */
+export async function confirmWithBiometric(reason: string): Promise<boolean> {
+  const plugins = await loadPlugins();
+  if (!plugins) return true;
+  if (!isBiometricEnabled()) return true;
+  try {
+    await plugins.BiometricAuth.authenticate({
+      reason,
+      cancelTitle: "Cancel",
+      allowDeviceCredential: false,
+      iosFallbackTitle: "Use Passcode",
+      androidTitle: "Confirm payment",
+      androidSubtitle: reason,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+

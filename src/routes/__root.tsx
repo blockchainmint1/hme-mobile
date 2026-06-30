@@ -135,6 +135,26 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  // Wire up Nectar.Pay tap-to-pay deep links (nectar:// + https universal
+  // link). Native-only — no-op on web. See lib/native/deeplink.ts.
+  useEffect(() => {
+    let cancel: (() => void) | undefined;
+    let cancelled = false;
+    import("../lib/native/deeplink").then(({ registerPayDeepLinkListener }) => {
+      registerPayDeepLinkListener(router).then((unsub) => {
+        if (cancelled) unsub();
+        else cancel = unsub;
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancel?.();
+    };
+  }, [router]);
+
+
 
   return (
     <QueryClientProvider client={queryClient}>

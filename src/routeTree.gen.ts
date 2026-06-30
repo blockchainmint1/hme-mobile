@@ -20,12 +20,14 @@ import { Route as WalletSendRouteImport } from './routes/wallet.send'
 import { Route as WalletReceiveRouteImport } from './routes/wallet.receive'
 import { Route as WalletContactsRouteImport } from './routes/wallet.contacts'
 import { Route as WalletBackupRouteImport } from './routes/wallet.backup'
+import { Route as PayInvoiceIdRouteImport } from './routes/pay.$invoiceId'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as WalletEvmChainRouteImport } from './routes/wallet.evm.$chain'
 import { Route as ApiEvmChainRouteImport } from './routes/api/evm.$chain'
 import { Route as WalletEvmChainSendRouteImport } from './routes/wallet.evm.$chain.send'
 import { Route as WalletEvmChainReceiveRouteImport } from './routes/wallet.evm.$chain.receive'
+import { Route as ApiNectarPayInvoiceIdRouteImport } from './routes/api/nectar.pay.$invoiceId'
 
 const WalletRoute = WalletRouteImport.update({
   id: '/wallet',
@@ -82,6 +84,11 @@ const WalletBackupRoute = WalletBackupRouteImport.update({
   path: '/backup',
   getParentRoute: () => WalletRoute,
 } as any)
+const PayInvoiceIdRoute = PayInvoiceIdRouteImport.update({
+  id: '/pay/$invoiceId',
+  path: '/pay/$invoiceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LegalTermsRoute = LegalTermsRouteImport.update({
   id: '/legal/terms',
   path: '/legal/terms',
@@ -112,6 +119,11 @@ const WalletEvmChainReceiveRoute = WalletEvmChainReceiveRouteImport.update({
   path: '/receive',
   getParentRoute: () => WalletEvmChainRoute,
 } as any)
+const ApiNectarPayInvoiceIdRoute = ApiNectarPayInvoiceIdRouteImport.update({
+  id: '/api/nectar/pay/$invoiceId',
+  path: '/api/nectar/pay/$invoiceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -121,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/wallet': typeof WalletRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/pay/$invoiceId': typeof PayInvoiceIdRoute
   '/wallet/backup': typeof WalletBackupRoute
   '/wallet/contacts': typeof WalletContactsRoute
   '/wallet/receive': typeof WalletReceiveRoute
@@ -129,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
   '/wallet/evm/$chain': typeof WalletEvmChainRouteWithChildren
+  '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
 }
@@ -139,6 +153,7 @@ export interface FileRoutesByTo {
   '/manifesto': typeof ManifestoRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/pay/$invoiceId': typeof PayInvoiceIdRoute
   '/wallet/backup': typeof WalletBackupRoute
   '/wallet/contacts': typeof WalletContactsRoute
   '/wallet/receive': typeof WalletReceiveRoute
@@ -147,6 +162,7 @@ export interface FileRoutesByTo {
   '/wallet': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
   '/wallet/evm/$chain': typeof WalletEvmChainRouteWithChildren
+  '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
 }
@@ -159,6 +175,7 @@ export interface FileRoutesById {
   '/wallet': typeof WalletRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
+  '/pay/$invoiceId': typeof PayInvoiceIdRoute
   '/wallet/backup': typeof WalletBackupRoute
   '/wallet/contacts': typeof WalletContactsRoute
   '/wallet/receive': typeof WalletReceiveRoute
@@ -167,6 +184,7 @@ export interface FileRoutesById {
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
   '/wallet/evm/$chain': typeof WalletEvmChainRouteWithChildren
+  '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
 }
@@ -180,6 +198,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/pay/$invoiceId'
     | '/wallet/backup'
     | '/wallet/contacts'
     | '/wallet/receive'
@@ -188,6 +207,7 @@ export interface FileRouteTypes {
     | '/wallet/'
     | '/api/evm/$chain'
     | '/wallet/evm/$chain'
+    | '/api/nectar/pay/$invoiceId'
     | '/wallet/evm/$chain/receive'
     | '/wallet/evm/$chain/send'
   fileRoutesByTo: FileRoutesByTo
@@ -198,6 +218,7 @@ export interface FileRouteTypes {
     | '/manifesto'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/pay/$invoiceId'
     | '/wallet/backup'
     | '/wallet/contacts'
     | '/wallet/receive'
@@ -206,6 +227,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/api/evm/$chain'
     | '/wallet/evm/$chain'
+    | '/api/nectar/pay/$invoiceId'
     | '/wallet/evm/$chain/receive'
     | '/wallet/evm/$chain/send'
   id:
@@ -217,6 +239,7 @@ export interface FileRouteTypes {
     | '/wallet'
     | '/legal/privacy'
     | '/legal/terms'
+    | '/pay/$invoiceId'
     | '/wallet/backup'
     | '/wallet/contacts'
     | '/wallet/receive'
@@ -225,6 +248,7 @@ export interface FileRouteTypes {
     | '/wallet/'
     | '/api/evm/$chain'
     | '/wallet/evm/$chain'
+    | '/api/nectar/pay/$invoiceId'
     | '/wallet/evm/$chain/receive'
     | '/wallet/evm/$chain/send'
   fileRoutesById: FileRoutesById
@@ -237,7 +261,9 @@ export interface RootRouteChildren {
   WalletRoute: typeof WalletRouteWithChildren
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
+  PayInvoiceIdRoute: typeof PayInvoiceIdRoute
   ApiEvmChainRoute: typeof ApiEvmChainRoute
+  ApiNectarPayInvoiceIdRoute: typeof ApiNectarPayInvoiceIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -319,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalletBackupRouteImport
       parentRoute: typeof WalletRoute
     }
+    '/pay/$invoiceId': {
+      id: '/pay/$invoiceId'
+      path: '/pay/$invoiceId'
+      fullPath: '/pay/$invoiceId'
+      preLoaderRoute: typeof PayInvoiceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/legal/terms': {
       id: '/legal/terms'
       path: '/legal/terms'
@@ -360,6 +393,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/wallet/evm/$chain/receive'
       preLoaderRoute: typeof WalletEvmChainReceiveRouteImport
       parentRoute: typeof WalletEvmChainRoute
+    }
+    '/api/nectar/pay/$invoiceId': {
+      id: '/api/nectar/pay/$invoiceId'
+      path: '/api/nectar/pay/$invoiceId'
+      fullPath: '/api/nectar/pay/$invoiceId'
+      preLoaderRoute: typeof ApiNectarPayInvoiceIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -409,7 +449,9 @@ const rootRouteChildren: RootRouteChildren = {
   WalletRoute: WalletRouteWithChildren,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
+  PayInvoiceIdRoute: PayInvoiceIdRoute,
   ApiEvmChainRoute: ApiEvmChainRoute,
+  ApiNectarPayInvoiceIdRoute: ApiNectarPayInvoiceIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
