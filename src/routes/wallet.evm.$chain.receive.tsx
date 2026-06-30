@@ -6,10 +6,10 @@ import { useMemo } from "react";
 import { ArrowLeft, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { QrCode } from "@/components/QrCode";
+import { QrCode } from "@/components/wallet/QrCode";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { EVM_CHAINS, deriveEvmAccount, type EvmChainId } from "@/lib/chains/evm";
-import { copyText } from "@/lib/clipboard";
+import { copyToClipboard } from "@/lib/clipboard";
 
 export const Route = createFileRoute("/wallet/evm/$chain/receive")({
   component: EvmReceive,
@@ -47,7 +47,7 @@ function EvmReceive() {
           <p className="font-mono text-xs break-all text-center">{address ?? "..."}</p>
           <Button
             variant="secondary"
-            onClick={() => address && copyText(address)}
+            onClick={() => address && copyToClipboard(address)}
             disabled={!address}
           >
             <Copy className="h-4 w-4 mr-2" /> Copy address
