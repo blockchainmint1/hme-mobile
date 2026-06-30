@@ -108,7 +108,7 @@ function CreatePage() {
       </Link>
       <h1 className="mt-4 text-3xl font-bold">Back up your seed phrase</h1>
       <p className="mt-2 text-muted-foreground">
-        These 24 words are the only way to recover your TEXITcoin. Write them down on paper and
+        These 24 words are the only way to recover your wallet. Write them down on paper and
         store them somewhere safe. Never share them. Never type them into a website you don't
         trust.
       </p>
