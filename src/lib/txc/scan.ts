@@ -3,7 +3,6 @@
  * Uses the BIP44 gap-limit convention (stop after 20 consecutive unused
  * addresses on each chain) which matches BlueWallet behavior.
  */
-import { Buffer } from "buffer/";
 import type { BIP32Interface } from "bip32";
 import {
   deriveAddress,
@@ -19,6 +18,10 @@ import {
 } from "./mempool";
 
 const GAP_LIMIT = 20;
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
 
 export interface AccountUtxo extends UtxoInput {
   address: string;
@@ -122,14 +125,16 @@ export async function scanAccount(
     const { TXC_NETWORK } = await import("./network");
     for (const u of utxos) {
       const d = (u.change === 0 ? ext.all : int.all)[u.index];
-      const pubkey = Buffer.from(d.pubkey);
+      const pubkey = d.pubkey;
       if (kind === "bip84") {
         const p = payments.p2wpkh({ pubkey, network: TXC_NETWORK });
-        u.witnessScriptHex = (p.output as Buffer).toString("hex");
+        if (!p.output) throw new Error("Failed to derive witness script");
+        u.witnessScriptHex = bytesToHex(p.output);
       } else {
         const inner = payments.p2wpkh({ pubkey, network: TXC_NETWORK });
         const p = payments.p2sh({ redeem: inner, network: TXC_NETWORK });
-        u.witnessScriptHex = (p.output as Buffer).toString("hex");
+        if (!p.output) throw new Error("Failed to derive witness script");
+        u.witnessScriptHex = bytesToHex(p.output);
       }
     }
   }

@@ -70,9 +70,6 @@ export function generateMnemonicFromUserEntropy(
 ): string {
   if (strengthBits !== 128 && strengthBits !== 256) throw new TypeError("Invalid entropy strength");
   const len = strengthBits / 8;
-  const userHash = crypto.subtle
-    ? null
-    : undefined;
   const secure = secureRandomBytes(len);
   const mixed = new Uint8Array(len);
   // Use a compact synchronous hash mixer without Node Buffer/bip39 dependencies.
@@ -89,6 +86,18 @@ export function generateMnemonicFromUserEntropy(
     mixed[i] = secure[i] ^ ((h >>> ((i % 4) * 8)) & 0xff);
   }
   return entropyToMnemonic(mixed, englishWordlist);
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.trim();
+  if (clean.length % 2 !== 0) throw new Error("Invalid hex string");
+  const out = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    const byte = Number.parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+    if (Number.isNaN(byte)) throw new Error("Invalid hex string");
+    out[i] = byte;
+  }
+  return out;
 }
 
 export function validateMnemonic(phrase: string): boolean {
@@ -186,7 +195,7 @@ export function buildAndSignTx(args: {
     if (kind === "bip84") {
       if (!u.witnessScriptHex) throw new Error("witnessScriptHex required for BIP84 input");
       base.witnessUtxo = {
-        script: Buffer.from(u.witnessScriptHex, "hex"),
+        script: hexToBytes(u.witnessScriptHex),
         value: BigInt(u.value),
       };
     } else if (kind === "bip49") {
@@ -194,13 +203,13 @@ export function buildAndSignTx(args: {
       const node = root.derivePath(`${DERIVATION_PATHS[kind]}/${u.change}/${u.index}`);
       const inner = payments.p2wpkh({ pubkey: node.publicKey, network: TXC_NETWORK });
       base.witnessUtxo = {
-        script: Buffer.from(u.witnessScriptHex, "hex"),
+        script: hexToBytes(u.witnessScriptHex),
         value: BigInt(u.value),
       };
-      base.redeemScript = inner.output as Buffer;
+      base.redeemScript = inner.output;
     } else {
       if (!u.nonWitnessUtxoHex) throw new Error("nonWitnessUtxoHex required for legacy input");
-      base.nonWitnessUtxo = Buffer.from(u.nonWitnessUtxoHex, "hex");
+      base.nonWitnessUtxo = hexToBytes(u.nonWitnessUtxoHex);
     }
     psbt.addInput(base);
   }

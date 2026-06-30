@@ -2,7 +2,6 @@
  * EVM chain registry and helpers. One address (m/44'/60'/0'/0/0) works on
  * every EVM network we support; only the RPC + native token differ.
  */
-import { Buffer } from "buffer/";
 import { createPublicClient, http, type PublicClient, type Chain, formatEther } from "viem";
 import { mainnet, base, bsc } from "viem/chains";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
@@ -63,6 +62,10 @@ export const EVM_CHAINS: Record<EvmChainId, EvmChainMeta> = {
 
 export const EVM_CHAIN_LIST = Object.values(EVM_CHAINS);
 
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 /** Returns a viem PublicClient that talks to our same-origin JSON-RPC proxy. */
 export function evmClient(id: EvmChainId): PublicClient {
   return createPublicClient({
@@ -75,7 +78,7 @@ export function evmClient(id: EvmChainId): PublicClient {
 export function deriveEvmAccount(root: BIP32Interface): PrivateKeyAccount {
   const node = root.derivePath("m/44'/60'/0'/0/0");
   if (!node.privateKey) throw new Error("Failed to derive EVM private key");
-  const hex = Buffer.from(node.privateKey).toString("hex");
+  const hex = bytesToHex(node.privateKey);
   return privateKeyToAccount(`0x${hex}`);
 }
 

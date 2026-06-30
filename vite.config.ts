@@ -7,23 +7,6 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
-  vite: {
-    resolve: {
-      alias: {
-        // Force every transitive `buffer` import (bip32 / bitcoinjs-lib / ecpair)
-        // to use the browser polyfill package. Without this, production builds can
-        // resolve Node's built-in `buffer` to an empty browser shim and crash on
-        // `Buffer.from(...)` during wallet import/create.
-        buffer: "buffer/",
-      },
-    },
-    define: {
-      global: "globalThis",
-    },
-    optimizeDeps: {
-      include: ["buffer"],
-    },
-  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
