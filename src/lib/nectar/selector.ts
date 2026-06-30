@@ -47,7 +47,9 @@ export function assetsForOption(opt: NectarPayOption): SupportedAsset[] {
     if (chain === "eth") return [{ kind: "evm-native", chain: "eth", symbol: "ETH" }];
     if (chain === "base") return [{ kind: "evm-native", chain: "base", symbol: "ETH" }];
     if (chain === "bsc") return [{ kind: "evm-native", chain: "bsc", symbol: "BNB" }];
-    if (chain === "txc") return [{ kind: "txc", symbol: "TXC" }];
+    // TXC tap-to-pay is not supported in this build — merchants rarely list it,
+    // and the TXC send flow has its own fee/UTXO UI we don't want to duplicate
+    // here. Leaving it out means pickBestOption simply skips the option.
   }
 
   // btc / sol / tron / unknown — not supported in this build.
