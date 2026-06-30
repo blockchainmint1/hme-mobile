@@ -34,8 +34,15 @@ export const Route = createFileRoute("/create")({
 function CreatePage() {
   const navigate = useNavigate();
   const { loadFromMemory } = useWallet();
-  const [mnemonic, setMnemonic] = useState("");
-  const words = mnemonic.split(" ");
+  const [mnemonic, setMnemonic] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      return getOrCreateDraftMnemonic();
+    } catch {
+      return "";
+    }
+  });
+  const words = mnemonic ? mnemonic.split(" ") : [];
   const [confirmedBackup, setConfirmedBackup] = useState(false);
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -43,8 +50,14 @@ function CreatePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setMnemonic(getOrCreateDraftMnemonic());
-  }, []);
+    if (!mnemonic) {
+      try {
+        setMnemonic(getOrCreateDraftMnemonic());
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to generate seed phrase");
+      }
+    }
+  }, [mnemonic]);
 
   async function finalize(e: React.FormEvent) {
     e.preventDefault();
