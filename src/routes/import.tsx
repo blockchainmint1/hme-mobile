@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   validateMnemonic,
   normalizeMnemonic,
@@ -40,6 +40,7 @@ const KIND_LABEL: Record<DerivationKind, string> = {
 
 const IMPORT_GAP_LIMIT = 20;
 const IMPORT_MAX_INDEX = 120;
+const IMPORT_PROBE_TIMEOUT_MS = 4500;
 
 interface Candidate {
   kind: DerivationKind;
@@ -138,15 +139,10 @@ function ImportPage() {
   const [passphrase, setPassphrase] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
-  const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
 
   async function finish(kind: DerivationKind) {
     const m = normalizeMnemonic(phrase);
@@ -164,11 +160,20 @@ function ImportPage() {
     }
   }
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  function fallbackCandidates(root: ReturnType<typeof rootFromSeed>): Candidate[] {
+    return (["bip84", "bip49", "bip44"] as DerivationKind[]).map((kind) => ({
+      kind,
+      address: deriveAddress(root, kind, 0, 0).address,
+      txCount: 0,
+      balanceSats: 0,
+      usedAddresses: 0,
+    }));
+  }
+
+  async function submit() {
+    if (busy) return;
     setError(null);
     setCandidates(null);
-    void hydrated;
 
     const m = normalizeMnemonic(phrase);
     if (!validateMnemonic(m)) {
@@ -195,7 +200,7 @@ function ImportPage() {
       // Fast probe first: just address 0 of each kind (3 requests instead of ~360).
       // This works for the vast majority of imports and is mobile-network friendly.
       setStatus("Looking for activity across TEXITcoin address types…");
-      const quickProbes = await Promise.all(
+      const probePromise = Promise.all(
         kinds.map(async (kind) => {
           const first = deriveAddress(root, kind, 0, 0);
           try {
@@ -212,18 +217,24 @@ function ImportPage() {
           }
         }),
       );
+      const quickProbes = await Promise.race([
+        probePromise,
+        new Promise<null>((resolve) => window.setTimeout(() => resolve(null), IMPORT_PROBE_TIMEOUT_MS)),
+      ]);
+
+      if (!quickProbes) {
+        setCandidates(fallbackCandidates(root));
+        setError("The network check is taking too long. Pick a wallet type below to import now.");
+        setBusy(false);
+        setStatus("");
+        return;
+      }
 
       const allFailed = quickProbes.every((p) => p.failed);
       if (allFailed) {
         // Network unreachable — let the user pick manually instead of getting stuck.
         setCandidates(
-          quickProbes.map((p) => ({
-            kind: p.kind,
-            address: p.address,
-            txCount: 0,
-            balanceSats: 0,
-            usedAddresses: 0,
-          })),
+          fallbackCandidates(root),
         );
         setError("Couldn't reach the TEXITcoin network — pick a wallet type below or check your connection and try again.");
         setBusy(false);
@@ -282,7 +293,7 @@ function ImportPage() {
         <p className="mt-2 text-muted-foreground">
           {candidates.some((c) => c.txCount > 0)
             ? "Your seed phrase has activity on multiple address types. Pick the one you want to import."
-            : "We didn't find TEXITcoin activity in the normal scan window. If this is an old wallet, Legacy is usually the best next try; otherwise use Native segwit for a new wallet."}
+            : "If this is from the old TXC Wallet, Legacy is usually the best next try. For a new wallet, choose Native segwit."}
         </p>
         <div className="mt-6 space-y-3">
           {candidates.map((c) => (
@@ -330,7 +341,7 @@ function ImportPage() {
           <CardDescription>12 or 24 words, separated by spaces.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="space-y-4" noValidate>
+          <div className="space-y-4">
             <Textarea
               value={phrase}
               onChange={(e) => setPhrase(e.target.value)}
@@ -414,7 +425,7 @@ function ImportPage() {
             )}
 
 
-            <Button type="submit" disabled={busy} className="w-full">
+            <Button type="button" onClick={submit} disabled={busy} className="w-full">
               {busy ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -424,7 +435,7 @@ function ImportPage() {
                 "Import wallet"
               )}
             </Button>
-          </form>
+          </div>
         </CardContent>
       </Card>
     </main>
