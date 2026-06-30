@@ -102,6 +102,7 @@ export function ScribblePad({
             (e.target as Element).setPointerCapture(e.pointerId);
             drawingRef.current = true;
             lastRef.current = null;
+            onStart?.();
             pushSample(e);
           }}
           onPointerMove={(e) => {
