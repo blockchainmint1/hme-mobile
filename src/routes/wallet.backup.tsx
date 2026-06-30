@@ -8,7 +8,7 @@ import { unlockWallet } from "@/lib/txc/storage";
 import { AlertTriangle, EyeOff, Eye } from "lucide-react";
 
 export const Route = createFileRoute("/wallet/backup")({
-  head: () => ({ meta: [{ title: "Backup — TEXITcoin Wallet" }] }),
+  head: () => ({ meta: [{ title: "Backup — HME Wallet" }] }),
   component: BackupPage,
 });
 

@@ -28,7 +28,7 @@ import {
 } from "@/lib/native/biometric";
 
 export const Route = createFileRoute("/wallet/settings")({
-  head: () => ({ meta: [{ title: "Settings — TEXITcoin Wallet" }] }),
+  head: () => ({ meta: [{ title: "Settings — HME Wallet" }] }),
   component: SettingsPage,
 });
 

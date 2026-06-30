@@ -26,7 +26,7 @@ import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
 export const Route = createFileRoute("/import")({
   head: () => ({
     meta: [
-      { title: "Import wallet — TEXITcoin Wallet" },
+      { title: "Import wallet — HME Wallet" },
       {
         name: "description",
         content: "Import your existing TEXITcoin seed phrase from the old TXC Wallet app.",

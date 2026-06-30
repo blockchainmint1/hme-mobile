@@ -15,7 +15,7 @@ import { TXC_NETWORK } from "@/lib/txc/network";
 import { address as addrLib } from "bitcoinjs-lib";
 
 export const Route = createFileRoute("/wallet/send")({
-  head: () => ({ meta: [{ title: "Send — TEXITcoin Wallet" }] }),
+  head: () => ({ meta: [{ title: "Send — HME Wallet" }] }),
   component: SendPage,
 });
 
