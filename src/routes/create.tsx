@@ -49,7 +49,11 @@ function CreatePage() {
   const [password2, setPassword2] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scribbleProgress, setScribbleProgress] = useState(0);
+  const [locked, setLocked] = useState(false);
 
+  // Pre-generate a draft so we have something to mix into when the user
+  // first taps the pad — but we won't show it until they lock in.
   useEffect(() => {
     if (!mnemonic) {
       try {
