@@ -15,6 +15,10 @@ import { ECPairFactory } from "ecpair";
 import { payments, Psbt } from "bitcoinjs-lib";
 import { TXC_NETWORK, DERIVATION_PATHS, type DerivationKind } from "./network";
 
+if (typeof globalThis !== "undefined" && !(globalThis as { Buffer?: unknown }).Buffer) {
+  (globalThis as { Buffer: typeof Buffer }).Buffer = Buffer;
+}
+
 const bip32 = BIP32Factory(ecc);
 const ECPair = ECPairFactory(ecc);
 
