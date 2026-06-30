@@ -400,10 +400,16 @@ function ImportPage() {
             </Collapsible>
 
             {error && (
-              <div className="flex items-start gap-2 text-sm text-destructive">
-                <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
+              <div
+                ref={(el) => el?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                role="alert"
+                className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+              >
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>{error}</div>
               </div>
             )}
+
 
             <Button type="submit" disabled={busy} className="w-full">
               {busy ? (
