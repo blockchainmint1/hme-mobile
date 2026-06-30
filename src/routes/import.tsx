@@ -342,7 +342,7 @@ function ImportPage() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              disabled={!hydrated || busy}
+              disabled={busy}
               className="font-mono"
               autoFocus
             />
@@ -356,7 +356,7 @@ function ImportPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"
-                  disabled={!hydrated || busy}
+                  disabled={busy}
                   className="mt-1"
                 />
               </div>
@@ -368,7 +368,7 @@ function ImportPage() {
                   value={password2}
                   onChange={(e) => setPassword2(e.target.value)}
                   autoComplete="new-password"
-                  disabled={!hydrated || busy}
+                  disabled={busy}
                   className="mt-1"
                 />
               </div>
@@ -393,7 +393,7 @@ function ImportPage() {
                   onChange={(e) => setPassphrase(e.target.value)}
                   placeholder="Leave blank if you didn't set one"
                   autoComplete="off"
-                  disabled={!hydrated || busy}
+                  disabled={busy}
                   className="mt-1"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -402,6 +402,7 @@ function ImportPage() {
                 </p>
               </div>
             </details>
+
 
             {error && (
               <div
