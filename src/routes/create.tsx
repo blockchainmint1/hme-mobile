@@ -1,15 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { generateMnemonic } from "@/lib/txc/wallet";
+import { generateMnemonic, generateMnemonicFromUserEntropy } from "@/lib/txc/wallet";
 import { saveWallet } from "@/lib/txc/storage";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { AlertTriangle, Copy } from "lucide-react";
+import { AlertTriangle, Copy, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
+import { ScribblePad } from "@/components/wallet/ScribblePad";
 
 // Hold the draft mnemonic in an in-memory module variable instead of
 // sessionStorage. sessionStorage is readable by any script on the origin
