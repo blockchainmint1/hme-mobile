@@ -416,10 +416,8 @@ function ImportPage() {
             )}
 
 
-            <Button type="submit" disabled={busy || !hydrated} className="w-full">
-              {!hydrated ? (
-                "Loading wallet tools…"
-              ) : busy ? (
+            <Button type="submit" disabled={busy} className="w-full">
+              {busy ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {status || "Working…"}
