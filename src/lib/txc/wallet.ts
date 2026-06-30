@@ -8,24 +8,17 @@
  * All crypto runs locally in the browser. Seed material never leaves the device.
  */
 import * as ecc from "@bitcoinerlab/secp256k1";
-import * as bip39 from "bip39";
-import { sha256 } from "@noble/hashes/sha256";
+import {
+  entropyToMnemonic,
+  mnemonicToSeed,
+  validateMnemonic as validateBip39Mnemonic,
+} from "@scure/bip39";
+import { wordlist as englishWordlist } from "@scure/bip39/wordlists/english.js";
 import { BIP32Factory, type BIP32Interface } from "bip32";
-import { Buffer } from "buffer/";
-import { ECPairFactory } from "ecpair";
 import { payments, Psbt } from "bitcoinjs-lib";
 import { TXC_NETWORK, DERIVATION_PATHS, type DerivationKind } from "./network";
 
-if (typeof globalThis !== "undefined" && !(globalThis as { Buffer?: unknown }).Buffer) {
-  (globalThis as unknown as { Buffer: typeof Buffer }).Buffer = Buffer;
-}
-
 const bip32 = BIP32Factory(ecc);
-const ECPair = ECPairFactory(ecc);
-
-function bytesToBinary(bytes: Uint8Array | number[]): string {
-  return Array.from(bytes, (byte) => byte.toString(2).padStart(8, "0")).join("");
-}
 
 function secureRandomBytes(length: number): Uint8Array {
   const crypto = globalThis.crypto;
@@ -33,18 +26,6 @@ function secureRandomBytes(length: number): Uint8Array {
     throw new Error("Secure random generator unavailable on this device.");
   }
   return crypto.getRandomValues(new Uint8Array(length));
-}
-
-function entropyToMnemonic(entropy: Uint8Array): string {
-  const wordlist = bip39.wordlists.english;
-  if (!wordlist?.length) throw new Error("Mnemonic word list unavailable.");
-
-  const entropyBits = bytesToBinary(entropy);
-  const checksumBits = bytesToBinary(sha256(entropy)).slice(0, entropy.length / 4);
-  const bits = `${entropyBits}${checksumBits}`;
-  const words = bits.match(/.{1,11}/g)?.map((chunk) => wordlist[parseInt(chunk, 2)]);
-  if (!words || words.some((word) => !word)) throw new Error("Failed to create seed phrase.");
-  return words.join(" ");
 }
 
 export type AddressKind = DerivationKind;
@@ -72,7 +53,7 @@ export interface UtxoInput {
 
 export function generateMnemonic(strengthBits: 128 | 256 = 128): string {
   if (strengthBits !== 128 && strengthBits !== 256) throw new TypeError("Invalid entropy strength");
-  return entropyToMnemonic(secureRandomBytes(strengthBits / 8));
+  return entropyToMnemonic(secureRandomBytes(strengthBits / 8), englishWordlist);
 }
 
 /**
@@ -87,15 +68,38 @@ export function generateMnemonicFromUserEntropy(
 ): string {
   if (strengthBits !== 128 && strengthBits !== 256) throw new TypeError("Invalid entropy strength");
   const len = strengthBits / 8;
-  const userHash = sha256(userBytes);
   const secure = secureRandomBytes(len);
   const mixed = new Uint8Array(len);
-  for (let i = 0; i < len; i++) mixed[i] = secure[i] ^ userHash[i % userHash.length];
-  return entropyToMnemonic(mixed);
+  // Use a compact synchronous hash mixer without Node Buffer/bip39 dependencies.
+  // FNV-style diffusion is only for mixing user scribble bytes; the final entropy
+  // remains cryptographically secure because it is XOR'd with secure randomness.
+  let h = 0x811c9dc5;
+  for (const b of userBytes) {
+    h ^= b;
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  for (let i = 0; i < len; i++) {
+    h ^= i + userBytes.length;
+    h = Math.imul(h, 0x01000193) >>> 0;
+    mixed[i] = secure[i] ^ ((h >>> ((i % 4) * 8)) & 0xff);
+  }
+  return entropyToMnemonic(mixed, englishWordlist);
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const clean = hex.trim();
+  if (clean.length % 2 !== 0) throw new Error("Invalid hex string");
+  const out = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    const byte = Number.parseInt(clean.slice(i * 2, i * 2 + 2), 16);
+    if (Number.isNaN(byte)) throw new Error("Invalid hex string");
+    out[i] = byte;
+  }
+  return out;
 }
 
 export function validateMnemonic(phrase: string): boolean {
-  return bip39.validateMnemonic(phrase.trim().toLowerCase().replace(/\s+/g, " "));
+  return validateBip39Mnemonic(phrase.trim().toLowerCase().replace(/\s+/g, " "), englishWordlist);
 }
 
 export function normalizeMnemonic(phrase: string): string {
@@ -103,13 +107,11 @@ export function normalizeMnemonic(phrase: string): string {
 }
 
 export async function seedFromMnemonic(phrase: string, passphrase = ""): Promise<Uint8Array> {
-  // bip39 returns Buffer in Node; in the browser shim it returns Uint8Array-like.
-  const buf = await bip39.mnemonicToSeed(normalizeMnemonic(phrase), passphrase);
-  return new Uint8Array(buf);
+  return new Uint8Array(await mnemonicToSeed(normalizeMnemonic(phrase), passphrase));
 }
 
 export function rootFromSeed(seed: Uint8Array): BIP32Interface {
-  return bip32.fromSeed(Buffer.from(seed), TXC_NETWORK);
+  return bip32.fromSeed(seed, TXC_NETWORK);
 }
 
 function pathFor(kind: AddressKind, change: 0 | 1, index: number): string {
@@ -117,7 +119,7 @@ function pathFor(kind: AddressKind, change: 0 | 1, index: number): string {
 }
 
 function deriveAddressFromNode(node: BIP32Interface, kind: AddressKind): string {
-  const pubkey = Buffer.from(node.publicKey);
+  const pubkey = node.publicKey;
   switch (kind) {
     case "bip84": {
       const p = payments.p2wpkh({ pubkey, network: TXC_NETWORK });
@@ -191,21 +193,21 @@ export function buildAndSignTx(args: {
     if (kind === "bip84") {
       if (!u.witnessScriptHex) throw new Error("witnessScriptHex required for BIP84 input");
       base.witnessUtxo = {
-        script: Buffer.from(u.witnessScriptHex, "hex"),
+        script: hexToBytes(u.witnessScriptHex),
         value: BigInt(u.value),
       };
     } else if (kind === "bip49") {
       if (!u.witnessScriptHex) throw new Error("witnessScriptHex required for BIP49 input");
       const node = root.derivePath(`${DERIVATION_PATHS[kind]}/${u.change}/${u.index}`);
-      const inner = payments.p2wpkh({ pubkey: Buffer.from(node.publicKey), network: TXC_NETWORK });
+      const inner = payments.p2wpkh({ pubkey: node.publicKey, network: TXC_NETWORK });
       base.witnessUtxo = {
-        script: Buffer.from(u.witnessScriptHex, "hex"),
+        script: hexToBytes(u.witnessScriptHex),
         value: BigInt(u.value),
       };
-      base.redeemScript = inner.output as Buffer;
+      base.redeemScript = inner.output;
     } else {
       if (!u.nonWitnessUtxoHex) throw new Error("nonWitnessUtxoHex required for legacy input");
-      base.nonWitnessUtxo = Buffer.from(u.nonWitnessUtxoHex, "hex");
+      base.nonWitnessUtxo = hexToBytes(u.nonWitnessUtxoHex);
     }
     psbt.addInput(base);
   }
@@ -218,10 +220,9 @@ export function buildAndSignTx(args: {
   inputs.forEach((u, i) => {
     const node = root.derivePath(`${DERIVATION_PATHS[kind]}/${u.change}/${u.index}`);
     if (!node.privateKey) throw new Error("Missing private key during signing");
-    const keypair = ECPair.fromPrivateKey(Buffer.from(node.privateKey), { network: TXC_NETWORK });
     psbt.signInput(i, {
-      publicKey: Buffer.from(keypair.publicKey),
-      sign: (hash) => Buffer.from(keypair.sign(hash)),
+      publicKey: node.publicKey,
+      sign: (hash) => ecc.sign(hash, node.privateKey!),
     });
   });
 
