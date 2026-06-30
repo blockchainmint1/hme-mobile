@@ -1,13 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useMemo } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
 import { formatTxc, formatFiat, satsToTxc } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
+import { getAllPricesUsd } from "@/lib/chains/prices.functions";
+import { EVM_CHAIN_LIST, deriveEvmAccount, evmClient, formatEth } from "@/lib/chains/evm";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowDown, ArrowUp, ExternalLink, RefreshCw, Send, QrCode } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, ExternalLink, RefreshCw, Send, QrCode } from "lucide-react";
 import { explorerTxUrl, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 
 export const Route = createFileRoute("/wallet/")({
