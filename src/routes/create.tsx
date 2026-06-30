@@ -11,14 +11,21 @@ import { AlertTriangle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
 
-const DRAFT_MNEMONIC_KEY = "txc.create.mnemonic";
+// Hold the draft mnemonic in an in-memory module variable instead of
+// sessionStorage. sessionStorage is readable by any script on the origin
+// (extensions, XSS, devtools) — the seed phrase must never live there.
+// Trade-off: a hard refresh during creation discards the draft and the user
+// generates a fresh one. That is the correct security posture.
+let draftMnemonic: string | null = null;
 
 function getOrCreateDraftMnemonic() {
-  const existing = sessionStorage.getItem(DRAFT_MNEMONIC_KEY);
-  if (existing) return existing;
-  const next = generateMnemonic(256);
-  sessionStorage.setItem(DRAFT_MNEMONIC_KEY, next);
-  return next;
+  if (draftMnemonic) return draftMnemonic;
+  draftMnemonic = generateMnemonic(256);
+  return draftMnemonic;
+}
+
+function clearDraftMnemonic() {
+  draftMnemonic = null;
 }
 
 export const Route = createFileRoute("/create")({
@@ -76,7 +83,7 @@ function CreatePage() {
       const u = { mnemonic, passphrase: "", kind: "bip84" as const, label: "Main wallet" };
       await saveWallet(u, password);
       await loadFromMemory(u);
-      sessionStorage.removeItem(DRAFT_MNEMONIC_KEY);
+      clearDraftMnemonic();
       navigate({ to: "/wallet" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save wallet");
