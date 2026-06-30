@@ -191,30 +191,75 @@ function ImportPage() {
       const root = rootFromSeed(seed);
       const kinds: DerivationKind[] = ["bip84", "bip49", "bip44"];
 
+      // Fast probe first: just address 0 of each kind (3 requests instead of ~360).
+      // This works for the vast majority of imports and is mobile-network friendly.
       setStatus("Looking for activity across TEXITcoin address types…");
-      const probes = await Promise.all(kinds.map((kind) => scanKindForImport(root, kind)));
+      const quickProbes = await Promise.all(
+        kinds.map(async (kind) => {
+          const first = deriveAddress(root, kind, 0, 0);
+          try {
+            const s = await getAddressStats(first.address);
+            const txc = s.chain_stats.tx_count + s.mempool_stats.tx_count;
+            const bal =
+              s.chain_stats.funded_txo_sum -
+              s.chain_stats.spent_txo_sum +
+              s.mempool_stats.funded_txo_sum -
+              s.mempool_stats.spent_txo_sum;
+            return { kind, address: first.address, txCount: txc, balanceSats: bal, usedAddresses: txc > 0 ? 1 : 0, failed: false };
+          } catch {
+            return { kind, address: first.address, txCount: 0, balanceSats: 0, usedAddresses: 0, failed: true };
+          }
+        }),
+      );
 
-      const failedChecks = probes.reduce((sum, p) => sum + p.failedChecks, 0);
-      const checkedAddresses = probes.reduce((sum, p) => sum + p.checkedAddresses, 0);
-      if (checkedAddresses > 0 && failedChecks === checkedAddresses) {
-        throw new Error("Couldn't reach the TEXITcoin network. Check your connection and try again.");
-      }
-
-      const active = probes.filter((p) => p.txCount > 0);
-
-      if (active.length === 0) {
-        // No history found — don't silently choose the wrong address type.
-        setCandidates(probes);
+      const allFailed = quickProbes.every((p) => p.failed);
+      if (allFailed) {
+        // Network unreachable — let the user pick manually instead of getting stuck.
+        setCandidates(
+          quickProbes.map((p) => ({
+            kind: p.kind,
+            address: p.address,
+            txCount: 0,
+            balanceSats: 0,
+            usedAddresses: 0,
+          })),
+        );
+        setError("Couldn't reach the TEXITcoin network — pick a wallet type below or check your connection and try again.");
         setBusy(false);
         setStatus("");
         return;
       }
-      if (active.length === 1) {
-        await finish(active[0].kind);
+
+      const activeQuick = quickProbes.filter((p) => !p.failed && (p.txCount > 0 || p.balanceSats > 0));
+
+      // If quick probe found exactly one kind with activity, deep-scan only it.
+      if (activeQuick.length === 1) {
+        setStatus("Found your wallet — checking the full history…");
+        const full = await scanKindForImport(root, activeQuick[0].kind);
+        await finish(full.kind);
         return;
       }
-      // Multiple match — let user pick.
-      setCandidates(active);
+
+      // If quick probe found multiple, deep-scan all that matched.
+      if (activeQuick.length > 1) {
+        setStatus("Found multiple wallet types — checking each…");
+        const deep = await Promise.all(activeQuick.map((p) => scanKindForImport(root, p.kind)));
+        setCandidates(deep);
+        setBusy(false);
+        setStatus("");
+        return;
+      }
+
+      // No activity at index 0 — show picker (covers brand-new seeds and unusual gaps).
+      setCandidates(
+        quickProbes.map((p) => ({
+          kind: p.kind,
+          address: p.address,
+          txCount: 0,
+          balanceSats: 0,
+          usedAddresses: 0,
+        })),
+      );
       setBusy(false);
       setStatus("");
     } catch (err) {
@@ -223,6 +268,7 @@ function ImportPage() {
       setStatus("");
     }
   }
+
 
   if (candidates) {
     return (
@@ -354,10 +400,16 @@ function ImportPage() {
             </Collapsible>
 
             {error && (
-              <div className="flex items-start gap-2 text-sm text-destructive">
-                <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
+              <div
+                ref={(el) => el?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                role="alert"
+                className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+              >
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>{error}</div>
               </div>
             )}
+
 
             <Button type="submit" disabled={busy} className="w-full">
               {busy ? (
