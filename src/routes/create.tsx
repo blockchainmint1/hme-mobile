@@ -105,6 +105,43 @@ function CreatePage() {
         trust.
       </p>
 
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-primary" /> Add your own randomness (optional)
+          </CardTitle>
+          <CardDescription>
+            Scribble in the pad to mix your own entropy into the seed below.
+            Touching the pad immediately generates a new seed phrase — any
+            words you already wrote down will no longer be valid.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScribblePad
+            onStart={() => {
+              try {
+                // Any touch invalidates the prior phrase. Regenerate from
+                // fresh secure randomness right away so the user sees new
+                // words the instant they tap.
+                draftMnemonic = generateMnemonic(256);
+                setMnemonic(draftMnemonic);
+                setConfirmedBackup(false);
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Could not regenerate seed");
+              }
+            }}
+            onEntropy={(bytes) => {
+              try {
+                draftMnemonic = generateMnemonicFromUserEntropy(bytes, 256);
+                setMnemonic(draftMnemonic);
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Could not mix entropy");
+              }
+            }}
+          />
+        </CardContent>
+      </Card>
+
       <Card className="mt-6 border-amber-700/40 bg-amber-950/10">
         <CardContent className="pt-6">
           {mnemonic ? (
@@ -146,31 +183,6 @@ function CreatePage() {
         </CardContent>
       </Card>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4 text-primary" /> Add your own randomness (optional)
-          </CardTitle>
-          <CardDescription>
-            Scribble below to mix your own entropy into the seed. We XOR your
-            strokes with secure randomness, so it can only make the seed
-            stronger — never weaker.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ScribblePad
-            onEntropy={(bytes) => {
-              try {
-                draftMnemonic = generateMnemonicFromUserEntropy(bytes, 256);
-                setMnemonic(draftMnemonic);
-                toast.success("Seed regenerated with your scribbles mixed in.");
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Could not mix entropy");
-              }
-            }}
-          />
-        </CardContent>
-      </Card>
 
       <Card className="mt-6">
         <CardHeader>
