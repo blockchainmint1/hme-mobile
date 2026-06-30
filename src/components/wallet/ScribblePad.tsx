@@ -29,8 +29,8 @@ export function ScribblePad({
   const drawingRef = useRef(false);
   const lastRef = useRef<{ x: number; y: number } | null>(null);
   const activePointerRef = useRef<number | null>(null);
-  const progressFrameRef = useRef<number | null>(null);
   const hasStartedStrokeRef = useRef(false);
+  const ignoreTouchUntilRef = useRef(0);
   const [ratio, setRatio] = useState(0);
 
   useEffect(() => {
@@ -98,13 +98,9 @@ export function ScribblePad({
 
   function updateProgress() {
     const r = Math.min(1, bufferRef.current.length / TARGET_BYTES);
-    if (progressFrameRef.current !== null) return;
-    progressFrameRef.current = window.requestAnimationFrame(() => {
-      progressFrameRef.current = null;
-      setRatio(r);
-      onProgressRef.current?.(r);
-      onEntropyRef.current(new Uint8Array(bufferRef.current));
-    });
+    setRatio(r);
+    onProgressRef.current?.(r);
+    onEntropyRef.current(new Uint8Array(bufferRef.current));
   }
 
   // Core sample push — takes raw client coordinates (already client-space).
@@ -162,6 +158,7 @@ export function ScribblePad({
 
     const onPointerDown = (e: PointerEvent) => {
       e.preventDefault();
+      ignoreTouchUntilRef.current = performance.now() + 700;
       activePointerRef.current = e.pointerId;
       try {
         c.setPointerCapture(e.pointerId);
@@ -194,62 +191,52 @@ export function ScribblePad({
     c.addEventListener("pointercancel", onPointerEnd, { passive: false });
     c.addEventListener("lostpointercapture", endStroke);
 
-    // Touch Events fallback for old WKWebView builds without Pointer Events.
-    if (!("PointerEvent" in window)) {
-      let activeTouchId: number | null = null;
+    // Touch Events are intentionally bound even when PointerEvent exists:
+    // several Capacitor/WKWebView combinations expose PointerEvent but only
+    // reliably deliver TouchEvent for canvas gestures.
+    let activeTouchId: number | null = null;
 
-      const getActiveTouch = (touches: TouchList) => {
-        if (activeTouchId === null) return touches[0] ?? null;
-        for (let i = 0; i < touches.length; i += 1) {
-          if (touches[i].identifier === activeTouchId) return touches[i];
-        }
-        return null;
-      };
-      const forceOf = (t: Touch) =>
-        (t as Touch & { force?: number }).force ??
-        (t as Touch & { webkitForce?: number }).webkitForce ??
-        0.5;
-      const onTouchStart = (e: TouchEvent) => {
-        const t = getActiveTouch(e.changedTouches);
-        if (!t) return;
-        e.preventDefault();
-        activeTouchId = t.identifier;
-        beginStroke();
-        pushAt(t.clientX, t.clientY, forceOf(t));
-      };
-      const onTouchMove = (e: TouchEvent) => {
-        if (!drawingRef.current) return;
-        const t = getActiveTouch(e.changedTouches);
-        if (!t) return;
-        e.preventDefault();
-        pushAt(t.clientX, t.clientY, forceOf(t));
-      };
-      const onTouchEnd = (e: TouchEvent) => {
-        if (activeTouchId === null) return;
-        const t = getActiveTouch(e.changedTouches);
-        if (!t) return;
-        e.preventDefault();
-        activeTouchId = null;
-        endStroke();
-      };
+    const shouldIgnoreTouch = () => performance.now() < ignoreTouchUntilRef.current;
+    const getActiveTouch = (touches: TouchList) => {
+      if (activeTouchId === null) return touches[0] ?? null;
+      for (let i = 0; i < touches.length; i += 1) {
+        if (touches[i].identifier === activeTouchId) return touches[i];
+      }
+      return null;
+    };
+    const forceOf = (t: Touch) =>
+      (t as Touch & { force?: number }).force ??
+      (t as Touch & { webkitForce?: number }).webkitForce ??
+      0.5;
+    const onTouchStart = (e: TouchEvent) => {
+      if (shouldIgnoreTouch()) return;
+      const t = getActiveTouch(e.changedTouches);
+      if (!t) return;
+      e.preventDefault();
+      activeTouchId = t.identifier;
+      beginStroke();
+      pushAt(t.clientX, t.clientY, forceOf(t));
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (shouldIgnoreTouch() || !drawingRef.current) return;
+      const t = getActiveTouch(e.changedTouches);
+      if (!t) return;
+      e.preventDefault();
+      pushAt(t.clientX, t.clientY, forceOf(t));
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (shouldIgnoreTouch() || activeTouchId === null) return;
+      const t = getActiveTouch(e.changedTouches);
+      if (!t) return;
+      e.preventDefault();
+      activeTouchId = null;
+      endStroke();
+    };
 
-      c.addEventListener("touchstart", onTouchStart, { passive: false });
-      c.addEventListener("touchmove", onTouchMove, { passive: false });
-      c.addEventListener("touchend", onTouchEnd, { passive: false });
-      c.addEventListener("touchcancel", onTouchEnd, { passive: false });
-
-      return () => {
-        c.removeEventListener("pointerdown", onPointerDown);
-        c.removeEventListener("pointermove", onPointerMove);
-        c.removeEventListener("pointerup", onPointerEnd);
-        c.removeEventListener("pointercancel", onPointerEnd);
-        c.removeEventListener("lostpointercapture", endStroke);
-        c.removeEventListener("touchstart", onTouchStart);
-        c.removeEventListener("touchmove", onTouchMove);
-        c.removeEventListener("touchend", onTouchEnd);
-        c.removeEventListener("touchcancel", onTouchEnd);
-      };
-    }
+    c.addEventListener("touchstart", onTouchStart, { passive: false });
+    c.addEventListener("touchmove", onTouchMove, { passive: false });
+    c.addEventListener("touchend", onTouchEnd, { passive: false });
+    c.addEventListener("touchcancel", onTouchEnd, { passive: false });
 
     return () => {
       c.removeEventListener("pointerdown", onPointerDown);
@@ -257,7 +244,10 @@ export function ScribblePad({
       c.removeEventListener("pointerup", onPointerEnd);
       c.removeEventListener("pointercancel", onPointerEnd);
       c.removeEventListener("lostpointercapture", endStroke);
-      if (progressFrameRef.current !== null) window.cancelAnimationFrame(progressFrameRef.current);
+      c.removeEventListener("touchstart", onTouchStart);
+      c.removeEventListener("touchmove", onTouchMove);
+      c.removeEventListener("touchend", onTouchEnd);
+      c.removeEventListener("touchcancel", onTouchEnd);
     };
     // Listener callbacks intentionally read current props through refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
