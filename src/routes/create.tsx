@@ -108,7 +108,7 @@ function CreatePage() {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Sparkles className="h-4 w-4 text-primary" /> Add your own randomness (optional)
+            <Sparkles className="h-4 w-4 text-primary" /> Add your own randomness
           </CardTitle>
           <CardDescription>
             Scribble in the pad to mix your own entropy into the seed below.
