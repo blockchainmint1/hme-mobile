@@ -158,7 +158,7 @@ function Home() {
             <CardHeader>
               <CardTitle>Create a new wallet</CardTitle>
               <CardDescription>
-                Generate a fresh 12-word seed phrase. You'll back it up on the next screen.
+                Generate a fresh 24-word seed phrase. You'll back it up on the next screen.
               </CardDescription>
             </CardHeader>
             <CardContent>
