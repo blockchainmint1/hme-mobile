@@ -15,12 +15,10 @@ import {
 } from "@scure/bip39";
 import { wordlist as englishWordlist } from "@scure/bip39/wordlists/english.js";
 import { BIP32Factory, type BIP32Interface } from "bip32";
-import { ECPairFactory } from "ecpair";
 import { payments, Psbt } from "bitcoinjs-lib";
 import { TXC_NETWORK, DERIVATION_PATHS, type DerivationKind } from "./network";
 
 const bip32 = BIP32Factory(ecc);
-const ECPair = ECPairFactory(ecc);
 
 function secureRandomBytes(length: number): Uint8Array {
   const crypto = globalThis.crypto;
@@ -222,10 +220,9 @@ export function buildAndSignTx(args: {
   inputs.forEach((u, i) => {
     const node = root.derivePath(`${DERIVATION_PATHS[kind]}/${u.change}/${u.index}`);
     if (!node.privateKey) throw new Error("Missing private key during signing");
-    const keypair = ECPair.fromPrivateKey(node.privateKey, { network: TXC_NETWORK });
     psbt.signInput(i, {
-      publicKey: keypair.publicKey,
-      sign: (hash) => keypair.sign(hash),
+      publicKey: node.publicKey,
+      sign: (hash) => ecc.sign(hash, node.privateKey!),
     });
   });
 
