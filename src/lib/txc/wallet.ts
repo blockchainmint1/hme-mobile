@@ -75,6 +75,25 @@ export function generateMnemonic(strengthBits: 128 | 256 = 128): string {
   return entropyToMnemonic(secureRandomBytes(strengthBits / 8));
 }
 
+/**
+ * Generate a mnemonic from user-supplied entropy (e.g. screen scribbles)
+ * XOR'd with cryptographically secure randomness. If the user input is
+ * predictable, the result is still as strong as `generateMnemonic`. If the
+ * user input is genuinely unpredictable, the result is strictly stronger.
+ */
+export function generateMnemonicFromUserEntropy(
+  userBytes: Uint8Array,
+  strengthBits: 128 | 256 = 256,
+): string {
+  if (strengthBits !== 128 && strengthBits !== 256) throw new TypeError("Invalid entropy strength");
+  const len = strengthBits / 8;
+  const userHash = sha256(userBytes);
+  const secure = secureRandomBytes(len);
+  const mixed = new Uint8Array(len);
+  for (let i = 0; i < len; i++) mixed[i] = secure[i] ^ userHash[i % userHash.length];
+  return entropyToMnemonic(mixed);
+}
+
 export function validateMnemonic(phrase: string): boolean {
   return bip39.validateMnemonic(phrase.trim().toLowerCase().replace(/\s+/g, " "));
 }

@@ -1,15 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { generateMnemonic } from "@/lib/txc/wallet";
+import { generateMnemonic, generateMnemonicFromUserEntropy } from "@/lib/txc/wallet";
 import { saveWallet } from "@/lib/txc/storage";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { AlertTriangle, Copy } from "lucide-react";
+import { AlertTriangle, Copy, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
+import { ScribblePad } from "@/components/wallet/ScribblePad";
 
 // Hold the draft mnemonic in an in-memory module variable instead of
 // sessionStorage. sessionStorage is readable by any script on the origin
@@ -142,6 +143,32 @@ function CreatePage() {
           >
             <Copy className="h-3.5 w-3.5" /> Copy to clipboard
           </button>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-primary" /> Add your own randomness (optional)
+          </CardTitle>
+          <CardDescription>
+            Scribble below to mix your own entropy into the seed. We XOR your
+            strokes with secure randomness, so it can only make the seed
+            stronger — never weaker.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScribblePad
+            onEntropy={(bytes) => {
+              try {
+                draftMnemonic = generateMnemonicFromUserEntropy(bytes, 256);
+                setMnemonic(draftMnemonic);
+                toast.success("Seed regenerated with your scribbles mixed in.");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Could not mix entropy");
+              }
+            }}
+          />
         </CardContent>
       </Card>
 
