@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   validateMnemonic,
   normalizeMnemonic,
@@ -16,13 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import type { DerivationKind } from "@/lib/txc/network";
-import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/import")({
   head: () => ({
@@ -143,11 +138,15 @@ function ImportPage() {
   const [passphrase, setPassphrase] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   async function finish(kind: DerivationKind) {
     const m = normalizeMnemonic(phrase);
@@ -169,6 +168,10 @@ function ImportPage() {
     e.preventDefault();
     setError(null);
     setCandidates(null);
+    if (!hydrated) {
+      setError("Wallet tools are still loading. Try again in a second.");
+      return;
+    }
     const m = normalizeMnemonic(phrase);
     if (!validateMnemonic(m)) {
       setError("That doesn't look like a valid 12 or 24-word seed phrase.");
@@ -329,7 +332,7 @@ function ImportPage() {
           <CardDescription>12 or 24 words, separated by spaces.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={submit} className="space-y-4">
+          <form onSubmit={submit} className="space-y-4" noValidate>
             <Textarea
               value={phrase}
               onChange={(e) => setPhrase(e.target.value)}
@@ -339,6 +342,7 @@ function ImportPage() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
+              disabled={!hydrated || busy}
               className="font-mono"
               autoFocus
             />
@@ -352,6 +356,7 @@ function ImportPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="new-password"
+                  disabled={!hydrated || busy}
                   className="mt-1"
                 />
               </div>
@@ -363,6 +368,7 @@ function ImportPage() {
                   value={password2}
                   onChange={(e) => setPassword2(e.target.value)}
                   autoComplete="new-password"
+                  disabled={!hydrated || busy}
                   className="mt-1"
                 />
               </div>
@@ -372,14 +378,11 @@ function ImportPage() {
               phrase.
             </p>
 
-            <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-              <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-                <ChevronDown
-                  className={`h-3 w-3 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
-                />
-                Advanced
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-3">
+            <details className="rounded-md border border-border bg-muted/30 p-3 text-sm">
+              <summary className="cursor-pointer font-medium text-foreground">
+                Advanced seed options
+              </summary>
+              <div className="pt-3">
                 <Label htmlFor="bip39pp" className="text-xs">
                   BIP39 passphrase (25th word)
                 </Label>
@@ -390,14 +393,15 @@ function ImportPage() {
                   onChange={(e) => setPassphrase(e.target.value)}
                   placeholder="Leave blank if you didn't set one"
                   autoComplete="off"
+                  disabled={!hydrated || busy}
                   className="mt-1"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   Only fill this in if you explicitly set a passphrase when you first created
                   your wallet. Almost nobody does.
                 </p>
-              </CollapsibleContent>
-            </Collapsible>
+              </div>
+            </details>
 
             {error && (
               <div
@@ -411,8 +415,10 @@ function ImportPage() {
             )}
 
 
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? (
+            <Button type="submit" disabled={busy || !hydrated} className="w-full">
+              {!hydrated ? (
+                "Loading wallet tools…"
+              ) : busy ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {status || "Working…"}
