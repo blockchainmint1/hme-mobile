@@ -29,8 +29,8 @@ export function ScribblePad({
   const drawingRef = useRef(false);
   const lastRef = useRef<{ x: number; y: number } | null>(null);
   const activePointerRef = useRef<number | null>(null);
+  const activeTouchIdRef = useRef<number | null>(null);
   const hasStartedStrokeRef = useRef(false);
-  const ignoreTouchUntilRef = useRef(0);
   const [ratio, setRatio] = useState(0);
 
   useEffect(() => {
@@ -140,6 +140,7 @@ export function ScribblePad({
   function endStroke() {
     drawingRef.current = false;
     activePointerRef.current = null;
+    activeTouchIdRef.current = null;
     lastRef.current = null;
     if (bufferRef.current.length > 0) {
       const r = Math.min(1, bufferRef.current.length / TARGET_BYTES);
@@ -149,9 +150,9 @@ export function ScribblePad({
     }
   }
 
-  // Bind native Pointer Events first. iOS/Android WebViews can drop React's
-  // synthetic touch path inside scroll containers, while native listeners with
-  // preventDefault keep the canvas in charge of the gesture.
+  // Bind native events and keep move/end listeners on window. On Samsung /
+  // Android WebView, touch starts on the canvas but move events can be
+  // retargeted to the scrolling page, so canvas-only move handlers miss them.
   useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
@@ -160,7 +161,6 @@ export function ScribblePad({
 
     const onPointerDown = (e: PointerEvent) => {
       e.preventDefault();
-      if (pointerLooksLikeTouch(e)) ignoreTouchUntilRef.current = performance.now() + 700;
       activePointerRef.current = e.pointerId;
       // Pointer capture is flaky on mobile WebViews and can immediately fire
       // lostpointercapture, ending the stroke. It is only useful for desktop
@@ -193,12 +193,11 @@ export function ScribblePad({
     };
 
     c.addEventListener("pointerdown", onPointerDown, { passive: false });
-    c.addEventListener("pointermove", onPointerMove, { passive: false });
-    c.addEventListener("pointerup", onPointerEnd, { passive: false });
-    c.addEventListener("pointercancel", onPointerEnd, { passive: false });
+    window.addEventListener("pointermove", onPointerMove, { passive: false });
+    window.addEventListener("pointerup", onPointerEnd, { passive: false });
+    window.addEventListener("pointercancel", onPointerEnd, { passive: false });
     const onLostPointerCapture = () => {
-      // Ignore mobile capture glitches; pointerup/touchend will finish it.
-      if (ignoreTouchUntilRef.current > performance.now()) return;
+      if (activePointerRef.current !== null && drawingRef.current) return;
       endStroke();
     };
 
@@ -207,13 +206,10 @@ export function ScribblePad({
     // Touch Events are intentionally bound even when PointerEvent exists:
     // several Capacitor/WKWebView combinations expose PointerEvent but only
     // reliably deliver TouchEvent for canvas gestures.
-    let activeTouchId: number | null = null;
-
-    const shouldIgnoreTouch = () => performance.now() < ignoreTouchUntilRef.current;
     const getActiveTouch = (touches: TouchList) => {
-      if (activeTouchId === null) return touches[0] ?? null;
+      if (activeTouchIdRef.current === null) return touches[0] ?? null;
       for (let i = 0; i < touches.length; i += 1) {
-        if (touches[i].identifier === activeTouchId) return touches[i];
+        if (touches[i].identifier === activeTouchIdRef.current) return touches[i];
       }
       return null;
     };
@@ -222,45 +218,66 @@ export function ScribblePad({
       (t as Touch & { webkitForce?: number }).webkitForce ??
       0.5;
     const onTouchStart = (e: TouchEvent) => {
-      if (shouldIgnoreTouch()) return;
       const t = getActiveTouch(e.changedTouches);
       if (!t) return;
       e.preventDefault();
-      activeTouchId = t.identifier;
+      activeTouchIdRef.current = t.identifier;
       beginStroke();
       pushAt(t.clientX, t.clientY, forceOf(t));
     };
     const onTouchMove = (e: TouchEvent) => {
-      if (shouldIgnoreTouch() || !drawingRef.current) return;
-      const t = getActiveTouch(e.changedTouches);
+      if (!drawingRef.current) return;
+      const t = getActiveTouch(e.touches.length ? e.touches : e.changedTouches);
       if (!t) return;
       e.preventDefault();
       pushAt(t.clientX, t.clientY, forceOf(t));
     };
     const onTouchEnd = (e: TouchEvent) => {
-      if (shouldIgnoreTouch() || activeTouchId === null) return;
+      if (activeTouchIdRef.current === null) return;
       const t = getActiveTouch(e.changedTouches);
       if (!t) return;
       e.preventDefault();
-      activeTouchId = null;
       endStroke();
     };
 
     c.addEventListener("touchstart", onTouchStart, { passive: false });
-    c.addEventListener("touchmove", onTouchMove, { passive: false });
-    c.addEventListener("touchend", onTouchEnd, { passive: false });
-    c.addEventListener("touchcancel", onTouchEnd, { passive: false });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", onTouchEnd, { passive: false });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: false });
+
+    const onMouseDown = (e: MouseEvent) => {
+      e.preventDefault();
+      beginStroke();
+      pushAt(e.clientX, e.clientY, 0.5);
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      if (!drawingRef.current || activePointerRef.current !== null || activeTouchIdRef.current !== null) return;
+      e.preventDefault();
+      pushAt(e.clientX, e.clientY, 0.5);
+    };
+    const onMouseUp = (e: MouseEvent) => {
+      if (!drawingRef.current || activePointerRef.current !== null || activeTouchIdRef.current !== null) return;
+      e.preventDefault();
+      endStroke();
+    };
+
+    c.addEventListener("mousedown", onMouseDown, { passive: false });
+    window.addEventListener("mousemove", onMouseMove, { passive: false });
+    window.addEventListener("mouseup", onMouseUp, { passive: false });
 
     return () => {
       c.removeEventListener("pointerdown", onPointerDown);
-      c.removeEventListener("pointermove", onPointerMove);
-      c.removeEventListener("pointerup", onPointerEnd);
-      c.removeEventListener("pointercancel", onPointerEnd);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerEnd);
+      window.removeEventListener("pointercancel", onPointerEnd);
       c.removeEventListener("lostpointercapture", onLostPointerCapture);
       c.removeEventListener("touchstart", onTouchStart);
-      c.removeEventListener("touchmove", onTouchMove);
-      c.removeEventListener("touchend", onTouchEnd);
-      c.removeEventListener("touchcancel", onTouchEnd);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
+      c.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
     };
     // Listener callbacks intentionally read current props through refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -271,6 +288,7 @@ export function ScribblePad({
     bufferRef.current = [];
     lastRef.current = null;
     activePointerRef.current = null;
+    activeTouchIdRef.current = null;
     hasStartedStrokeRef.current = false;
     setRatio(0);
     onProgressRef.current?.(0);
@@ -279,7 +297,10 @@ export function ScribblePad({
 
   return (
     <div className="space-y-2">
-      <div className="relative rounded-lg border border-border bg-background/60 overflow-hidden">
+      <div
+        className="relative rounded-lg border border-border bg-background/60 overflow-hidden"
+        style={{ touchAction: "none", overscrollBehavior: "contain" }}
+      >
         <canvas
           ref={canvasRef}
           className="block h-56 w-full cursor-crosshair select-none"
