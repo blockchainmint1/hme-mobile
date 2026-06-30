@@ -8,7 +8,7 @@ import txcIcon from "@/assets/txc-icon-512.png.asset.json";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
-    meta: [{ title: "Wallet — TEXITcoin" }],
+    meta: [{ title: "Wallet — HME Wallet" }],
   }),
   component: WalletLayout,
 });
