@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { AlertTriangle, Copy, Sparkles } from "lucide-react";
+import { AlertTriangle, Check, Copy, Lock, RotateCcw, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
 import { ScribblePad } from "@/components/wallet/ScribblePad";
