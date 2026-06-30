@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 
 /** Bytes of raw movement data to collect before we call it "enough". */
-const TARGET_BYTES = 512;
+const TARGET_BYTES = 64;
 
 /**
  * Captures pointer movement entropy. We accumulate (x, y, t, pressure) bytes
@@ -22,6 +22,7 @@ export function ScribblePad({
   onProgress?: (ratio: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const padRef = useRef<HTMLDivElement>(null);
   const onEntropyRef = useRef(onEntropy);
   const onStartRef = useRef(onStart);
   const onProgressRef = useRef(onProgress);
@@ -51,7 +52,8 @@ export function ScribblePad({
 
   function resize() {
     const c = canvasRef.current;
-    if (!c) return;
+    const pad = padRef.current;
+    if (!c || !pad) return;
     const dpr = window.devicePixelRatio || 1;
     const rect = c.getBoundingClientRect();
     c.width = Math.floor(rect.width * dpr);
@@ -155,7 +157,8 @@ export function ScribblePad({
   // retargeted to the scrolling page, so canvas-only move handlers miss them.
   useEffect(() => {
     const c = canvasRef.current;
-    if (!c) return;
+    const pad = padRef.current;
+    if (!c || !pad) return;
 
     const pointerLooksLikeTouch = (e: PointerEvent) => e.pointerType === "touch" || e.pointerType === "pen";
 
@@ -192,7 +195,7 @@ export function ScribblePad({
       endStroke();
     };
 
-    c.addEventListener("pointerdown", onPointerDown, { passive: false });
+    pad.addEventListener("pointerdown", onPointerDown, { passive: false });
     window.addEventListener("pointermove", onPointerMove, { passive: false });
     window.addEventListener("pointerup", onPointerEnd, { passive: false });
     window.addEventListener("pointercancel", onPointerEnd, { passive: false });
@@ -240,7 +243,7 @@ export function ScribblePad({
       endStroke();
     };
 
-    c.addEventListener("touchstart", onTouchStart, { passive: false });
+    pad.addEventListener("touchstart", onTouchStart, { passive: false });
     window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("touchend", onTouchEnd, { passive: false });
     window.addEventListener("touchcancel", onTouchEnd, { passive: false });
@@ -261,23 +264,36 @@ export function ScribblePad({
       endStroke();
     };
 
-    c.addEventListener("mousedown", onMouseDown, { passive: false });
+    const onClick = (e: MouseEvent) => {
+      // Last-resort Android/Samsung fallback: even when drag events are stolen
+      // by the browser shell, a tap/click usually still arrives. Multiple taps
+      // can fill the entropy bar and give the user visible feedback.
+      if (drawingRef.current) return;
+      e.preventDefault();
+      beginStroke();
+      pushAt(e.clientX, e.clientY, 0.5);
+      endStroke();
+    };
+
+    pad.addEventListener("mousedown", onMouseDown, { passive: false });
     window.addEventListener("mousemove", onMouseMove, { passive: false });
     window.addEventListener("mouseup", onMouseUp, { passive: false });
+    pad.addEventListener("click", onClick, { passive: false });
 
     return () => {
-      c.removeEventListener("pointerdown", onPointerDown);
+      pad.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerEnd);
       window.removeEventListener("pointercancel", onPointerEnd);
       c.removeEventListener("lostpointercapture", onLostPointerCapture);
-      c.removeEventListener("touchstart", onTouchStart);
+      pad.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("touchcancel", onTouchEnd);
-      c.removeEventListener("mousedown", onMouseDown);
+      pad.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+      pad.removeEventListener("click", onClick);
     };
     // Listener callbacks intentionally read current props through refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -298,6 +314,7 @@ export function ScribblePad({
   return (
     <div className="space-y-2">
       <div
+        ref={padRef}
         className="relative rounded-lg border border-border bg-background/60 overflow-hidden"
         style={{ touchAction: "none", overscrollBehavior: "contain" }}
       >
@@ -315,7 +332,7 @@ export function ScribblePad({
         />
         {ratio === 0 && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-            Scribble here to add your own randomness
+            Scribble or tap here to add your own randomness
           </div>
         )}
       </div>
