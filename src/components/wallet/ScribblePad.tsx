@@ -22,10 +22,32 @@ export function ScribblePad({
   onProgress?: (ratio: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const onEntropyRef = useRef(onEntropy);
+  const onStartRef = useRef(onStart);
+  const onProgressRef = useRef(onProgress);
   const bufferRef = useRef<number[]>([]);
   const drawingRef = useRef(false);
   const lastRef = useRef<{ x: number; y: number } | null>(null);
+  const activePointerRef = useRef<number | null>(null);
+  const hasStartedStrokeRef = useRef(false);
+  const ignoreTouchUntilRef = useRef(0);
   const [ratio, setRatio] = useState(0);
+
+  useEffect(() => {
+    onEntropyRef.current = onEntropy;
+    onStartRef.current = onStart;
+    onProgressRef.current = onProgress;
+  }, [onEntropy, onStart, onProgress]);
+
+  function clearCanvas() {
+    const c = canvasRef.current;
+    const ctx = c?.getContext("2d");
+    if (!c || !ctx) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.restore();
+  }
 
   function resize() {
     const c = canvasRef.current;
@@ -35,7 +57,7 @@ export function ScribblePad({
     c.width = Math.floor(rect.width * dpr);
     c.height = Math.floor(rect.height * dpr);
     const ctx = c.getContext("2d");
-    if (ctx) ctx.scale(dpr, dpr);
+    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
   useEffect(() => {
@@ -43,6 +65,43 @@ export function ScribblePad({
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
+
+  function paintSample(c: HTMLCanvasElement, x: number, y: number) {
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+
+    // Canvas support for OKLCH/custom properties is inconsistent in mobile
+    // WebViews. Read the resolved CSS color, then fall back to a high-contrast
+    // stroke if the canvas rejects that value.
+    const fallbackStroke = document.documentElement.classList.contains("dark")
+      ? "rgba(248, 250, 252, 0.94)"
+      : "rgba(15, 23, 42, 0.9)";
+    ctx.strokeStyle = fallbackStroke;
+    const resolvedColor = getComputedStyle(c).color;
+    if (resolvedColor) ctx.strokeStyle = resolvedColor;
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    if (lastRef.current) {
+      ctx.beginPath();
+      ctx.moveTo(lastRef.current.x, lastRef.current.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y, 2.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function updateProgress() {
+    const r = Math.min(1, bufferRef.current.length / TARGET_BYTES);
+    setRatio(r);
+    onProgressRef.current?.(r);
+    onEntropyRef.current(new Uint8Array(bufferRef.current));
+  }
 
   // Core sample push — takes raw client coordinates (already client-space).
   function pushAt(clientX: number, clientY: number, pressure: number) {
@@ -64,84 +123,158 @@ export function ScribblePad({
       p,
     );
 
-    const ctx = c.getContext("2d");
-    if (ctx && lastRef.current) {
-      ctx.strokeStyle = "hsl(var(--primary))";
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(lastRef.current.x, lastRef.current.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
-    }
+    paintSample(c, x, y);
     lastRef.current = { x, y };
-
-    const r = Math.min(1, bufferRef.current.length / TARGET_BYTES);
-    setRatio(r);
-    onProgress?.(r);
-    onEntropy(new Uint8Array(bufferRef.current));
+    updateProgress();
   }
 
-  // Bind native touch listeners with { passive: false } so we can call
-  // preventDefault() and stop iOS/Capacitor WKWebView from scrolling /
-  // cancelling the gesture. React's synthetic touch handlers are passive
-  // by default, which is exactly the case that breaks on mobile.
+  function beginStroke() {
+    drawingRef.current = true;
+    lastRef.current = null;
+    if (!hasStartedStrokeRef.current) {
+      hasStartedStrokeRef.current = true;
+      onStartRef.current?.();
+    }
+  }
+
+  function endStroke() {
+    drawingRef.current = false;
+    activePointerRef.current = null;
+    lastRef.current = null;
+    if (bufferRef.current.length > 0) {
+      const r = Math.min(1, bufferRef.current.length / TARGET_BYTES);
+      setRatio(r);
+      onProgressRef.current?.(r);
+      onEntropyRef.current(new Uint8Array(bufferRef.current));
+    }
+  }
+
+  // Bind native Pointer Events first. iOS/Android WebViews can drop React's
+  // synthetic touch path inside scroll containers, while native listeners with
+  // preventDefault keep the canvas in charge of the gesture.
   useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
 
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 0) return;
+    const pointerLooksLikeTouch = (e: PointerEvent) => e.pointerType === "touch" || e.pointerType === "pen";
+
+    const onPointerDown = (e: PointerEvent) => {
       e.preventDefault();
-      drawingRef.current = true;
-      lastRef.current = null;
-      onStart?.();
-      const t = e.touches[0];
-      // `force` is the iOS pressure equivalent (0..1). Safari only exposes
-      // it on TouchEvent, not PointerEvent.
-      const force =
-        (t as Touch & { force?: number }).force ??
-        (t as Touch & { webkitForce?: number }).webkitForce ??
-        0.5;
-      pushAt(t.clientX, t.clientY, force);
+      if (pointerLooksLikeTouch(e)) ignoreTouchUntilRef.current = performance.now() + 700;
+      activePointerRef.current = e.pointerId;
+      // Pointer capture is flaky on mobile WebViews and can immediately fire
+      // lostpointercapture, ending the stroke. It is only useful for desktop
+      // mouse drags that leave the canvas.
+      if (!pointerLooksLikeTouch(e)) {
+        try {
+          c.setPointerCapture(e.pointerId);
+        } catch {
+          /* older WebViews may not support pointer capture */
+        }
+      }
+      beginStroke();
+      pushAt(e.clientX, e.clientY, e.pressure || 0.5);
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!drawingRef.current || activePointerRef.current !== e.pointerId) return;
+      e.preventDefault();
+      const coalesced = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [];
+      const samples = coalesced.length ? coalesced : [e];
+      for (const sample of samples) {
+        pushAt(sample.clientX, sample.clientY, sample.pressure || e.pressure || 0.5);
+      }
+    };
+
+    const onPointerEnd = (e: PointerEvent) => {
+      if (activePointerRef.current !== e.pointerId) return;
+      e.preventDefault();
+      endStroke();
+    };
+
+    c.addEventListener("pointerdown", onPointerDown, { passive: false });
+    c.addEventListener("pointermove", onPointerMove, { passive: false });
+    c.addEventListener("pointerup", onPointerEnd, { passive: false });
+    c.addEventListener("pointercancel", onPointerEnd, { passive: false });
+    const onLostPointerCapture = () => {
+      // Ignore mobile capture glitches; pointerup/touchend will finish it.
+      if (ignoreTouchUntilRef.current > performance.now()) return;
+      endStroke();
+    };
+
+    c.addEventListener("lostpointercapture", onLostPointerCapture);
+
+    // Touch Events are intentionally bound even when PointerEvent exists:
+    // several Capacitor/WKWebView combinations expose PointerEvent but only
+    // reliably deliver TouchEvent for canvas gestures.
+    let activeTouchId: number | null = null;
+
+    const shouldIgnoreTouch = () => performance.now() < ignoreTouchUntilRef.current;
+    const getActiveTouch = (touches: TouchList) => {
+      if (activeTouchId === null) return touches[0] ?? null;
+      for (let i = 0; i < touches.length; i += 1) {
+        if (touches[i].identifier === activeTouchId) return touches[i];
+      }
+      return null;
+    };
+    const forceOf = (t: Touch) =>
+      (t as Touch & { force?: number }).force ??
+      (t as Touch & { webkitForce?: number }).webkitForce ??
+      0.5;
+    const onTouchStart = (e: TouchEvent) => {
+      if (shouldIgnoreTouch()) return;
+      const t = getActiveTouch(e.changedTouches);
+      if (!t) return;
+      e.preventDefault();
+      activeTouchId = t.identifier;
+      beginStroke();
+      pushAt(t.clientX, t.clientY, forceOf(t));
     };
     const onTouchMove = (e: TouchEvent) => {
-      if (!drawingRef.current || e.touches.length === 0) return;
+      if (shouldIgnoreTouch() || !drawingRef.current) return;
+      const t = getActiveTouch(e.changedTouches);
+      if (!t) return;
       e.preventDefault();
-      const t = e.touches[0];
-      const force =
-        (t as Touch & { force?: number }).force ??
-        (t as Touch & { webkitForce?: number }).webkitForce ??
-        0.5;
-      pushAt(t.clientX, t.clientY, force);
+      pushAt(t.clientX, t.clientY, forceOf(t));
     };
-    const onTouchEnd = () => {
-      drawingRef.current = false;
-      lastRef.current = null;
+    const onTouchEnd = (e: TouchEvent) => {
+      if (shouldIgnoreTouch() || activeTouchId === null) return;
+      const t = getActiveTouch(e.changedTouches);
+      if (!t) return;
+      e.preventDefault();
+      activeTouchId = null;
+      endStroke();
     };
 
     c.addEventListener("touchstart", onTouchStart, { passive: false });
     c.addEventListener("touchmove", onTouchMove, { passive: false });
     c.addEventListener("touchend", onTouchEnd, { passive: false });
     c.addEventListener("touchcancel", onTouchEnd, { passive: false });
+
     return () => {
+      c.removeEventListener("pointerdown", onPointerDown);
+      c.removeEventListener("pointermove", onPointerMove);
+      c.removeEventListener("pointerup", onPointerEnd);
+      c.removeEventListener("pointercancel", onPointerEnd);
+      c.removeEventListener("lostpointercapture", onLostPointerCapture);
       c.removeEventListener("touchstart", onTouchStart);
       c.removeEventListener("touchmove", onTouchMove);
       c.removeEventListener("touchend", onTouchEnd);
       c.removeEventListener("touchcancel", onTouchEnd);
     };
-    // pushAt/onStart references are stable enough — we only need to bind once.
+    // Listener callbacks intentionally read current props through refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function clear() {
-    const c = canvasRef.current;
-    const ctx = c?.getContext("2d");
-    if (c && ctx) ctx.clearRect(0, 0, c.width, c.height);
+    clearCanvas();
     bufferRef.current = [];
     lastRef.current = null;
+    activePointerRef.current = null;
+    hasStartedStrokeRef.current = false;
     setRatio(0);
-    onProgress?.(0);
+    onProgressRef.current?.(0);
+    onEntropyRef.current(new Uint8Array());
   }
 
   return (
@@ -150,38 +283,13 @@ export function ScribblePad({
         <canvas
           ref={canvasRef}
           className="block h-56 w-full cursor-crosshair select-none"
-          style={{ touchAction: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
-          // Mouse / stylus path — touch is handled by the native listeners
-          // above so we can preventDefault on iOS WKWebView.
-          onPointerDown={(e) => {
-            if (e.pointerType === "touch") return;
-            try {
-              (e.target as Element).setPointerCapture(e.pointerId);
-            } catch {
-              /* not all webviews support capture — safe to ignore */
-            }
-            drawingRef.current = true;
-            lastRef.current = null;
-            onStart?.();
-            pushAt(e.clientX, e.clientY, e.pressure);
-          }}
-          onPointerMove={(e) => {
-            if (e.pointerType === "touch") return;
-            if (drawingRef.current) pushAt(e.clientX, e.clientY, e.pressure);
-          }}
-          onPointerUp={(e) => {
-            if (e.pointerType === "touch") return;
-            drawingRef.current = false;
-            lastRef.current = null;
-          }}
-          onPointerCancel={() => {
-            drawingRef.current = false;
-            lastRef.current = null;
-          }}
-          onPointerLeave={(e) => {
-            if (e.pointerType === "touch") return;
-            drawingRef.current = false;
-            lastRef.current = null;
+          style={{
+            color: "var(--primary)",
+            touchAction: "none",
+            userSelect: "none",
+            WebkitUserSelect: "none",
+            WebkitTouchCallout: "none",
+            WebkitTapHighlightColor: "transparent",
           }}
         />
         {ratio === 0 && (
