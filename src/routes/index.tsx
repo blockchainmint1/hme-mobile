@@ -176,7 +176,7 @@ function Home() {
           This is a brand-new app. It <strong>cannot</strong> read the old app's storage, so
           installing it will <strong>not</strong> overwrite or change anything in your existing
           wallet. To move funds: open the old app, back up your seed phrase, then choose
-          <em> Import seed phrase</em> here.
+          <em> Import seed phrase</em> here. Better yet, setup a fresh wallet here and transfer your digital assets. You can bring the old wallet over later.
         </p>
       </section>
     </main>
