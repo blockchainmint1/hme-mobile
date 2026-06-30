@@ -9,7 +9,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  */
 const config: CapacitorConfig = {
   appId: "money.honest.txcwallet",
-  appName: "TEXITcoin Wallet",
+  appName: "HME Wallet",
   webDir: "dist/client",
   backgroundColor: "#0b0f14",
   ios: {

@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
 
 export const Route = createFileRoute("/wallet/receive")({
-  head: () => ({ meta: [{ title: "Receive — TEXITcoin Wallet" }] }),
+  head: () => ({ meta: [{ title: "Receive — HME Wallet" }] }),
   component: ReceivePage,
 });
 

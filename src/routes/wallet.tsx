@@ -8,7 +8,7 @@ import txcIcon from "@/assets/txc-icon-512.png.asset.json";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
-    meta: [{ title: "Wallet — TEXITcoin" }],
+    meta: [{ title: "Wallet — HME Wallet" }],
   }),
   component: WalletLayout,
 });
@@ -30,10 +30,10 @@ function WalletLayout() {
           <Link to="/wallet" className="flex items-center gap-2">
             <img
               src={txcIcon.url}
-              alt="TEXITcoin"
+              alt="HME Wallet"
               className="w-8 h-8 rounded-lg"
             />
-            <span className="font-semibold">TEXITcoin</span>
+            <span className="font-semibold">HME Wallet</span>
           </Link>
           <nav className="hidden sm:flex items-center gap-1">
             <Button asChild variant="ghost" size="sm">

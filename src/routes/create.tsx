@@ -24,7 +24,7 @@ function getOrCreateDraftMnemonic() {
 export const Route = createFileRoute("/create")({
   head: () => ({
     meta: [
-      { title: "Create wallet — TEXITcoin Wallet" },
+      { title: "Create wallet — HME Wallet" },
       { name: "description", content: "Generate a new TEXITcoin wallet and back up the seed phrase." },
     ],
   }),

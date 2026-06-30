@@ -3,11 +3,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/legal/terms")({
   head: () => ({
     meta: [
-      { title: "Terms — TEXITcoin Wallet" },
+      { title: "Terms — HME Wallet" },
       {
         name: "description",
         content:
-          "Terms of use for the TEXITcoin Wallet. Self-custodial software provided as-is, no recovery service.",
+          "Terms of use for the HME Wallet. Self-custodial software provided as-is, no recovery service.",
       },
     ],
   }),
@@ -25,7 +25,7 @@ function TermsPage() {
 
       <h2>1. What this app is</h2>
       <p>
-        TEXITcoin Wallet is open-source, self-custodial software that lets you generate, store,
+        HME Wallet is open-source, self-custodial software that lets you generate, store,
         and use TEXITcoin (TXC) addresses on your own device. We do not hold your keys, your
         funds, or your personal data. We cannot freeze, refund, or reverse any transaction.
       </p>
