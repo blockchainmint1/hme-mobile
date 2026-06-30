@@ -44,15 +44,16 @@ export function ScribblePad({
     return () => window.removeEventListener("resize", resize);
   }, []);
 
-  function pushSample(e: React.PointerEvent<HTMLCanvasElement>) {
+  // Core sample push — takes raw client coordinates (already client-space).
+  function pushAt(clientX: number, clientY: number, pressure: number) {
     const c = canvasRef.current;
     if (!c) return;
     const rect = c.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    if (rect.width === 0 || rect.height === 0) return;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
     const t = performance.now();
-    const p = Math.floor((e.pressure || 0.5) * 255);
-    // Pack into bytes — low byte of coords, time micros, pressure.
+    const p = Math.floor((pressure || 0.5) * 255);
     bufferRef.current.push(
       x & 0xff,
       (x >> 8) & 0xff,
@@ -78,9 +79,60 @@ export function ScribblePad({
     const r = Math.min(1, bufferRef.current.length / TARGET_BYTES);
     setRatio(r);
     onProgress?.(r);
-    // Fire entropy on every sample so the seed updates live as the user draws.
     onEntropy(new Uint8Array(bufferRef.current));
   }
+
+  // Bind native touch listeners with { passive: false } so we can call
+  // preventDefault() and stop iOS/Capacitor WKWebView from scrolling /
+  // cancelling the gesture. React's synthetic touch handlers are passive
+  // by default, which is exactly the case that breaks on mobile.
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 0) return;
+      e.preventDefault();
+      drawingRef.current = true;
+      lastRef.current = null;
+      onStart?.();
+      const t = e.touches[0];
+      // `force` is the iOS pressure equivalent (0..1). Safari only exposes
+      // it on TouchEvent, not PointerEvent.
+      const force =
+        (t as Touch & { force?: number }).force ??
+        (t as Touch & { webkitForce?: number }).webkitForce ??
+        0.5;
+      pushAt(t.clientX, t.clientY, force);
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!drawingRef.current || e.touches.length === 0) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      const force =
+        (t as Touch & { force?: number }).force ??
+        (t as Touch & { webkitForce?: number }).webkitForce ??
+        0.5;
+      pushAt(t.clientX, t.clientY, force);
+    };
+    const onTouchEnd = () => {
+      drawingRef.current = false;
+      lastRef.current = null;
+    };
+
+    c.addEventListener("touchstart", onTouchStart, { passive: false });
+    c.addEventListener("touchmove", onTouchMove, { passive: false });
+    c.addEventListener("touchend", onTouchEnd, { passive: false });
+    c.addEventListener("touchcancel", onTouchEnd, { passive: false });
+    return () => {
+      c.removeEventListener("touchstart", onTouchStart);
+      c.removeEventListener("touchmove", onTouchMove);
+      c.removeEventListener("touchend", onTouchEnd);
+      c.removeEventListener("touchcancel", onTouchEnd);
+    };
+    // pushAt/onStart references are stable enough — we only need to bind once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function clear() {
     const c = canvasRef.current;
@@ -97,22 +149,37 @@ export function ScribblePad({
       <div className="relative rounded-lg border border-border bg-background/60 overflow-hidden">
         <canvas
           ref={canvasRef}
-          className="block h-56 w-full touch-none cursor-crosshair"
+          className="block h-56 w-full cursor-crosshair select-none"
+          style={{ touchAction: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none" }}
+          // Mouse / stylus path — touch is handled by the native listeners
+          // above so we can preventDefault on iOS WKWebView.
           onPointerDown={(e) => {
-            (e.target as Element).setPointerCapture(e.pointerId);
+            if (e.pointerType === "touch") return;
+            try {
+              (e.target as Element).setPointerCapture(e.pointerId);
+            } catch {
+              /* not all webviews support capture — safe to ignore */
+            }
             drawingRef.current = true;
             lastRef.current = null;
             onStart?.();
-            pushSample(e);
+            pushAt(e.clientX, e.clientY, e.pressure);
           }}
           onPointerMove={(e) => {
-            if (drawingRef.current) pushSample(e);
+            if (e.pointerType === "touch") return;
+            if (drawingRef.current) pushAt(e.clientX, e.clientY, e.pressure);
           }}
-          onPointerUp={() => {
+          onPointerUp={(e) => {
+            if (e.pointerType === "touch") return;
             drawingRef.current = false;
             lastRef.current = null;
           }}
-          onPointerLeave={() => {
+          onPointerCancel={() => {
+            drawingRef.current = false;
+            lastRef.current = null;
+          }}
+          onPointerLeave={(e) => {
+            if (e.pointerType === "touch") return;
             drawingRef.current = false;
             lastRef.current = null;
           }}
@@ -140,3 +207,4 @@ export function ScribblePad({
     </div>
   );
 }
+
