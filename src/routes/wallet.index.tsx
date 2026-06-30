@@ -110,6 +110,50 @@ function WalletHome() {
         </div>
       </section>
 
+      <section className="mt-6">
+        <h2 className="text-sm uppercase tracking-wide text-muted-foreground mb-3">Other chains</h2>
+        <ul className="space-y-2">
+          {EVM_CHAIN_LIST.map((c, i) => {
+            const q = evmBalances[i];
+            const bal = q.data;
+            const eth = bal != null ? Number(bal) / 1e18 : null;
+            const usd = allPrices.data?.prices[c.priceSymbol];
+            const fiat = eth != null && usd != null ? eth * usd : null;
+            return (
+              <li key={c.id}>
+                <Link
+                  to="/wallet/evm/$chain"
+                  params={{ chain: c.id }}
+                  className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors"
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                    style={{ background: c.accent }}
+                  >
+                    {c.shortName.slice(0, 2)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">{c.nativeSymbol}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold">
+                      {q.isLoading ? "..." : eth != null ? formatEth(bal) : "0"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {fiat != null ? formatFiat(fiat) : usd == null ? "—" : "$0.00"}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+
+
       <section className="mt-8">
         <h2 className="text-lg font-semibold mb-3">Recent activity</h2>
 
