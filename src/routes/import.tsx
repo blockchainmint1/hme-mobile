@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   validateMnemonic,
   normalizeMnemonic,
@@ -139,10 +139,15 @@ function ImportPage() {
   const [passphrase, setPassphrase] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
+  const [hydrated, setHydrated] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   async function finish(kind: DerivationKind) {
     const m = normalizeMnemonic(phrase);
@@ -425,12 +430,14 @@ function ImportPage() {
             )}
 
 
-            <Button type="button" onClick={submit} disabled={busy} className="w-full">
+            <Button type="button" onClick={submit} disabled={busy || !hydrated} className="w-full">
               {busy ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {status || "Working…"}
                 </span>
+              ) : !hydrated ? (
+                "Loading wallet tools…"
               ) : (
                 "Import wallet"
               )}
