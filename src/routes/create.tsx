@@ -148,6 +148,32 @@ function CreatePage() {
 
       <Card className="mt-6">
         <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-primary" /> Add your own randomness (optional)
+          </CardTitle>
+          <CardDescription>
+            Scribble below to mix your own entropy into the seed. We XOR your
+            strokes with secure randomness, so it can only make the seed
+            stronger — never weaker.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScribblePad
+            onEntropy={(bytes) => {
+              try {
+                draftMnemonic = generateMnemonicFromUserEntropy(bytes, 256);
+                setMnemonic(draftMnemonic);
+                toast.success("Seed regenerated with your scribbles mixed in.");
+              } catch (e) {
+                toast.error(e instanceof Error ? e.message : "Could not mix entropy");
+              }
+            }}
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
           <CardTitle>Set a wallet password</CardTitle>
           <CardDescription>
             Encrypts your seed inside this browser. You'll enter it each time you open the wallet.
