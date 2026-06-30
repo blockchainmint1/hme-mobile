@@ -78,9 +78,8 @@ export function ScribblePad({
     const r = Math.min(1, bufferRef.current.length / TARGET_BYTES);
     setRatio(r);
     onProgress?.(r);
-    if (bufferRef.current.length >= TARGET_BYTES) {
-      onEntropy(new Uint8Array(bufferRef.current));
-    }
+    // Fire entropy on every sample so the seed updates live as the user draws.
+    onEntropy(new Uint8Array(bufferRef.current));
   }
 
   function clear() {
