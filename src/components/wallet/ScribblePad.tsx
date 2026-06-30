@@ -156,14 +156,21 @@ export function ScribblePad({
     const c = canvasRef.current;
     if (!c) return;
 
+    const pointerLooksLikeTouch = (e: PointerEvent) => e.pointerType === "touch" || e.pointerType === "pen";
+
     const onPointerDown = (e: PointerEvent) => {
       e.preventDefault();
-      ignoreTouchUntilRef.current = performance.now() + 700;
+      if (pointerLooksLikeTouch(e)) ignoreTouchUntilRef.current = performance.now() + 700;
       activePointerRef.current = e.pointerId;
-      try {
-        c.setPointerCapture(e.pointerId);
-      } catch {
-        /* older WebViews may not support pointer capture */
+      // Pointer capture is flaky on mobile WebViews and can immediately fire
+      // lostpointercapture, ending the stroke. It is only useful for desktop
+      // mouse drags that leave the canvas.
+      if (!pointerLooksLikeTouch(e)) {
+        try {
+          c.setPointerCapture(e.pointerId);
+        } catch {
+          /* older WebViews may not support pointer capture */
+        }
       }
       beginStroke();
       pushAt(e.clientX, e.clientY, e.pressure || 0.5);
@@ -189,7 +196,13 @@ export function ScribblePad({
     c.addEventListener("pointermove", onPointerMove, { passive: false });
     c.addEventListener("pointerup", onPointerEnd, { passive: false });
     c.addEventListener("pointercancel", onPointerEnd, { passive: false });
-    c.addEventListener("lostpointercapture", endStroke);
+    const onLostPointerCapture = () => {
+      // Ignore mobile capture glitches; pointerup/touchend will finish it.
+      if (ignoreTouchUntilRef.current > performance.now()) return;
+      endStroke();
+    };
+
+    c.addEventListener("lostpointercapture", onLostPointerCapture);
 
     // Touch Events are intentionally bound even when PointerEvent exists:
     // several Capacitor/WKWebView combinations expose PointerEvent but only
@@ -243,7 +256,7 @@ export function ScribblePad({
       c.removeEventListener("pointermove", onPointerMove);
       c.removeEventListener("pointerup", onPointerEnd);
       c.removeEventListener("pointercancel", onPointerEnd);
-      c.removeEventListener("lostpointercapture", endStroke);
+      c.removeEventListener("lostpointercapture", onLostPointerCapture);
       c.removeEventListener("touchstart", onTouchStart);
       c.removeEventListener("touchmove", onTouchMove);
       c.removeEventListener("touchend", onTouchEnd);
