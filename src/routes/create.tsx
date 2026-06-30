@@ -65,6 +65,24 @@ function CreatePage() {
     }
   }, [mnemonic]);
 
+  function revealSeed(useScribbleEntropy: boolean) {
+    setError(null);
+    try {
+      if (useScribbleEntropy && scribbleBytesRef.current?.length) {
+        draftMnemonic = generateMnemonicFromUserEntropy(scribbleBytesRef.current, 256);
+      } else {
+        draftMnemonic = generateMnemonic(256);
+      }
+      setMnemonic(draftMnemonic);
+      setConfirmedBackup(false);
+      setLocked(true);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Could not reveal seed";
+      setError(message);
+      toast.error(message);
+    }
+  }
+
   async function finalize(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -146,41 +164,21 @@ function CreatePage() {
             />
             <Button
               type="button"
-              onClick={() => {
-                try {
-                  if (scribbleBytesRef.current?.length) {
-                    draftMnemonic = generateMnemonicFromUserEntropy(scribbleBytesRef.current, 256);
-                    setMnemonic(draftMnemonic);
-                  }
-                  setLocked(true);
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Could not lock in randomness");
-                }
-              }}
-              disabled={!mnemonic || scribbleProgress < 1}
+              onClick={() => revealSeed(true)}
+              disabled={!mnemonic || scribbleProgress <= 0}
               className="mt-4 w-full gap-2"
             >
               <Lock className="h-4 w-4" />
-              {scribbleProgress < 1 ? "Keep scribbling to fill the bar…" : "Lock in & reveal seed phrase"}
+              {scribbleProgress <= 0 ? "Scribble first, or skip below" : "Lock in & reveal seed phrase"}
             </Button>
             <Button
               type="button"
-              variant="ghost"
-              onClick={() => {
-                try {
-                  draftMnemonic = generateMnemonic(256);
-                  setMnemonic(draftMnemonic);
-                  setConfirmedBackup(false);
-                  scribbleBytesRef.current = null;
-                  setLocked(true);
-                } catch (e) {
-                  toast.error(e instanceof Error ? e.message : "Could not reveal seed");
-                }
-              }}
+              variant="secondary"
+              onClick={() => revealSeed(false)}
               disabled={!mnemonic}
               className="mt-2 w-full"
             >
-              Skip scribble — use secure device randomness
+              Skip scribble and reveal seed phrase
             </Button>
             <p className="mt-2 text-xs text-muted-foreground text-center">
               Your randomness is always combined with secure device randomness —
