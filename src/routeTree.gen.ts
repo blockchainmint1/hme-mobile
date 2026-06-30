@@ -18,6 +18,7 @@ import { Route as WalletIndexRouteImport } from './routes/wallet.index'
 import { Route as WalletSettingsRouteImport } from './routes/wallet.settings'
 import { Route as WalletSendRouteImport } from './routes/wallet.send'
 import { Route as WalletReceiveRouteImport } from './routes/wallet.receive'
+import { Route as WalletContactsRouteImport } from './routes/wallet.contacts'
 import { Route as WalletBackupRouteImport } from './routes/wallet.backup'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
@@ -71,6 +72,11 @@ const WalletReceiveRoute = WalletReceiveRouteImport.update({
   path: '/receive',
   getParentRoute: () => WalletRoute,
 } as any)
+const WalletContactsRoute = WalletContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => WalletRoute,
+} as any)
 const WalletBackupRoute = WalletBackupRouteImport.update({
   id: '/backup',
   path: '/backup',
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/wallet/backup': typeof WalletBackupRoute
+  '/wallet/contacts': typeof WalletContactsRoute
   '/wallet/receive': typeof WalletReceiveRoute
   '/wallet/send': typeof WalletSendRoute
   '/wallet/settings': typeof WalletSettingsRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/wallet/backup': typeof WalletBackupRoute
+  '/wallet/contacts': typeof WalletContactsRoute
   '/wallet/receive': typeof WalletReceiveRoute
   '/wallet/send': typeof WalletSendRoute
   '/wallet/settings': typeof WalletSettingsRoute
@@ -152,6 +160,7 @@ export interface FileRoutesById {
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/wallet/backup': typeof WalletBackupRoute
+  '/wallet/contacts': typeof WalletContactsRoute
   '/wallet/receive': typeof WalletReceiveRoute
   '/wallet/send': typeof WalletSendRoute
   '/wallet/settings': typeof WalletSettingsRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/wallet/backup'
+    | '/wallet/contacts'
     | '/wallet/receive'
     | '/wallet/send'
     | '/wallet/settings'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/wallet/backup'
+    | '/wallet/contacts'
     | '/wallet/receive'
     | '/wallet/send'
     | '/wallet/settings'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/legal/privacy'
     | '/legal/terms'
     | '/wallet/backup'
+    | '/wallet/contacts'
     | '/wallet/receive'
     | '/wallet/send'
     | '/wallet/settings'
@@ -293,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalletReceiveRouteImport
       parentRoute: typeof WalletRoute
     }
+    '/wallet/contacts': {
+      id: '/wallet/contacts'
+      path: '/contacts'
+      fullPath: '/wallet/contacts'
+      preLoaderRoute: typeof WalletContactsRouteImport
+      parentRoute: typeof WalletRoute
+    }
     '/wallet/backup': {
       id: '/wallet/backup'
       path: '/backup'
@@ -361,6 +380,7 @@ const WalletEvmChainRouteWithChildren = WalletEvmChainRoute._addFileChildren(
 
 interface WalletRouteChildren {
   WalletBackupRoute: typeof WalletBackupRoute
+  WalletContactsRoute: typeof WalletContactsRoute
   WalletReceiveRoute: typeof WalletReceiveRoute
   WalletSendRoute: typeof WalletSendRoute
   WalletSettingsRoute: typeof WalletSettingsRoute
@@ -370,6 +390,7 @@ interface WalletRouteChildren {
 
 const WalletRouteChildren: WalletRouteChildren = {
   WalletBackupRoute: WalletBackupRoute,
+  WalletContactsRoute: WalletContactsRoute,
   WalletReceiveRoute: WalletReceiveRoute,
   WalletSendRoute: WalletSendRoute,
   WalletSettingsRoute: WalletSettingsRoute,

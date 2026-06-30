@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { EVM_CHAINS, deriveEvmAccount, evmClient, formatEth, type EvmChainId } from "@/lib/chains/evm";
+import { ContactPicker } from "@/components/ContactPicker";
 
 export const Route = createFileRoute("/wallet/evm/$chain/send")({
   component: EvmSend,
@@ -92,6 +93,9 @@ function EvmSend() {
               autoCorrect="off"
               spellCheck={false}
             />
+            <div className="mt-2">
+              <ContactPicker chain={chainId} onPick={setTo} />
+            </div>
           </div>
 
           {isAddress(to) && (

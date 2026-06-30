@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Fingerprint, Palette } from "lucide-react";
+import { BookUser, ChevronRight, Fingerprint, Palette } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
@@ -155,6 +155,21 @@ function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Link to="/wallet/contacts" className="mt-5 block">
+        <Card className="hover:bg-accent/30 transition-colors">
+          <CardContent className="py-4 flex items-center gap-3">
+            <BookUser className="h-5 w-5 text-muted-foreground" />
+            <div className="flex-1">
+              <div className="font-medium">Address book</div>
+              <div className="text-xs text-muted-foreground">
+                Save names for the addresses you send to most.
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </CardContent>
+        </Card>
+      </Link>
 
       <Card className="mt-5">
         <CardHeader>
