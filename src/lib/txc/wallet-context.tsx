@@ -4,6 +4,7 @@
  * in plaintext.
  */
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import type { BIP32Interface } from "bip32";
 import { rootFromSeed, seedFromMnemonic } from "./wallet";
 import { deleteWallet, unlockWallet, type UnlockedWallet } from "./storage";
@@ -25,8 +26,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const loadFromMemory = useCallback(async (w: UnlockedWallet) => {
     const seed = await seedFromMnemonic(w.mnemonic, w.passphrase);
-    setRoot(rootFromSeed(seed));
-    setUnlocked(w);
+    const nextRoot = rootFromSeed(seed);
+    flushSync(() => {
+      setRoot(nextRoot);
+      setUnlocked(w);
+    });
   }, []);
 
   const unlock = useCallback(
