@@ -10,6 +10,7 @@ import {
 import { saveWallet } from "@/lib/txc/storage";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { getAddressStats } from "@/lib/txc/mempool";
+import { formatTxc } from "@/lib/txc/units";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,14 +39,101 @@ export const Route = createFileRoute("/import")({
 
 const KIND_LABEL: Record<DerivationKind, string> = {
   bip84: "Native segwit (txc1…)",
-  bip49: "Wrapped segwit (3…)",
+  bip49: "Wrapped segwit",
   bip44: "Legacy (T…)",
 };
+
+const IMPORT_GAP_LIMIT = 20;
+const IMPORT_MAX_INDEX = 120;
 
 interface Candidate {
   kind: DerivationKind;
   address: string;
   txCount: number;
+  balanceSats: number;
+  usedAddresses: number;
+}
+
+interface ImportScanResult extends Candidate {
+  checkedAddresses: number;
+  failedChecks: number;
+}
+
+async function scanChainForImport(
+  root: ReturnType<typeof rootFromSeed>,
+  kind: DerivationKind,
+  change: 0 | 1,
+): Promise<Omit<ImportScanResult, "kind" | "address">> {
+  let checkedAddresses = 0;
+  let failedChecks = 0;
+  let txCount = 0;
+  let balanceSats = 0;
+  let usedAddresses = 0;
+
+  for (let start = 0; start < IMPORT_MAX_INDEX; start += IMPORT_GAP_LIMIT) {
+    const batch = Array.from({ length: IMPORT_GAP_LIMIT }, (_, offset) =>
+      deriveAddress(root, kind, change, start + offset),
+    );
+    checkedAddresses += batch.length;
+
+    const stats = await Promise.all(
+      batch.map(async (derived) => {
+        try {
+          return { derived, stats: await getAddressStats(derived.address), failed: false };
+        } catch {
+          return { derived, stats: null, failed: true };
+        }
+      }),
+    );
+
+    let batchHadActivity = false;
+    for (const item of stats) {
+      if (item.failed || !item.stats) {
+        failedChecks += 1;
+        continue;
+      }
+      const chain = item.stats.chain_stats;
+      const mempool = item.stats.mempool_stats;
+      const itemTxCount = chain.tx_count + mempool.tx_count;
+      const itemBalance =
+        chain.funded_txo_sum -
+        chain.spent_txo_sum +
+        mempool.funded_txo_sum -
+        mempool.spent_txo_sum;
+      if (itemTxCount > 0 || itemBalance > 0) {
+        batchHadActivity = true;
+        usedAddresses += 1;
+        txCount += itemTxCount;
+        balanceSats += itemBalance;
+      }
+    }
+
+    // Standard wallet discovery: stop after a full unused gap window.
+    if (!batchHadActivity) break;
+  }
+
+  return { txCount, balanceSats, usedAddresses, checkedAddresses, failedChecks };
+}
+
+async function scanKindForImport(
+  root: ReturnType<typeof rootFromSeed>,
+  kind: DerivationKind,
+): Promise<ImportScanResult> {
+  const firstAddress = deriveAddress(root, kind, 0, 0).address;
+  const [external, internal] = await Promise.all([
+    scanChainForImport(root, kind, 0),
+    scanChainForImport(root, kind, 1),
+  ]);
+
+  return {
+    kind,
+    address: firstAddress,
+    txCount: external.txCount + internal.txCount,
+    balanceSats: external.balanceSats + internal.balanceSats,
+    usedAddresses: external.usedAddresses + internal.usedAddresses,
+    checkedAddresses: external.checkedAddresses + internal.checkedAddresses,
+    failedChecks: external.failedChecks + internal.failedChecks,
+  };
 }
 
 function ImportPage() {
@@ -103,25 +191,22 @@ function ImportPage() {
       const root = rootFromSeed(seed);
       const kinds: DerivationKind[] = ["bip84", "bip49", "bip44"];
 
-      // Probe address index 0 of each derivation in parallel.
-      const probes = await Promise.all(
-        kinds.map(async (kind) => {
-          const d = deriveAddress(root, kind, 0, 0);
-          try {
-            const stats = await getAddressStats(d.address);
-            const tx = stats.chain_stats.tx_count + stats.mempool_stats.tx_count;
-            return { kind, address: d.address, txCount: tx } as Candidate;
-          } catch {
-            return { kind, address: d.address, txCount: 0 } as Candidate;
-          }
-        }),
-      );
+      setStatus("Looking for activity across TEXITcoin address types…");
+      const probes = await Promise.all(kinds.map((kind) => scanKindForImport(root, kind)));
+
+      const failedChecks = probes.reduce((sum, p) => sum + p.failedChecks, 0);
+      const checkedAddresses = probes.reduce((sum, p) => sum + p.checkedAddresses, 0);
+      if (checkedAddresses > 0 && failedChecks === checkedAddresses) {
+        throw new Error("Couldn't reach the TEXITcoin network. Check your connection and try again.");
+      }
 
       const active = probes.filter((p) => p.txCount > 0);
 
       if (active.length === 0) {
-        // No history found — go with modern default. User can re-import if needed.
-        await finish("bip84");
+        // No history found — don't silently choose the wrong address type.
+        setCandidates(probes);
+        setBusy(false);
+        setStatus("");
         return;
       }
       if (active.length === 1) {
@@ -142,10 +227,15 @@ function ImportPage() {
   if (candidates) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-10">
-        <h1 className="text-2xl font-bold">We found more than one wallet</h1>
+        <h1 className="text-2xl font-bold">
+          {candidates.some((c) => c.txCount > 0)
+            ? "We found more than one wallet"
+            : "Choose the wallet type"}
+        </h1>
         <p className="mt-2 text-muted-foreground">
-          Your seed phrase has activity on multiple address types. Pick the one you want to
-          import. (You can import the others later from Settings.)
+          {candidates.some((c) => c.txCount > 0)
+            ? "Your seed phrase has activity on multiple address types. Pick the one you want to import."
+            : "We didn't find TEXITcoin activity in the normal scan window. If this is an old wallet, Legacy is usually the best next try; otherwise use Native segwit for a new wallet."}
         </p>
         <div className="mt-6 space-y-3">
           {candidates.map((c) => (
@@ -161,6 +251,8 @@ function ImportPage() {
               </div>
               <div className="mt-1 text-xs text-muted-foreground">
                 {c.txCount} transaction{c.txCount === 1 ? "" : "s"}
+                {c.usedAddresses > 0 ? ` · ${c.usedAddresses} used address${c.usedAddresses === 1 ? "" : "es"}` : ""}
+                {c.balanceSats > 0 ? ` · ${formatTxc(c.balanceSats)}` : ""}
               </div>
             </button>
           ))}
