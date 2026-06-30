@@ -2,7 +2,6 @@
   "name": "tanstack_start_ts",
   "private": true,
   "sideEffects": [
-    "src/lib/buffer-polyfill.ts",
     "src/styles.css"
   ],
   "type": "module",
@@ -60,14 +59,11 @@
     "@tanstack/react-start": "^1.168.26",
     "@tanstack/router-plugin": "^1.168.18",
     "bip32": "^5.0.1",
-    "bip39": "^3.1.0",
     "bitcoinjs-lib": "^7.0.1",
-    "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
-    "ecpair": "^3.0.1",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
