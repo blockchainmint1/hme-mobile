@@ -2,7 +2,7 @@
  * EVM chain registry and helpers. One address (m/44'/60'/0'/0/0) works on
  * every EVM network we support; only the RPC + native token differ.
  */
-import { Buffer } from "buffer";
+import { Buffer } from "buffer/";
 import { createPublicClient, http, type PublicClient, type Chain, formatEther } from "viem";
 import { mainnet, base, bsc } from "viem/chains";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
