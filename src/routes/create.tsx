@@ -75,11 +75,18 @@ function CreatePage() {
       setError("Passwords don't match.");
       return;
     }
+    if (!locked) {
+      setError("Lock in your scribble first so the seed phrase stops changing.");
+      return;
+    }
     if (!confirmedBackup) {
       setError("Please confirm you wrote down the seed phrase.");
       return;
     }
     if (!mnemonic) {
+      setError("Seed phrase is still generating. Try again in a moment.");
+      return;
+    }
       setError("Seed phrase is still generating. Try again in a moment.");
       return;
     }
