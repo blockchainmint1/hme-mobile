@@ -14,9 +14,11 @@ const TARGET_BYTES = 512;
  */
 export function ScribblePad({
   onEntropy,
+  onStart,
   onProgress,
 }: {
   onEntropy: (bytes: Uint8Array) => void;
+  onStart?: () => void;
   onProgress?: (ratio: number) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -76,9 +78,8 @@ export function ScribblePad({
     const r = Math.min(1, bufferRef.current.length / TARGET_BYTES);
     setRatio(r);
     onProgress?.(r);
-    if (bufferRef.current.length >= TARGET_BYTES) {
-      onEntropy(new Uint8Array(bufferRef.current));
-    }
+    // Fire entropy on every sample so the seed updates live as the user draws.
+    onEntropy(new Uint8Array(bufferRef.current));
   }
 
   function clear() {
@@ -101,6 +102,7 @@ export function ScribblePad({
             (e.target as Element).setPointerCapture(e.pointerId);
             drawingRef.current = true;
             lastRef.current = null;
+            onStart?.();
             pushSample(e);
           }}
           onPointerMove={(e) => {
