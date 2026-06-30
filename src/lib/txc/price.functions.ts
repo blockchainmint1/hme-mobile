@@ -14,7 +14,7 @@ export interface PriceQuote {
 }
 
 export const getTxcPriceUsd = createServerFn({ method: "GET" }).handler(async (): Promise<PriceQuote> => {
-  const key = process.env.CMC_API_KEY;
+  const key = process.env.CMC_API ?? process.env.CMC_API_KEY;
   if (!key) return { usd: null, source: "unavailable", fetchedAt: Date.now() };
 
   try {
