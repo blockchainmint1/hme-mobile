@@ -31,9 +31,10 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      // Hide manually after React has mounted the unlock screen so users never
-      // see a flash of unstyled content. See src/routes/index.tsx.
-      launchAutoHide: false,
+      // Auto-hide so a JS/hydration failure can never leave an invisible native
+      // splash overlay blocking every tap on the landing page.
+      launchAutoHide: true,
+      launchShowDuration: 900,
       backgroundColor: "#0b0f14",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,

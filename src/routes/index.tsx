@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Fingerprint } from "lucide-react";
 import { hasWallet } from "@/lib/txc/storage";
@@ -10,7 +10,8 @@ import {
   getBiometricStatus,
   unlockWithBiometric,
 } from "@/lib/native/biometric";
-import walletIcon from "@/assets/icons/icon-512.webp";
+
+const HOME_ICON_URL = "/icon-512.webp";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -97,14 +98,24 @@ function Home() {
   const goImport = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      navigate({ to: "/import" });
+      const isNativeShell = window.location.protocol === "capacitor:";
+      if (isNativeShell) {
+        window.location.assign("/import");
+        return;
+      }
+      void navigate({ to: "/import" }).catch(() => window.location.assign("/import"));
     },
     [navigate],
   );
   const goCreate = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      navigate({ to: "/create" });
+      const isNativeShell = window.location.protocol === "capacitor:";
+      if (isNativeShell) {
+        window.location.assign("/create");
+        return;
+      }
+      void navigate({ to: "/create" }).catch(() => window.location.assign("/create"));
     },
     [navigate],
   );
@@ -112,22 +123,14 @@ function Home() {
   return (
     <main className="mx-auto max-w-3xl px-4 pt-16 pb-12">
       <header className="text-center mb-12">
-        <img
-          src={walletIcon}
-          alt="Honest Money Ecosystem"
-          width={64}
-          height={64}
-          onError={(e) => {
-            // If the hashed asset can't be resolved inside the native
-            // shell for any reason, fall back to a stable unhashed copy.
-            const img = e.currentTarget;
-            if (!img.dataset.fallback) {
-              img.dataset.fallback = "1";
-              img.src = "/icon-512.webp";
-            }
-          }}
-          className="w-16 h-16 rounded-2xl mb-5 mx-auto block shadow-lg shadow-amber-900/40"
-        />
+        <div
+          aria-label="Honest Money Ecosystem"
+          role="img"
+          className="mx-auto mb-5 h-16 w-16 rounded-2xl bg-primary bg-cover bg-center shadow-lg shadow-amber-900/40"
+          style={{ backgroundImage: `url(${HOME_ICON_URL})` }}
+        >
+          <span className="sr-only">HME</span>
+        </div>
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">HME Wallet</h1>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
           A self-custodial wallet for TEXITcoin (TXC), Iskander Coin (ISK), Zero
@@ -164,7 +167,7 @@ function Home() {
                   </Button>
                 )}
                 <Button asChild variant="ghost">
-                  <Link to="/import">Import a different wallet</Link>
+                  <a href="/import" onClick={goImport}>Import a different wallet</a>
                 </Button>
               </div>
             </form>
@@ -182,7 +185,7 @@ function Home() {
             </CardHeader>
             <CardContent>
               <Button asChild className="w-full">
-                <Link to="/import" onClick={goImport}>Import seed phrase</Link>
+                <a href="/import" onClick={goImport}>Import seed phrase</a>
               </Button>
             </CardContent>
           </Card>
@@ -196,7 +199,7 @@ function Home() {
             </CardHeader>
             <CardContent>
               <Button asChild variant="secondary" className="w-full">
-                <Link to="/create" onClick={goCreate}>Create new wallet</Link>
+                <a href="/create" onClick={goCreate}>Create new wallet</a>
               </Button>
             </CardContent>
           </Card>
