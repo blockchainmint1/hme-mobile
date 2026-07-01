@@ -11,10 +11,11 @@ import { getEvmHistory } from "@/lib/chains/history.functions";
 import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowDown, ArrowUp, ExternalLink, RefreshCw, Send, QrCode } from "lucide-react";
-import { explorerTxUrl, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
+import { ArrowDown, ArrowUp, ChevronRight, RefreshCw, Send, QrCode } from "lucide-react";
+import { getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { EVM_CHAINS, deriveEvmAccount, evmClient, formatEth, type EvmChainId } from "@/lib/chains/evm";
+import { TxDetailSheet, type TxDetail } from "@/components/wallet/TxDetailSheet";
 
 export const Route = createFileRoute("/wallet/")({
   component: WalletHome,
