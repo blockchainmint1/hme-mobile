@@ -149,6 +149,7 @@ export async function scanAccount(
     external: usedExt,
     internal: usedInt,
     nextReceiveAddress: nextReceive.address,
+    nextReceiveIndex: nextRecvIdx,
     nextChangeAddress: nextChange.address,
     nextChangeIndex: nextChangeIdx,
     balanceSats: balance,
