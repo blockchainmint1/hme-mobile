@@ -261,6 +261,43 @@ function WalletHome() {
         </div>
       </div>
       <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
+      {tileOpen === "txc" && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="txc"
+          balanceText={`${formatTxc(account.data?.balanceSats ?? 0)} TXC`}
+          fiatText={
+            price.data?.usd != null
+              ? formatFiat(satsToTxc(account.data?.balanceSats ?? 0) * price.data.usd)
+              : null
+          }
+          receiveAddress={account.data?.nextReceiveAddress ?? null}
+          txCount={txs.data?.length ?? null}
+        />
+      )}
+      {tileOpen && tileOpen !== "txc" && tileOpen in EVM_CHAINS && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="evm"
+          chainId={tileOpen as EvmChainId}
+          address={evmAddress}
+          balanceText={(() => {
+            const idx = evmEnabled.indexOf(tileOpen as EvmChainId);
+            const wei = evmBalances[idx]?.data ?? null;
+            const sym = EVM_CHAINS[tileOpen as EvmChainId].nativeSymbol;
+            return `${wei != null ? formatEth(wei) : "0"} ${sym}`;
+          })()}
+          fiatText={(() => {
+            const idx = evmEnabled.indexOf(tileOpen as EvmChainId);
+            const wei = evmBalances[idx]?.data ?? null;
+            const p = allPrices.data?.prices[EVM_CHAINS[tileOpen as EvmChainId].priceSymbol];
+            if (wei == null || p == null) return null;
+            return formatFiat((Number(wei) / 1e18) * p);
+          })()}
+        />
+      )}
     </main>
   );
 }
