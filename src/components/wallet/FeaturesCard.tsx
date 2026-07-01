@@ -6,6 +6,7 @@ import { useFeature } from "@/lib/feature-prefs";
 
 export function FeaturesCard() {
   const [evmSwap, setEvmSwap] = useFeature("evmSwap");
+  const [confirmLast4, setConfirmLast4] = useFeature("confirmLast4");
   return (
     <Card>
       <CardHeader>
@@ -13,11 +14,26 @@ export function FeaturesCard() {
           <Sparkles className="h-5 w-5" /> Extra features
         </CardTitle>
         <CardDescription>
-          Opt-in features that add extra buttons to the wallet. Off by default to keep the
-          main screen simple.
+          Opt-in features and safety checks. Toggle to fit how you use the wallet.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <Label htmlFor="feat-confirm-last4" className="text-sm font-medium">
+              Confirm last 4 of address
+            </Label>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Before sending on Ethereum, Base, or BSC, re-type the last 4 characters
+              of the recipient address. Helps catch clipboard-swap malware. On by default.
+            </p>
+          </div>
+          <Switch
+            id="feat-confirm-last4"
+            checked={confirmLast4}
+            onCheckedChange={setConfirmLast4}
+          />
+        </div>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Label htmlFor="feat-evm-swap" className="text-sm font-medium">
