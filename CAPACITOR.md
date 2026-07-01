@@ -72,6 +72,10 @@ looks like an old native build, delete the generated iOS shell and recreate it:
 bun run ios:reset
 ```
 
+That command removes `ios/`, recreates it from the current Capacitor config,
+generates HME icons/splash, syncs the web bundle, and reapplies required iOS
+permissions/deep-link settings.
+
 Then in Xcode:
 
 1. **Product → Clean Build Folder**.
