@@ -109,6 +109,10 @@ function SettingsPage() {
         <HideBalancesToggle />
       </div>
 
+      <div className="mt-5">
+        <RotationPolicyCard />
+      </div>
+
 
 
 
