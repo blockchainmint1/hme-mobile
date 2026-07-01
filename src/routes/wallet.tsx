@@ -247,6 +247,50 @@ function WalletLayout() {
       <div className="flex-1 flex flex-col min-h-0">
         <Outlet />
       </div>
+
+      <Dialog open={!!pickChain} onOpenChange={(o) => !o && setPickChain(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Which network?</DialogTitle>
+            <DialogDescription>
+              This payment request didn&apos;t specify a chain. Pick the network to send{" "}
+              {pickChain?.assetSymbol ?? "the payment"} on.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            {(getEnabledChains().filter((c) =>
+              (["eth", "base", "bsc"] as string[]).includes(c),
+            ) as EvmChainId[]).map((c) => (
+              <Button
+                key={c}
+                variant="outline"
+                className="justify-start"
+                onClick={() => {
+                  if (!pickChain) return;
+                  const target = pickChain;
+                  setPickChain(null);
+                  navigate({
+                    to: "/wallet/evm/$chain/send",
+                    params: { chain: c },
+                    search: {
+                      to: target.address,
+                      amount: target.amount,
+                      asset: target.assetSymbol,
+                    },
+                  });
+                }}
+              >
+                {c.toUpperCase()}
+              </Button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPickChain(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
