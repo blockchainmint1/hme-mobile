@@ -79,7 +79,7 @@ function WalletHome() {
 
   // TXC data
   const account = useQuery({
-    queryKey: ["account", unlocked?.kind, unlocked?.mnemonic.slice(0, 12)],
+    queryKey: ["account", unlocked?.kind, root?.neutered().toBase58().slice(0, 24)],
     enabled: !!root && !!unlocked,
     queryFn: () => scanAccount(root!, unlocked!.kind),
     staleTime: 30_000,
