@@ -170,8 +170,10 @@ function SendPage() {
         feeSats: stage.feeSats,
       });
       const txid = await broadcastTx(built.hex);
+      hapticSuccess();
       setStage({ kind: "sent", txid });
     } catch (err) {
+      hapticError();
       setError(err instanceof Error ? err.message : "Send failed");
     } finally {
       setBusy(false);
