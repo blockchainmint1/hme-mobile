@@ -124,6 +124,57 @@ function WalletLayout() {
     return total;
   }, [price.data, account.data, evmBalances, allPrices.data, watchList, watchBalances]);
 
+  // EVM chain picker when a scanned URI doesn't specify a chain.
+  const [pickChain, setPickChain] = useState<
+    | { address: string; assetSymbol?: string; amount?: string }
+    | null
+  >(null);
+
+  function handleScan(raw: string) {
+    const intent = parsePaymentUri(raw);
+    if (intent.kind === "txc") {
+      navigate({
+        to: "/wallet/send",
+        search: { to: intent.address, amount: intent.amount },
+      });
+      return;
+    }
+    if (intent.kind === "evm") {
+      if (!intent.address) {
+        toast.error("QR is missing a recipient address");
+        return;
+      }
+      const enabledEvm = getEnabledChains().filter((c) =>
+        (["eth", "base", "bsc"] as string[]).includes(c),
+      ) as EvmChainId[];
+      if (intent.chain && enabledEvm.includes(intent.chain)) {
+        navigate({
+          to: "/wallet/evm/$chain/send",
+          params: { chain: intent.chain },
+          search: {
+            to: intent.address,
+            amount: intent.amount,
+            asset: intent.assetSymbol,
+          },
+        });
+        return;
+      }
+      // No chain in URI (or chain disabled) — ask the user which EVM network to use.
+      setPickChain({
+        address: intent.address,
+        assetSymbol: intent.assetSymbol,
+        amount: intent.amount,
+      });
+      return;
+    }
+    if (intent.kind === "nectar-invoice") {
+      // Hosted checkout — open in system browser; tap-to-pay handoff kicks in from there.
+      window.open(intent.url, "_blank", "noopener");
+      return;
+    }
+    toast.error("Couldn't recognize that QR code");
+  }
+
   if (!unlocked) return null;
 
   return (
