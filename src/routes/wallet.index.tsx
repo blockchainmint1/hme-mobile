@@ -684,6 +684,8 @@ function EvmActivity({
       enabled: !!address,
       queryFn: () => readErc20Balance(chainId, t, address as `0x${string}`),
       staleTime: 30_000,
+      retry: 3,
+      retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 8000),
     })),
   });
 
@@ -693,6 +695,18 @@ function EvmActivity({
     queryFn: () => fetchHistory({ data: { chain: chainId, address: address! } }),
   });
   const [hideSpam] = useFeature("hideSpamTokens");
+  const visibleTokens = useMemo(() => {
+    if (!hideSpam) return tokens.map((t, i) => ({ token: t, index: i }));
+    return tokens
+      .map((t, i) => ({ token: t, index: i }))
+      .filter(({ index }) => {
+        const q = tokenBalances[index];
+        // Hide zero balances only after the query settles — avoid flicker while loading.
+        if (q?.isLoading || q?.isError) return true;
+        return (q?.data ?? 0n) > 0n;
+      });
+  }, [tokens, tokenBalances, hideSpam]);
+  const hiddenTokenCount = tokens.length - visibleTokens.length;
   const visibleTransfers = useMemo(() => {
     const list = history.data?.transfers ?? [];
     return hideSpam ? list.filter((t) => !t.spam) : list;
