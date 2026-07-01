@@ -95,6 +95,17 @@ export async function initNativeChrome(): Promise<void> {
   } catch {
     /* plugin not present on this build */
   }
+
+  // Safety valve for iOS builds that still have PrivacyScreen enabled in the
+  // native config: its screenshot-prevention UITextField can sit above the
+  // WKWebView and swallow all touches. We only enable PrivacyScreen explicitly
+  // on the seed-backup screen, so force it off during normal app startup.
+  try {
+    const { PrivacyScreen } = await import("@capacitor-community/privacy-screen");
+    await PrivacyScreen.disable().catch(() => {});
+  } catch {
+    /* plugin not present on this build */
+  }
 }
 
 /**
