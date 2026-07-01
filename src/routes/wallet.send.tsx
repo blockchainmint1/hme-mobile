@@ -59,7 +59,7 @@ function SendPage() {
   const navigate = useNavigate();
   const { root, unlocked } = useWallet();
   const account = useQuery({
-    queryKey: ["account", unlocked?.kind, unlocked?.mnemonic.slice(0, 12)],
+    queryKey: ["account", unlocked?.kind, root ? Buffer.from(root.fingerprint).toString("hex") : null],
     enabled: !!root && !!unlocked,
     queryFn: () => scanAccount(root!, unlocked!.kind),
     staleTime: 30_000,
