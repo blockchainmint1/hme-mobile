@@ -65,10 +65,20 @@ function SendPage() {
 
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
+  const [sendAll, setSendAll] = useState(false);
   const [feeTier, setFeeTier] = useState<"fastestFee" | "halfHourFee" | "hourFee">("halfHourFee");
   const [stage, setStage] = useState<Stage>({ kind: "form" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function applyUri(raw: string) {
+    const { address, amount: amt } = parseWalletUri(raw);
+    setTo(address);
+    if (amt) {
+      setAmount(amt);
+      setSendAll(false);
+    }
+  }
 
   const utxos = account.data?.utxos ?? [];
   const totalAvailable = utxos.reduce((s, u) => s + u.value, 0);
