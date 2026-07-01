@@ -37,16 +37,20 @@ import {
 } from "@/lib/chains/evm";
 import {
   encodeTransfer,
-  findToken,
   readErc20Balance,
   tokenAmountFromRaw,
   tokenAmountToRaw,
-  TOKENS_BY_CHAIN,
   type Erc20TokenMeta,
 } from "@/lib/chains/erc20";
+import { getKnownTokens, useTokensForChain } from "@/lib/token-prefs";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";
+
+function findKnownToken(chain: EvmChainId, symbol: string): Erc20TokenMeta | null {
+  const s = symbol.toUpperCase();
+  return getKnownTokens(chain).find((t) => t.symbol.toUpperCase() === s) ?? null;
+}
 
 const searchSchema = z.object({
   asset: z.string().optional(),
