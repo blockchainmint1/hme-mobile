@@ -1,0 +1,41 @@
+{
+  "appId": "money.honest.txcwallet",
+  "appName": "HME Wallet",
+  "webDir": "dist/client",
+  "backgroundColor": "#0b0f14",
+  "server": {
+    "url": "https://mobile.honest.money",
+    "cleartext": false,
+    "androidScheme": "https",
+    "iosScheme": "https",
+    "hostname": "mobile.honest.money",
+    "allowNavigation": ["mobile.honest.money", "nectar-pay.com"]
+  },
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#0b0f14"
+  },
+  "android": {
+    "backgroundColor": "#0b0f14",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 900,
+      "backgroundColor": "#0b0f14",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0b0f14"
+    },
+    "PrivacyScreen": {
+      "enable": false,
+      "imageName": "Splash",
+      "contentMode": "center",
+      "preventScreenshots": false
+    }
+  }
+}
