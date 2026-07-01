@@ -52,6 +52,24 @@ function WalletHome() {
     return () => window.removeEventListener("hme:chains-changed", h);
   }, []);
 
+  // Watch-only wallets (appended after the derived-chain tiles).
+  const [watchList, setWatchList] = useState<WatchWallet[]>(() => listWatchWallets());
+  useEffect(() => {
+    const h = () => setWatchList(listWatchWallets());
+    window.addEventListener(watchChangedEvent(), h);
+    return () => window.removeEventListener(watchChangedEvent(), h);
+  }, []);
+
+  // Unified carousel item list — chains first, then watch-only.
+  type Slot = { kind: "chain"; chain: ChainId } | { kind: "watch"; watch: WatchWallet };
+  const slots: Slot[] = useMemo(
+    () => [
+      ...enabled.map((c) => ({ kind: "chain" as const, chain: c })),
+      ...watchList.map((w) => ({ kind: "watch" as const, watch: w })),
+    ],
+    [enabled, watchList],
+  );
+
   // Active tile tracked via scroll position
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -65,9 +83,11 @@ function WalletHome() {
     };
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
-  }, [enabled.length]);
+  }, [slots.length]);
 
-  const activeChain: ChainId = enabled[activeIdx] ?? "txc";
+  const activeSlot: Slot = slots[activeIdx] ?? { kind: "chain", chain: "txc" };
+  const activeChain: ChainId = activeSlot.kind === "chain" ? activeSlot.chain : "txc";
+  const activeWatch: WatchWallet | null = activeSlot.kind === "watch" ? activeSlot.watch : null;
 
   // Selected transaction (opens in-page detail sheet)
   const [detail, setDetail] = useState<TxDetail | null>(null);
