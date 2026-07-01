@@ -355,14 +355,14 @@ function WalletHome() {
               )}
             </section>
           )}
-          {activeChain !== "txc" && activeChain in EVM_CHAINS && (
+          {activeChain !== "txc" && activeChain in EVM_CHAINS && !activeWatch && (
             <EvmActivity
               chainId={activeChain as EvmChainId}
               address={evmAddress}
               onOpen={(t) => setDetail({ kind: "evm", chain: activeChain as EvmChainId, transfer: t })}
             />
           )}
-          {activeChain !== "txc" && !(activeChain in EVM_CHAINS) && (
+          {activeChain !== "txc" && !(activeChain in EVM_CHAINS) && !activeWatch && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
@@ -370,6 +370,16 @@ function WalletHome() {
                 </CardContent>
               </Card>
             </section>
+          )}
+          {activeWatch && (
+            <WatchOnlyActivity
+              wallet={activeWatch}
+              txs={activeWatchTxs.data ?? null}
+              loading={activeWatchTxs.isLoading}
+              error={activeWatchTxs.isError}
+              onRefresh={() => activeWatchTxs.refetch()}
+              onOpen={(tx, net, incoming) => setDetail({ kind: "txc", tx, net, incoming })}
+            />
           )}
         </div>
       </div>
