@@ -94,4 +94,10 @@ if (existsSync(iosGitignorePath)) {
   await writeFile(iosGitignorePath, next);
 }
 
+if (existsSync(pbxprojPath)) {
+  const pbx = await readFile(pbxprojPath, "utf8");
+  const patched = pbx.replace(/TARGETED_DEVICE_FAMILY = "1,2";/g, 'TARGETED_DEVICE_FAMILY = "1";');
+  if (patched !== pbx) await writeFile(pbxprojPath, patched);
+}
+
 console.log("Hardened iOS native shell for HME Wallet.");
