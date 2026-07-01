@@ -1,0 +1,58 @@
+import { useEffect, useState } from "react";
+
+/**
+ * Optional extra features the user can opt into from Settings.
+ * Kept off by default — every feature we surface is another button
+ * that can go wrong or confuse a first-time user.
+ */
+export type FeatureId = "evmSwap";
+
+const STORAGE_KEY = "hme:features";
+const EVENT = "hme:features-changed";
+
+type FeatureMap = Partial<Record<FeatureId, boolean>>;
+
+function read(): FeatureMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as FeatureMap) : {};
+  } catch {
+    return {};
+  }
+}
+
+function write(m: FeatureMap) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(m));
+    window.dispatchEvent(new Event(EVENT));
+  } catch {
+    /* noop */
+  }
+}
+
+export function isFeatureEnabled(id: FeatureId): boolean {
+  return !!read()[id];
+}
+
+export function setFeatureEnabled(id: FeatureId, enabled: boolean) {
+  const m = read();
+  m[id] = enabled;
+  write(m);
+}
+
+export function useFeature(id: FeatureId): [boolean, (v: boolean) => void] {
+  const [on, setOn] = useState<boolean>(() => isFeatureEnabled(id));
+  useEffect(() => {
+    const h = () => setOn(isFeatureEnabled(id));
+    window.addEventListener(EVENT, h);
+    return () => window.removeEventListener(EVENT, h);
+  }, [id]);
+  return [
+    on,
+    (v: boolean) => {
+      setFeatureEnabled(id, v);
+      setOn(v);
+    },
+  ];
+}
