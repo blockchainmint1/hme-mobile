@@ -31,6 +31,7 @@ export interface AccountSnapshot {
   external: DerivedAddress[];
   internal: DerivedAddress[];
   nextReceiveAddress: string;
+  nextReceiveIndex: number;
   nextChangeAddress: string;
   nextChangeIndex: number;
   balanceSats: number;
@@ -148,6 +149,7 @@ export async function scanAccount(
     external: usedExt,
     internal: usedInt,
     nextReceiveAddress: nextReceive.address,
+    nextReceiveIndex: nextRecvIdx,
     nextChangeAddress: nextChange.address,
     nextChangeIndex: nextChangeIdx,
     balanceSats: balance,

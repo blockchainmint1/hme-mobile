@@ -52,7 +52,10 @@ export function installQueryPersistence(queryClient: QueryClient) {
     });
 
     persistQueryClient({
-      queryClient,
+      // Cast bypasses a spurious duplicate-symbol type mismatch between the
+      // versions of @tanstack/query-core resolved for react-query vs the
+      // persist-client packages. Runtime is a single 5.101.2 install.
+      queryClient: queryClient as unknown as Parameters<typeof persistQueryClient>[0]["queryClient"],
       persister,
       maxAge: 24 * 60 * 60 * 1000, // 24h
       buster: "v1",
