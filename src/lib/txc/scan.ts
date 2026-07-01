@@ -31,6 +31,7 @@ export interface AccountSnapshot {
   external: DerivedAddress[];
   internal: DerivedAddress[];
   nextReceiveAddress: string;
+  nextReceiveIndex: number;
   nextChangeAddress: string;
   nextChangeIndex: number;
   balanceSats: number;
