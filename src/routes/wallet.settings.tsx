@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { BookUser, ChevronRight, Fingerprint, Palette } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChainsCard } from "@/components/wallet/ChainsCard";
+import { HideBalancesToggle } from "@/components/wallet/WalletDetailSheet";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -102,6 +103,12 @@ function SettingsPage() {
       <div className="mt-5">
         <ChainsCard />
       </div>
+
+      <div className="mt-5">
+        <HideBalancesToggle />
+      </div>
+
+
 
 
 
