@@ -98,7 +98,8 @@ if (!serverEntryPath) {
   throw new Error("No server entry found to render the TanStack Start SPA shell.");
 }
 
-const outputDirs = Array.from(new Set([capacitorWebDir, publicDir, iosWebDir]));
+const iosExists = await isDirectory(resolve(root, "ios/App/App"));
+const outputDirs = Array.from(new Set([capacitorWebDir, publicDir, ...(iosExists ? [iosWebDir] : [])]));
 const routeHtml = new Map();
 const homeHtml = await renderSpaShell(serverEntryPath, "/");
 routeHtml.set("", homeHtml);
