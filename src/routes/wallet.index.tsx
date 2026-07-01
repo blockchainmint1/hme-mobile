@@ -7,6 +7,8 @@ import { scanAccount } from "@/lib/txc/scan";
 import { formatTxc, formatFiat, satsToTxc } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
+import { getEvmHistory } from "@/lib/chains/history.functions";
+import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, ExternalLink, RefreshCw, Send, QrCode } from "lucide-react";
@@ -224,12 +226,14 @@ function WalletHome() {
               )}
             </section>
           )}
-          {activeChain !== "txc" && (
+          {activeChain !== "txc" && activeChain in EVM_CHAINS && (
+            <EvmActivity chainId={activeChain as EvmChainId} address={evmAddress} />
+          )}
+          {activeChain !== "txc" && !(activeChain in EVM_CHAINS) && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
-                  Transaction history for {CHAIN_META[activeChain].name} coming soon. Tap Send or
-                  Receive below to use this chain.
+                  {CHAIN_META[activeChain].name} support is coming soon.
                 </CardContent>
               </Card>
             </section>
@@ -365,5 +369,130 @@ function EvmTile({
         {balanceUsd != null ? formatFiat(balanceUsd) : priceUsd == null ? "Price unavailable" : "—"}
       </p>
     </section>
+  );
+}
+
+function EvmActivity({ chainId, address }: { chainId: EvmChainId; address: string | null }) {
+  const meta = EVM_CHAINS[chainId];
+  const fetchHistory = useServerFn(getEvmHistory);
+
+  const usdc = useQuery({
+    queryKey: ["erc20-usdc", chainId, address],
+    enabled: !!address,
+    queryFn: () => readErc20Balance(chainId, USDC_BY_CHAIN[chainId], address as `0x${string}`),
+    staleTime: 30_000,
+  });
+
+  const history = useQuery({
+    queryKey: ["evm-history", chainId, address],
+    enabled: !!address,
+    queryFn: () => fetchHistory({ data: { chain: chainId, address: address! } }),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const usdcRaw = usdc.data ?? 0n;
+  const usdcAmt = usdcRaw > 0n ? tokenAmountFromRaw(usdcRaw, USDC_BY_CHAIN[chainId].decimals) : "0";
+
+  return (
+    <>
+      <section className="mt-8 px-4">
+        <h2 className="text-lg font-semibold mb-3">Tokens</h2>
+        <ul className="space-y-2">
+          <li className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3">
+            <div className="w-9 h-9 rounded-full bg-blue-500/15 text-blue-400 flex items-center justify-center text-xs font-bold">
+              $
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium">USDC</p>
+              <p className="text-xs text-muted-foreground">on {meta.name}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-semibold">
+                {usdc.isLoading ? "…" : Number(usdcAmt).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {usdc.data != null ? formatFiat(Number(usdcAmt)) : "—"}
+              </p>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section className="mt-6 px-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-lg font-semibold">Recent activity</h2>
+          <button
+            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            onClick={() => history.refetch()}
+          >
+            <RefreshCw className={`h-3 w-3 ${history.isFetching ? "animate-spin" : ""}`} /> Refresh
+          </button>
+        </div>
+        {history.isLoading ? (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-16 rounded-lg bg-muted/40 animate-pulse" />
+            ))}
+          </div>
+        ) : !history.data?.supported ? (
+          <Card>
+            <CardContent className="pt-6 text-sm text-muted-foreground">
+              History for {meta.name} isn't indexed here yet.{" "}
+              {address && (
+                <a
+                  href={meta.explorerAddress(address)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                >
+                  Open in {meta.shortName} explorer
+                </a>
+              )}
+            </CardContent>
+          </Card>
+        ) : (history.data?.transfers.length ?? 0) === 0 ? (
+          <Card>
+            <CardContent className="pt-6 text-sm text-muted-foreground">
+              No transactions on {meta.name} yet.
+            </CardContent>
+          </Card>
+        ) : (
+          <ul className="space-y-2">
+            {history.data!.transfers.map((t) => (
+              <li key={`${t.hash}-${t.category}-${t.outgoing ? "o" : "i"}`}>
+                <a
+                  href={meta.explorerTx(t.hash)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors"
+                >
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                      t.outgoing ? "bg-rose-500/15 text-rose-400" : "bg-emerald-500/15 text-emerald-400"
+                    }`}
+                  >
+                    {t.outgoing ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{t.outgoing ? "Sent" : "Received"}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {t.timestamp ? new Date(t.timestamp).toLocaleString() : `Block ${t.blockNum}`}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-semibold ${t.outgoing ? "" : "text-emerald-400"}`}>
+                      {t.outgoing ? "−" : "+"}
+                      {Number(t.value).toLocaleString(undefined, { maximumFractionDigits: 6 })} {t.asset}
+                    </p>
+                  </div>
+                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
   );
 }
