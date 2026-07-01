@@ -142,9 +142,9 @@ export async function loadSession(): Promise<UnlockedWallet | null> {
     // Because the AES key is regenerated per process, a decryption failure
     // here is expected after a full reload — treat as no session.
     const pt = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: unb64(wire.iv) },
+      { name: "AES-GCM", iv: unb64(wire.iv).slice().buffer as ArrayBuffer },
       key,
-      unb64(wire.ct),
+      unb64(wire.ct).slice().buffer as ArrayBuffer,
     );
     const parsed = JSON.parse(new TextDecoder().decode(pt)) as CachedPlain;
     memPayload = parsed;
