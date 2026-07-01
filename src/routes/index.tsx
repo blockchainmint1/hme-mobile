@@ -10,6 +10,7 @@ import {
   getBiometricStatus,
   unlockWithBiometric,
 } from "@/lib/native/biometric";
+import hmeIcon from "@/assets/txc-icon-512.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
