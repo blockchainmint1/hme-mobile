@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { BookUser, ChevronRight, Fingerprint, Palette } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChainsCard } from "@/components/wallet/ChainsCard";
+import { TokensCard } from "@/components/wallet/TokensCard";
 import { RotationPolicyCard } from "@/components/wallet/RotationPolicyCard";
 import { DeepRescanCard } from "@/components/wallet/DeepRescanCard";
 import { HideBalancesToggle } from "@/components/wallet/WalletDetailSheet";
@@ -104,6 +105,10 @@ function SettingsPage() {
 
       <div className="mt-5">
         <ChainsCard />
+      </div>
+
+      <div className="mt-5">
+        <TokensCard />
       </div>
 
       <div className="mt-5">
