@@ -226,12 +226,14 @@ function WalletHome() {
               )}
             </section>
           )}
-          {activeChain !== "txc" && (
+          {activeChain !== "txc" && activeChain in EVM_CHAINS && (
+            <EvmActivity chainId={activeChain as EvmChainId} address={evmAddress} />
+          )}
+          {activeChain !== "txc" && !(activeChain in EVM_CHAINS) && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
-                  Transaction history for {CHAIN_META[activeChain].name} coming soon. Tap Send or
-                  Receive below to use this chain.
+                  {CHAIN_META[activeChain].name} support is coming soon.
                 </CardContent>
               </Card>
             </section>
