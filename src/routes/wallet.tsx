@@ -169,8 +169,21 @@ function WalletLayout() {
       return;
     }
     if (intent.kind === "nectar-invoice") {
-      // Hosted checkout — open in system browser; tap-to-pay handoff kicks in from there.
-      window.open(intent.url, "_blank", "noopener");
+      // Hosted checkout — open in the system browser (SFSafariViewController /
+      // Custom Tabs). window.open('_blank') is silently dropped by WKWebView.
+      void (async () => {
+        try {
+          const { isNative } = await import("@/lib/native/platform");
+          if (isNative()) {
+            const { Browser } = await import("@capacitor/browser");
+            await Browser.open({ url: intent.url });
+            return;
+          }
+        } catch {
+          /* fall through to web open */
+        }
+        window.open(intent.url, "_blank", "noopener,noreferrer");
+      })();
       return;
     }
     toast.error("Couldn't recognize that QR code");

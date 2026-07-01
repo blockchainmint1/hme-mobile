@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { unlockWallet } from "@/lib/txc/storage";
 import { AlertTriangle, EyeOff, Eye } from "lucide-react";
+import { isNative } from "@/lib/native/platform";
 
 export const Route = createFileRoute("/wallet/backup")({
   head: () => ({ meta: [{ title: "Backup — HME Wallet" }] }),
@@ -18,6 +19,32 @@ function BackupPage() {
   const [shown, setShown] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reveal, setReveal] = useState(false);
+
+  // Block screenshots + app-switcher thumbnails whenever the seed is on screen.
+  // Android: FLAG_SECURE. iOS: blur overlay in the app switcher (there is no
+  // system API to block on-device screenshots on iOS). Best-effort — the
+  // plugin no-ops if it's missing from this build.
+  useEffect(() => {
+    if (!shown || !isNative()) return;
+    void (async () => {
+      try {
+        const { PrivacyScreen } = await import("@capacitor-community/privacy-screen");
+        await PrivacyScreen.enable();
+      } catch {
+        /* plugin unavailable */
+      }
+    })();
+    return () => {
+      void (async () => {
+        try {
+          const { PrivacyScreen } = await import("@capacitor-community/privacy-screen");
+          await PrivacyScreen.disable();
+        } catch {
+          /* noop */
+        }
+      })();
+    };
+  }, [shown]);
 
   async function verify(e: React.FormEvent) {
     e.preventDefault();

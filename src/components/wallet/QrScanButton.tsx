@@ -26,8 +26,22 @@ export function QrScanButton({ onScan }: { onScan: (text: string) => void }) {
       let BarcodeScanner: typeof import("@capacitor-community/barcode-scanner").BarcodeScanner | null = null;
       try {
         ({ BarcodeScanner } = await import("@capacitor-community/barcode-scanner"));
-        const perm = await BarcodeScanner.checkPermission({ force: true });
-        if (!perm.granted) return;
+        // Pre-check without prompting so we can show an in-app rationale
+        // before the OS dialog (Apple HIG requirement).
+        const status = await BarcodeScanner.checkPermission({ force: false });
+        if (!status.granted) {
+          if (status.denied) {
+            // User previously said no — bounce them to Settings.
+            const { toast } = await import("sonner");
+            toast.error("Camera access is off. Enable it in Settings → HME Wallet.");
+            await BarcodeScanner.openAppSettings().catch(() => {});
+            return;
+          }
+          const { toast } = await import("sonner");
+          toast.info("HME Wallet needs camera access to scan wallet QR codes.");
+          const perm = await BarcodeScanner.checkPermission({ force: true });
+          if (!perm.granted) return;
+        }
         // Make the webview transparent so the native camera view shows through.
         document.documentElement.classList.add("qr-scanning");
         document.body.classList.add("qr-scanning");

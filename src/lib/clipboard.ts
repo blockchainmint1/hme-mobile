@@ -5,8 +5,34 @@
  * care about (iframes without `clipboard-write` permission, some Android
  * WebView versions, insecure contexts, the Lovable preview iframe). We try
  * the modern API first, then fall back to a hidden textarea + execCommand.
+ *
+ * For sensitive values (addresses, seeds), pass `autoClearMs` so a background
+ * clipboard sniffer cannot lift the value forever — we overwrite the
+ * clipboard with an empty string after the timeout.
  */
-export async function copyToClipboard(text: string): Promise<boolean> {
+export async function copyToClipboard(
+  text: string,
+  opts?: { autoClearMs?: number },
+): Promise<boolean> {
+  const ok = await writeClipboard(text);
+  if (ok && opts?.autoClearMs && opts.autoClearMs > 0) {
+    setTimeout(() => {
+      // Only clear if the clipboard hasn't been overwritten by something else
+      // in the meantime. Best-effort — we tolerate any failure.
+      void (async () => {
+        try {
+          const current = await readClipboardSafe();
+          if (current === text) await writeClipboard("");
+        } catch {
+          /* noop */
+        }
+      })();
+    }, opts.autoClearMs);
+  }
+  return ok;
+}
+
+async function writeClipboard(text: string): Promise<boolean> {
   // Native iOS / Android path — uses the OS clipboard directly inside the
   // Capacitor app, which is more reliable than WebView clipboard APIs.
   try {
@@ -53,14 +79,33 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     ta.focus();
     ta.select();
     ta.setSelectionRange(0, text.length);
-    const ok = document.execCommand("copy");
+    const okExec = document.execCommand("copy");
     document.body.removeChild(ta);
     if (previousRange && selection) {
       selection.removeAllRanges();
       selection.addRange(previousRange);
     }
-    return ok;
+    return okExec;
   } catch {
     return false;
   }
+}
+
+async function readClipboardSafe(): Promise<string | null> {
+  try {
+    const { isNative } = await import("@/lib/native/platform");
+    if (isNative()) {
+      const { Clipboard } = await import("@capacitor/clipboard");
+      const r = await Clipboard.read();
+      return typeof r?.value === "string" ? r.value : null;
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    if (navigator?.clipboard?.readText) return await navigator.clipboard.readText();
+  } catch {
+    /* ignore */
+  }
+  return null;
 }
