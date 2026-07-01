@@ -225,8 +225,12 @@ function EvmSend() {
         value: 0n,
       });
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => {
+      hapticError();
+      setError(e.message);
+    },
     onSuccess: () => {
+      hapticSuccess();
       navigate({ to: "/wallet" });
     },
   });
