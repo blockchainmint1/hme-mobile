@@ -256,8 +256,8 @@ function WalletHome() {
                       }
                       onOpenDetails={() => {
                         if (longPressFired.current) return;
-                        // Scroll into view for tap-select if needed
                         setActiveIdx(slotIdx);
+                        setWatchRemove(slot.watch);
                       }}
                     />
                   )}
@@ -987,16 +987,30 @@ function WatchRemoveDialog({
     <Dialog open={!!wallet} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Remove watch-only wallet?</DialogTitle>
+          <DialogTitle>{wallet?.label ?? "Watch-only wallet"}</DialogTitle>
           <DialogDescription>
-            {wallet?.label} — this only removes the tile from your app. The
-            address itself is not affected on-chain, and you can add it back
-            anytime.
+            Watch-only · {wallet?.chain.toUpperCase()}
           </DialogDescription>
         </DialogHeader>
+        {wallet && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                Address
+              </p>
+              <p className="font-mono text-xs break-all rounded-md border border-border/60 bg-card/40 px-3 py-2">
+                {wallet.address}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Removing only deletes the tile from this app. The address itself
+              is not affected on-chain — you can add it back anytime.
+            </p>
+          </div>
+        )}
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            Close
           </Button>
           <Button
             variant="destructive"
@@ -1012,3 +1026,4 @@ function WatchRemoveDialog({
     </Dialog>
   );
 }
+
