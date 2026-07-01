@@ -22,8 +22,10 @@ them to whichever native repo you ship from.
 bun run cap:sync        # = bun run build && bunx cap sync
 ```
 
-`vite build` writes to `dist/client`, which `capacitor.config.ts` points at
-via `webDir`.
+`vite build` writes a TanStack Start SPA shell to `dist/client/index.html`.
+That is the file Capacitor needs as its native-webview entry point. The
+`capacitor.config.ts` `webDir` points at `dist/client` when that file exists,
+with `.output/public` only as a fallback for alternate adapters.
 
 ## Generate app icons and splash screens
 
