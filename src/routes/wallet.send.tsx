@@ -89,18 +89,39 @@ function SendPage() {
   function review(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!isValidTxcAddress(to)) {
+    const cleanTo = to.trim();
+    if (!isValidTxcAddress(cleanTo)) {
       setError("That's not a valid TEXITcoin address.");
-      return;
-    }
-    if (amountSats <= 546) {
-      setError("Amount is below dust limit.");
       return;
     }
     if (!unlocked) return;
 
-    // Greedy coin selection — pick UTXOs until we cover amount + fee.
     const sorted = [...utxos].sort((a, b) => b.value - a.value);
+
+    if (sendAll) {
+      // Send everything: one output, no change. Fee scales with all inputs.
+      const nIn = sorted.length;
+      if (nIn === 0) {
+        setError("No funds available.");
+        return;
+      }
+      const vsize = estimateVsize(unlocked.kind, nIn, 1);
+      const feeSats = Math.ceil(vsize * feeRate);
+      const outSats = totalAvailable - feeSats;
+      if (outSats <= 546) {
+        setError("Not enough to cover the network fee.");
+        return;
+      }
+      setStage({ kind: "review", vsize, feeSats, selected: nIn });
+      return;
+    }
+
+    if (amountSats <= 546) {
+      setError("Amount is below dust limit.");
+      return;
+    }
+
+    // Greedy coin selection — pick UTXOs until we cover amount + fee.
     const picked: typeof sorted = [];
     let acc = 0;
     let vsize = 0;
@@ -129,11 +150,12 @@ function SendPage() {
     try {
       const sorted = [...utxos].sort((a, b) => b.value - a.value);
       const picked = sorted.slice(0, stage.selected);
+      const outValue = sendAll ? totalAvailable - stage.feeSats : amountSats;
       const built = buildAndSignTx({
         root,
         kind: unlocked.kind,
         inputs: picked,
-        outputs: [{ address: to.trim(), valueSats: amountSats }],
+        outputs: [{ address: to.trim(), valueSats: outValue }],
         changeAddress: account.data.nextChangeAddress,
         changeIndex: account.data.nextChangeIndex,
         feeSats: stage.feeSats,
@@ -146,6 +168,9 @@ function SendPage() {
       setBusy(false);
     }
   }
+
+  const reviewedOutSats =
+    stage.kind === "review" ? (sendAll ? totalAvailable - stage.feeSats : amountSats) : 0;
 
   if (stage.kind === "sent") {
     return (
