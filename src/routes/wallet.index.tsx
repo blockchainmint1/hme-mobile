@@ -746,10 +746,10 @@ function EvmActivity({
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold">
-                      {q?.isLoading ? "…" : Number(amt).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                      {q?.isLoading && q?.data == null ? "…" : Number(amt).toLocaleString(undefined, { maximumFractionDigits: 4 })}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {q?.isError ? "unavailable" : isStable ? formatFiat(Number(amt)) : "—"}
+                      {q?.data == null && q?.isError ? "unavailable" : isStable ? formatFiat(Number(amt)) : "—"}
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
