@@ -151,3 +151,21 @@ html.qr-scanning body,
 body.qr-scanning #root {
   background: transparent !important;
 }
+
+/* Also make the mobile-frame wrapper divs transparent while the native QR
+   scanner is active — otherwise they sit between #root and the visible
+   content and block the camera preview. */
+body.qr-scanning [data-wallet-frame],
+html.qr-scanning [data-wallet-frame] {
+  background: transparent !important;
+}
+
+/* Keyboard-aware padding: iOS exposes env(keyboard-inset-height) so a
+   scrollable form pushes its bottom controls above the keyboard.
+   Combined with @capacitor/keyboard resize=Body this keeps Send buttons
+   visible on both platforms. */
+@supports (padding-bottom: env(keyboard-inset-height)) {
+  body {
+    padding-bottom: env(keyboard-inset-height, 0);
+  }
+}
