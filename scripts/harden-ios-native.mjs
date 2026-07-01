@@ -6,6 +6,7 @@ const root = process.cwd();
 const iosDir = resolve(root, "ios");
 const infoPlistPath = resolve(root, "ios/App/App/Info.plist");
 const iosGitignorePath = resolve(root, "ios/.gitignore");
+const pbxprojPath = resolve(root, "ios/App/App.xcodeproj/project.pbxproj");
 
 if (!existsSync(iosDir)) {
   console.log("iOS project not present; skipping native hardening.");
@@ -91,6 +92,12 @@ if (existsSync(iosGitignorePath)) {
     .join("\n")
     .replace(/\n*$/, "\n");
   await writeFile(iosGitignorePath, next);
+}
+
+if (existsSync(pbxprojPath)) {
+  const pbx = await readFile(pbxprojPath, "utf8");
+  const patched = pbx.replace(/TARGETED_DEVICE_FAMILY = "1,2";/g, 'TARGETED_DEVICE_FAMILY = "1";');
+  if (patched !== pbx) await writeFile(pbxprojPath, patched);
 }
 
 console.log("Hardened iOS native shell for HME Wallet.");
