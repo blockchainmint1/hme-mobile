@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { z } from "zod";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
 import { buildAndSignTx } from "@/lib/txc/wallet";
@@ -16,8 +17,14 @@ import { address as addrLib } from "bitcoinjs-lib";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 
+const searchSchema = z.object({
+  to: z.string().optional(),
+  amount: z.string().optional(),
+});
+
 export const Route = createFileRoute("/wallet/send")({
   head: () => ({ meta: [{ title: "Send — HME Wallet" }] }),
+  validateSearch: (raw) => searchSchema.parse(raw),
   component: SendPage,
 });
 
@@ -63,8 +70,9 @@ function SendPage() {
     staleTime: 60_000,
   });
 
-  const [to, setTo] = useState("");
-  const [amount, setAmount] = useState("");
+  const search = Route.useSearch();
+  const [to, setTo] = useState(search.to ?? "");
+  const [amount, setAmount] = useState(search.amount ?? "");
   const [sendAll, setSendAll] = useState(false);
   const [feeTier, setFeeTier] = useState<"fastestFee" | "halfHourFee" | "hourFee">("halfHourFee");
   const [stage, setStage] = useState<Stage>({ kind: "form" });
