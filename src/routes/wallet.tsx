@@ -10,12 +10,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Settings as Cog, Download, Sparkles } from "lucide-react";
+import { Plus, Settings as Cog, Download, Sparkles, Eye } from "lucide-react";
 import { scanAccount } from "@/lib/txc/scan";
 import { satsToTxc, formatFiat } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
 import { EVM_CHAIN_LIST, deriveEvmAccount, evmClient } from "@/lib/chains/evm";
+import { listWatchWallets, watchChangedEvent, type WatchWallet } from "@/lib/watch-only";
+import { getAddressStats } from "@/lib/txc/mempool";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
@@ -66,6 +68,22 @@ function WalletLayout() {
     })),
   });
 
+  // Watch-only wallets contribute to the portfolio total too.
+  const [watchList, setWatchList] = useState<WatchWallet[]>(() => listWatchWallets());
+  useEffect(() => {
+    const h = () => setWatchList(listWatchWallets());
+    window.addEventListener(watchChangedEvent(), h);
+    return () => window.removeEventListener(watchChangedEvent(), h);
+  }, []);
+  const watchBalances = useQueries({
+    queries: watchList.map((w) => ({
+      queryKey: ["watch-stats", w.chain, w.address],
+      queryFn: () => getAddressStats(w.address),
+      staleTime: 60_000,
+      enabled: !!unlocked,
+    })),
+  });
+
   const portfolioUsd = useMemo(() => {
     let total = 0;
     if (price.data?.usd && account.data) {
@@ -78,8 +96,21 @@ function WalletLayout() {
         total += (Number(bal) / 1e18) * usd;
       }
     });
+    // Watch-only TXC balances (funded - spent, in sats).
+    if (price.data?.usd) {
+      watchList.forEach((_, i) => {
+        const s = watchBalances[i]?.data;
+        if (!s) return;
+        const bal =
+          s.chain_stats.funded_txo_sum -
+          s.chain_stats.spent_txo_sum +
+          s.mempool_stats.funded_txo_sum -
+          s.mempool_stats.spent_txo_sum;
+        total += satsToTxc(bal) * (price.data?.usd ?? 0);
+      });
+    }
     return total;
-  }, [price.data, account.data, evmBalances, allPrices.data]);
+  }, [price.data, account.data, evmBalances, allPrices.data, watchList, watchBalances]);
 
   if (!unlocked) return null;
 
@@ -127,6 +158,11 @@ function WalletLayout() {
               <DropdownMenuItem asChild>
                 <Link to="/import">
                   <Download className="h-4 w-4 mr-2" /> Import wallet
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/wallet/watch-add">
+                  <Eye className="h-4 w-4 mr-2" /> Add watch-only
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
