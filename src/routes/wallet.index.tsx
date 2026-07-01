@@ -139,7 +139,16 @@ function WalletHome() {
             style={{ scrollbarWidth: "none" }}
           >
             {enabled.map((id) => (
-              <div key={id} className="snap-center shrink-0 w-full px-4 pt-6">
+              <div
+                key={id}
+                className="snap-center shrink-0 w-full px-4 pt-6"
+                onPointerDown={startLongPress}
+                onPointerUp={cancelLongPress}
+                onPointerMove={cancelLongPress}
+                onPointerCancel={cancelLongPress}
+                onPointerLeave={cancelLongPress}
+                onContextMenu={(e) => e.preventDefault()}
+              >
                 {id === "txc" ? (
                   <TxcTile
                     balanceSats={account.data?.balanceSats ?? 0}
@@ -148,7 +157,10 @@ function WalletHome() {
                     onRefresh={() => account.refetch()}
                     refreshing={account.isFetching}
                     label={unlocked?.label ?? "TXC Wallet"}
-                    onOpenDetails={() => setTileOpen("txc")}
+                    onOpenDetails={() => {
+                      if (longPressFired.current) return;
+                      setTileOpen("txc");
+                    }}
                   />
                 ) : (
                   <EvmTile
@@ -159,11 +171,15 @@ function WalletHome() {
                     onRefresh={() =>
                       evmBalances[evmEnabled.indexOf(id as EvmChainId)]?.refetch()
                     }
-                    onOpenDetails={() => setTileOpen(id)}
+                    onOpenDetails={() => {
+                      if (longPressFired.current) return;
+                      setTileOpen(id);
+                    }}
                   />
                 )}
               </div>
             ))}
+
           </div>
 
           {/* Dots indicator */}
