@@ -182,7 +182,7 @@ function Home() {
             </CardHeader>
             <CardContent>
               <Button asChild className="w-full">
-                <Link to="/import">Import seed phrase</Link>
+                <Link to="/import" onClick={goImport}>Import seed phrase</Link>
               </Button>
             </CardContent>
           </Card>
@@ -196,7 +196,7 @@ function Home() {
             </CardHeader>
             <CardContent>
               <Button asChild variant="secondary" className="w-full">
-                <Link to="/create">Create new wallet</Link>
+                <Link to="/create" onClick={goCreate}>Create new wallet</Link>
               </Button>
             </CardContent>
           </Card>
