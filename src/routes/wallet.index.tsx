@@ -420,9 +420,9 @@ function EvmTile({
   const meta = EVM_CHAINS[chainId];
   const balanceEth = balanceWei != null ? Number(balanceWei) / 1e18 : null;
   const balanceUsd = balanceEth != null && priceUsd != null ? balanceEth * priceUsd : null;
-  const balText = loading
-    ? "..."
-    : `${balanceWei != null ? formatEth(balanceWei) : "0"} ${meta.nativeSymbol}`;
+  const rawEthText = balanceWei != null ? formatEth(balanceWei) : "0";
+  const compactEthText = compactNumberString(rawEthText, 10, 5);
+  const balText = loading ? "..." : `${compactEthText} ${meta.nativeSymbol}`;
   const fiatText =
     balanceUsd != null ? formatFiat(balanceUsd) : priceUsd == null ? "Price unavailable" : "—";
   return (
