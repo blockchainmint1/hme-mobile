@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 const root = process.cwd();
 const capacitorWebDir = resolve(root, "dist/client");
 const iosWebDir = resolve(root, "ios/App/App/public");
+const iosConfigPath = resolve(root, "ios/App/App/capacitor.config.json");
 const publicCandidates = [resolve(root, "dist/client"), resolve(root, ".output/public")];
 const serverCandidates = [resolve(root, "dist/server/index.mjs"), resolve(root, ".output/server/index.mjs")];
 const staticSpaRoutes = [
@@ -136,6 +137,15 @@ for (const outputDir of outputDirs) {
       await cp(source, resolve(outputDir, asset), { force: true });
     }
   }
+}
+
+try {
+  const capacitorConfigModule = await import(pathToFileURL(resolve(root, "capacitor.config.ts")).href + `?t=${Date.now()}`);
+  const capacitorConfig = capacitorConfigModule.default ?? capacitorConfigModule;
+  await mkdir(dirname(iosConfigPath), { recursive: true });
+  await writeFile(iosConfigPath, `${JSON.stringify(capacitorConfig, null, 2)}\n`);
+} catch (error) {
+  console.warn(`Could not stage iOS capacitor.config.json: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 console.log(`Generated Capacitor SPA entry: ${outputDirs.map((dir) => `${dir}/index.html`).join(", ")}`);
