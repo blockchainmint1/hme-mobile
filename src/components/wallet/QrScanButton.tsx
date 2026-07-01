@@ -23,18 +23,30 @@ export function QrScanButton({ onScan }: { onScan: (text: string) => void }) {
 
   async function handleClick() {
     if (isNative()) {
+      let BarcodeScanner: typeof import("@capacitor-community/barcode-scanner").BarcodeScanner | null = null;
       try {
-        const { BarcodeScanner } = await import("@capacitor-community/barcode-scanner");
-        await BarcodeScanner.checkPermission({ force: true });
+        ({ BarcodeScanner } = await import("@capacitor-community/barcode-scanner"));
+        const perm = await BarcodeScanner.checkPermission({ force: true });
+        if (!perm.granted) return;
+        // Make the webview transparent so the native camera view shows through.
+        document.documentElement.classList.add("qr-scanning");
+        document.body.classList.add("qr-scanning");
         await BarcodeScanner.hideBackground();
         const result = await BarcodeScanner.startScan();
-        await BarcodeScanner.showBackground();
-        await BarcodeScanner.stopScan();
         if (result.hasContent && result.content) {
           onScan(result.content);
         }
-      } catch (e) {
+      } catch {
         // ignore cancel / permission denial
+      } finally {
+        try {
+          await BarcodeScanner?.showBackground();
+          await BarcodeScanner?.stopScan();
+        } catch {
+          // no-op
+        }
+        document.documentElement.classList.remove("qr-scanning");
+        document.body.classList.remove("qr-scanning");
       }
       return;
     }

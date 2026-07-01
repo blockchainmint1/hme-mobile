@@ -142,3 +142,12 @@
     color: var(--color-foreground);
   }
 }
+
+/* Native QR scanner overlay: make the webview transparent so the
+   Capacitor barcode scanner's native camera view is visible through it. */
+html.qr-scanning,
+body.qr-scanning,
+html.qr-scanning body,
+body.qr-scanning #root {
+  background: transparent !important;
+}
