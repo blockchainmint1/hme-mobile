@@ -160,6 +160,11 @@ function WalletLayout() {
                   <Download className="h-4 w-4 mr-2" /> Import wallet
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/wallet/watch-add">
+                  <Eye className="h-4 w-4 mr-2" /> Add watch-only
+                </Link>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
