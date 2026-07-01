@@ -5,13 +5,17 @@
  *  - The wallet itself is always encrypted on disk with the user's password
  *    (PBKDF2 + AES-GCM, see src/lib/txc/storage.ts). That never changes.
  *  - When the user opts in to Face ID / fingerprint unlock, we store the
- *    plaintext password in the platform secure store (iOS Keychain,
- *    Android Keystore) via @aparajita/capacitor-secure-storage.
+ *    plaintext password AND the "enabled" flag in the platform secure store
+ *    (iOS Keychain, Android Keystore) via @aparajita/capacitor-secure-storage.
  *  - To retrieve it we first call BiometricAuth.authenticate() — the user has
  *    to pass Face ID / Touch ID / fingerprint before we read the password
  *    back and feed it into the normal unlock flow.
  *  - The password is always still required as a recovery fallback and for
  *    sensitive actions (revealing the seed phrase, deleting the wallet).
+ *
+ * The "enabled" flag lives in SecureStorage rather than localStorage so a
+ * jailbroken filesystem attacker cannot toggle it on to phish a Keychain
+ * read; the value is only trusted after biometric auth succeeds anyway.
  *
  * On the web (Lovable preview, browser) all of this is a no-op:
  * `isBiometricAvailable()` returns false and `enableBiometric()` throws.
@@ -19,7 +23,8 @@
 import { isNative } from "./platform";
 
 const SECURE_KEY = "txc.wallet.bio.password.v1";
-const FLAG_KEY = "txc.wallet.bio.enabled";
+const FLAG_KEY = "txc.wallet.bio.enabled.v1";
+const LEGACY_FLAG_KEY = "txc.wallet.bio.enabled";
 
 export interface BiometricStatus {
   available: boolean;
@@ -47,17 +52,53 @@ export async function isBiometricAvailable(): Promise<boolean> {
   }
 }
 
-export function isBiometricEnabled(): boolean {
+// In-memory shadow so synchronous callers (e.g. unlockWithBiometric's early
+// guard) don't have to await a SecureStorage read every time.
+let cachedFlag: boolean | null = null;
+
+async function readFlag(): Promise<boolean> {
+  if (cachedFlag !== null) return cachedFlag;
+  const plugins = await loadPlugins();
+  if (!plugins) {
+    cachedFlag = false;
+    return false;
+  }
   try {
-    return localStorage.getItem(FLAG_KEY) === "1";
+    // Migrate from the old plaintext localStorage flag if present.
+    try {
+      const legacy = typeof localStorage !== "undefined" && localStorage.getItem(LEGACY_FLAG_KEY);
+      if (legacy === "1") {
+        await plugins.SecureStorage.set(FLAG_KEY, "1", true, false);
+        try {
+          localStorage.removeItem(LEGACY_FLAG_KEY);
+        } catch {
+          /* ignore */
+        }
+        cachedFlag = true;
+        return true;
+      }
+    } catch {
+      /* ignore migration errors */
+    }
+    const v = await plugins.SecureStorage.get(FLAG_KEY, true, false).catch(() => null);
+    cachedFlag = v === "1";
+    return cachedFlag;
   } catch {
+    cachedFlag = false;
     return false;
   }
 }
 
+export function isBiometricEnabled(): boolean {
+  // Synchronous consumers get whatever's cached; async paths (getBiometricStatus,
+  // unlockWithBiometric) refresh via readFlag first.
+  return cachedFlag === true;
+}
+
 export async function getBiometricStatus(): Promise<BiometricStatus> {
   const available = await isBiometricAvailable();
-  return { available, enabled: available && isBiometricEnabled() };
+  const enabled = available ? await readFlag() : false;
+  return { available, enabled };
 }
 
 /**
@@ -68,7 +109,6 @@ export async function getBiometricStatus(): Promise<BiometricStatus> {
 export async function enableBiometric(password: string): Promise<void> {
   const plugins = await loadPlugins();
   if (!plugins) throw new Error("Biometric unlock is only available on the mobile app.");
-  // Force a biometric prompt right now so the user confirms enrollment.
   await plugins.BiometricAuth.authenticate({
     reason: "Enable Face ID / fingerprint unlock for your TXC wallet",
     cancelTitle: "Cancel",
@@ -78,7 +118,8 @@ export async function enableBiometric(password: string): Promise<void> {
     androidSubtitle: "Confirm your identity to enable biometric unlock",
   });
   await plugins.SecureStorage.set(SECURE_KEY, password, true, false);
-  localStorage.setItem(FLAG_KEY, "1");
+  await plugins.SecureStorage.set(FLAG_KEY, "1", true, false);
+  cachedFlag = true;
 }
 
 export async function disableBiometric(): Promise<void> {
@@ -89,12 +130,18 @@ export async function disableBiometric(): Promise<void> {
     } catch {
       /* ignore */
     }
+    try {
+      await plugins.SecureStorage.remove(FLAG_KEY);
+    } catch {
+      /* ignore */
+    }
   }
   try {
-    localStorage.removeItem(FLAG_KEY);
+    localStorage.removeItem(LEGACY_FLAG_KEY);
   } catch {
     /* ignore */
   }
+  cachedFlag = false;
 }
 
 /**
@@ -104,7 +151,8 @@ export async function disableBiometric(): Promise<void> {
 export async function unlockWithBiometric(): Promise<string | null> {
   const plugins = await loadPlugins();
   if (!plugins) return null;
-  if (!isBiometricEnabled()) return null;
+  const enabled = await readFlag();
+  if (!enabled) return null;
   try {
     await plugins.BiometricAuth.authenticate({
       reason: "Unlock your TEXITcoin wallet",
@@ -132,7 +180,8 @@ export async function unlockWithBiometric(): Promise<string | null> {
 export async function confirmWithBiometric(reason: string): Promise<boolean> {
   const plugins = await loadPlugins();
   if (!plugins) return true;
-  if (!isBiometricEnabled()) return true;
+  const enabled = await readFlag();
+  if (!enabled) return true;
   try {
     await plugins.BiometricAuth.authenticate({
       reason,
@@ -147,4 +196,3 @@ export async function confirmWithBiometric(reason: string): Promise<boolean> {
     return false;
   }
 }
-

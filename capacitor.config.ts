@@ -14,6 +14,13 @@ const config: CapacitorConfig = {
   appName: "HME Wallet",
   webDir: "dist/client",
   backgroundColor: "#0b0f14",
+  server: {
+    androidScheme: "https",
+    // Allowlist only the domains we intentionally load in the WebView
+    // (e.g. universal-link entry). External links use Browser.open() so
+    // this stays tight; wildcard would defeat the point.
+    allowNavigation: ["mobile.honest.money", "nectar-pay.com"],
+  },
   ios: {
     contentInset: "always",
     backgroundColor: "#0b0f14",
@@ -24,7 +31,9 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchAutoHide: true,
+      // Hide manually after React has mounted the unlock screen so users never
+      // see a flash of unstyled content. See src/routes/index.tsx.
+      launchAutoHide: false,
       backgroundColor: "#0b0f14",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
@@ -32,6 +41,11 @@ const config: CapacitorConfig = {
     StatusBar: {
       style: "DARK",
       backgroundColor: "#0b0f14",
+    },
+    PrivacyScreen: {
+      enable: true,
+      imageName: "Splash",
+      contentMode: "center",
     },
   },
 };
