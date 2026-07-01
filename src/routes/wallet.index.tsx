@@ -379,7 +379,15 @@ function EvmTile({
   );
 }
 
-function EvmActivity({ chainId, address }: { chainId: EvmChainId; address: string | null }) {
+function EvmActivity({
+  chainId,
+  address,
+  onOpen,
+}: {
+  chainId: EvmChainId;
+  address: string | null;
+  onOpen: (t: import("@/lib/chains/history.functions").EvmTransfer) => void;
+}) {
   const meta = EVM_CHAINS[chainId];
   const fetchHistory = useServerFn(getEvmHistory);
 
@@ -468,11 +476,10 @@ function EvmActivity({ chainId, address }: { chainId: EvmChainId; address: strin
           <ul className="space-y-2">
             {history.data!.transfers.map((t) => (
               <li key={`${t.hash}-${t.category}-${t.outgoing ? "o" : "i"}`}>
-                <a
-                  href={meta.explorerTx(t.hash)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors"
+                <button
+                  type="button"
+                  onClick={() => onOpen(t)}
+                  className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors text-left"
                 >
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center ${
@@ -493,8 +500,8 @@ function EvmActivity({ chainId, address }: { chainId: EvmChainId; address: strin
                       {Number(t.value).toLocaleString(undefined, { maximumFractionDigits: 6 })} {t.asset}
                     </p>
                   </div>
-                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                </a>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
               </li>
             ))}
           </ul>
