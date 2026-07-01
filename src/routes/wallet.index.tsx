@@ -369,34 +369,51 @@ function EvmTile({
   loading,
   priceUsd,
   onRefresh,
+  onOpenDetails,
 }: {
   chainId: EvmChainId;
   balanceWei: bigint | null;
   loading: boolean;
   priceUsd: number | null;
   onRefresh: () => void;
+  onOpenDetails: () => void;
 }) {
+  const [hidden] = useHideBalances();
   const meta = EVM_CHAINS[chainId];
   const balanceEth = balanceWei != null ? Number(balanceWei) / 1e18 : null;
   const balanceUsd = balanceEth != null && priceUsd != null ? balanceEth * priceUsd : null;
+  const balText = loading
+    ? "..."
+    : `${balanceWei != null ? formatEth(balanceWei) : "0"} ${meta.nativeSymbol}`;
+  const fiatText =
+    balanceUsd != null ? formatFiat(balanceUsd) : priceUsd == null ? "Price unavailable" : "—";
   return (
-    <section
-      className="rounded-2xl p-6 text-white shadow-xl"
+    <button
+      type="button"
+      onClick={onOpenDetails}
+      className="w-full text-left rounded-2xl p-6 text-white shadow-xl active:scale-[0.99] transition-transform"
       style={{ background: `linear-gradient(135deg, ${meta.accent} 0%, ${meta.accent}CC 60%, #111 140%)` }}
     >
       <div className="flex items-center justify-between">
         <p className="text-sm opacity-80">{meta.name}</p>
-        <button onClick={onRefresh} className="opacity-80 hover:opacity-100" aria-label="Refresh">
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRefresh();
+          }}
+          className="opacity-80 hover:opacity-100"
+          aria-label="Refresh"
+        >
           <RefreshCw className="h-4 w-4" />
-        </button>
+        </span>
       </div>
       <p className="mt-2 text-4xl font-bold tracking-tight">
-        {loading ? "..." : `${balanceWei != null ? formatEth(balanceWei) : "0"} ${meta.nativeSymbol}`}
+        {hidden ? maskAmount(balText) : balText}
       </p>
-      <p className="text-sm opacity-80">
-        {balanceUsd != null ? formatFiat(balanceUsd) : priceUsd == null ? "Price unavailable" : "—"}
-      </p>
-    </section>
+      <p className="text-sm opacity-80">{hidden ? maskAmount(fiatText) : fiatText}</p>
+    </button>
   );
 }
 
