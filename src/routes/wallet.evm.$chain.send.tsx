@@ -46,6 +46,7 @@ import { getKnownTokens, useTokensForChain } from "@/lib/token-prefs";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";
+import { useFeature } from "@/lib/feature-prefs";
 
 function findKnownToken(chain: EvmChainId, symbol: string): Erc20TokenMeta | null {
   const s = symbol.toUpperCase();
