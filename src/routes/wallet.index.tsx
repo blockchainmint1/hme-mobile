@@ -296,6 +296,7 @@ function WalletHome() {
         </div>
       </div>
       <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
+      <ReorderTilesSheet open={reorderOpen} onClose={() => setReorderOpen(false)} />
       {tileOpen === "txc" && (
         <WalletDetailSheet
           open
