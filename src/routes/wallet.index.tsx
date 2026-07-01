@@ -569,10 +569,11 @@ function EvmTile({
   balanceWei: bigint | null;
   loading: boolean;
   priceUsd: number | null;
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
   onOpenDetails: () => void;
 }) {
   const [hidden] = useHideBalances();
+  const [refreshing, setRefreshing] = useState(false);
   const meta = EVM_CHAINS[chainId];
   const balanceEth = balanceWei != null ? Number(balanceWei) / 1e18 : null;
   const balanceUsd = balanceEth != null && priceUsd != null ? balanceEth * priceUsd : null;
