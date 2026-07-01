@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { TXC_NETWORK } from "@/lib/txc/network";
 import { address as addrLib } from "bitcoinjs-lib";
-import { ContactPicker } from "@/components/ContactPicker";
+import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
+import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 
 export const Route = createFileRoute("/wallet/send")({
   head: () => ({ meta: [{ title: "Send — HME Wallet" }] }),
@@ -64,10 +65,20 @@ function SendPage() {
 
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
+  const [sendAll, setSendAll] = useState(false);
   const [feeTier, setFeeTier] = useState<"fastestFee" | "halfHourFee" | "hourFee">("halfHourFee");
   const [stage, setStage] = useState<Stage>({ kind: "form" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function applyUri(raw: string) {
+    const { address, amount: amt } = parseWalletUri(raw);
+    setTo(address);
+    if (amt) {
+      setAmount(amt);
+      setSendAll(false);
+    }
+  }
 
   const utxos = account.data?.utxos ?? [];
   const totalAvailable = utxos.reduce((s, u) => s + u.value, 0);
@@ -78,18 +89,39 @@ function SendPage() {
   function review(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!isValidTxcAddress(to)) {
+    const cleanTo = to.trim();
+    if (!isValidTxcAddress(cleanTo)) {
       setError("That's not a valid TEXITcoin address.");
-      return;
-    }
-    if (amountSats <= 546) {
-      setError("Amount is below dust limit.");
       return;
     }
     if (!unlocked) return;
 
-    // Greedy coin selection — pick UTXOs until we cover amount + fee.
     const sorted = [...utxos].sort((a, b) => b.value - a.value);
+
+    if (sendAll) {
+      // Send everything: one output, no change. Fee scales with all inputs.
+      const nIn = sorted.length;
+      if (nIn === 0) {
+        setError("No funds available.");
+        return;
+      }
+      const vsize = estimateVsize(unlocked.kind, nIn, 1);
+      const feeSats = Math.ceil(vsize * feeRate);
+      const outSats = totalAvailable - feeSats;
+      if (outSats <= 546) {
+        setError("Not enough to cover the network fee.");
+        return;
+      }
+      setStage({ kind: "review", vsize, feeSats, selected: nIn });
+      return;
+    }
+
+    if (amountSats <= 546) {
+      setError("Amount is below dust limit.");
+      return;
+    }
+
+    // Greedy coin selection — pick UTXOs until we cover amount + fee.
     const picked: typeof sorted = [];
     let acc = 0;
     let vsize = 0;
@@ -118,11 +150,12 @@ function SendPage() {
     try {
       const sorted = [...utxos].sort((a, b) => b.value - a.value);
       const picked = sorted.slice(0, stage.selected);
+      const outValue = sendAll ? totalAvailable - stage.feeSats : amountSats;
       const built = buildAndSignTx({
         root,
         kind: unlocked.kind,
         inputs: picked,
-        outputs: [{ address: to.trim(), valueSats: amountSats }],
+        outputs: [{ address: to.trim(), valueSats: outValue }],
         changeAddress: account.data.nextChangeAddress,
         changeIndex: account.data.nextChangeIndex,
         feeSats: stage.feeSats,
@@ -135,6 +168,9 @@ function SendPage() {
       setBusy(false);
     }
   }
+
+  const reviewedOutSats =
+    stage.kind === "review" ? (sendAll ? totalAvailable - stage.feeSats : amountSats) : 0;
 
   if (stage.kind === "sent") {
     return (
@@ -179,31 +215,44 @@ function SendPage() {
             <form onSubmit={review} className="space-y-4">
               <div>
                 <Label htmlFor="to">TEXITcoin address</Label>
-                <Input
-                  id="to"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  placeholder="txc1..."
-                  className="mt-1 font-mono"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                <div className="mt-2">
-                  <ContactPicker chain="txc" onPick={setTo} />
+                <div className="mt-1 flex gap-2">
+                  <Input
+                    id="to"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    placeholder="txc1... or T..."
+                    className="font-mono flex-1"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <QrScanButton onScan={applyUri} />
+                  <AddressBookButton chain="txc" onPick={(a) => setTo(a)} />
                 </div>
               </div>
               <div>
-                <Label htmlFor="amount">Amount (TXC)</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="amount">Amount (TXC)</Label>
+                  <label className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sendAll}
+                      onChange={(e) => setSendAll(e.target.checked)}
+                      className="h-3.5 w-3.5"
+                    />
+                    Send all
+                  </label>
+                </div>
                 <Input
                   id="amount"
                   type="number"
                   inputMode="decimal"
                   step="0.00000001"
                   min="0"
-                  value={amount}
+                  value={sendAll ? "" : amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.0"
+                  placeholder={sendAll ? "All available (minus fee)" : "0.0"}
                   className="mt-1"
+                  disabled={sendAll}
                 />
               </div>
               <div>
@@ -235,7 +284,11 @@ function SendPage() {
                   <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={!to || !amount || account.isLoading}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!to || (!sendAll && !amount) || account.isLoading}
+              >
                 Review
               </Button>
             </form>
@@ -249,15 +302,18 @@ function SendPage() {
             <CardTitle>Review and send</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="To"><code className="font-mono break-all">{to}</code></Row>
-            <Row label="Amount">{formatTxc(amountSats)}</Row>
+            <Row label="To"><code className="font-mono break-all">{to.trim()}</code></Row>
+            <Row label="Amount">
+              {formatTxc(reviewedOutSats)}
+              {sendAll && <span className="text-muted-foreground text-xs ml-1">(all)</span>}
+            </Row>
             <Row label="Network fee">
               {formatTxc(stage.feeSats)}{" "}
               <span className="text-muted-foreground text-xs">
                 ({stage.vsize} vB × {feeRate} sat/vB)
               </span>
             </Row>
-            <Row label="Total">{formatTxc(amountSats + stage.feeSats)}</Row>
+            <Row label="Total">{formatTxc(reviewedOutSats + stage.feeSats)}</Row>
             {error && (
               <div className="flex items-start gap-2 text-sm text-destructive">
                 <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
