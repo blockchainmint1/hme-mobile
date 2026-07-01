@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 
 const root = process.cwd();
 const capacitorWebDir = resolve(root, "dist/client");
+const iosWebDir = resolve(root, "ios/App/App/public");
 const publicCandidates = [resolve(root, "dist/client"), resolve(root, ".output/public")];
 const serverCandidates = [resolve(root, "dist/server/index.mjs"), resolve(root, ".output/server/index.mjs")];
 const staticSpaRoutes = [
@@ -90,7 +91,7 @@ if (!serverEntryPath) {
   throw new Error("No server entry found to render the TanStack Start SPA shell.");
 }
 
-const outputDirs = Array.from(new Set([capacitorWebDir, publicDir]));
+const outputDirs = Array.from(new Set([capacitorWebDir, publicDir, iosWebDir]));
 const routeHtml = new Map();
 const homeHtml = await renderSpaShell(serverEntryPath, "/");
 routeHtml.set("", homeHtml);
