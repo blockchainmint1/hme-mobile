@@ -10,7 +10,6 @@ import {
   getBiometricStatus,
   unlockWithBiometric,
 } from "@/lib/native/biometric";
-import hmeIcon from "@/assets/txc-icon-512.png.asset.json";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -112,7 +111,7 @@ function Home() {
     <main className="mx-auto max-w-3xl px-4 pt-16 pb-12">
       <header className="text-center mb-12">
         <img
-          src={hmeIcon.url}
+          src="/icon-512.webp"
           alt="Honest Money Ecosystem"
           width={64}
           height={64}
