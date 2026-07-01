@@ -352,9 +352,42 @@ function SendPage() {
               <Button variant="ghost" onClick={() => setStage({ kind: "form" })} disabled={busy}>
                 Edit
               </Button>
-              <Button onClick={send} className="flex-1" disabled={busy}>
-                {busy ? "Broadcasting..." : "Send TXC"}
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button className="flex-1" disabled={busy}>
+                    {busy ? "Broadcasting..." : "Send TXC"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirm transaction</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-2 text-sm">
+                        <div>
+                          Send <strong>{formatTxc(reviewedOutSats)}</strong> to
+                        </div>
+                        <code className="block font-mono break-all text-xs bg-muted rounded p-2">
+                          {to.trim()}
+                        </code>
+                        <div className="text-muted-foreground">
+                          Network fee {formatTxc(stage.feeSats)} · Total{" "}
+                          {formatTxc(reviewedOutSats + stage.feeSats)}
+                        </div>
+                        <div className="text-destructive text-xs pt-1">
+                          TXC transactions are irreversible.
+                        </div>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={busy}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={send} disabled={busy}>
+                      Confirm & send
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
             </div>
           </CardContent>
         </Card>
