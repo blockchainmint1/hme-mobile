@@ -63,6 +63,28 @@ Do not run `~/Library/Developer/Xcode/DerivedData/*` by itself — that tries to
 execute the first DerivedData folder and zsh correctly returns "permission
 denied". It must be part of an `rm -rf ...` cleanup command.
 
+## Full native reset when Xcode keeps running an old product
+
+If the console still says `Loading app at capacitor://localhost...` or the app
+looks like an old native build, delete the generated iOS shell and recreate it:
+
+```bash
+bun run ios:reset
+```
+
+That command removes `ios/`, recreates it from the current Capacitor config,
+generates HME icons/splash, syncs the web bundle, and reapplies required iOS
+permissions/deep-link settings.
+
+Then in Xcode:
+
+1. **Product → Clean Build Folder**.
+2. Delete the app from the device/simulator.
+3. Re-open `ios/App/App.xcodeproj` from this repo and build/archive again.
+
+The generated `ios/App/App/capacitor.config.json` is intentionally committed so
+Xcode always has the same production URL and HME identity as the web config.
+
 ## Generate app icons and splash screens
 
 Source PNGs live in `assets/` (`icon.png` 1024×1024, `splash.png` 1920×1920).

@@ -1,4 +1,18 @@
-<?xml version="1.0" encoding="UTF-8"?>
+import { readFile, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+
+const root = process.cwd();
+const iosDir = resolve(root, "ios");
+const infoPlistPath = resolve(root, "ios/App/App/Info.plist");
+const iosGitignorePath = resolve(root, "ios/.gitignore");
+
+if (!existsSync(iosDir)) {
+  console.log("iOS project not present; skipping native hardening.");
+  process.exit(0);
+}
+
+const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
@@ -65,3 +79,18 @@
 	<true/>
 </dict>
 </plist>
+`;
+
+await writeFile(infoPlistPath, infoPlist);
+
+if (existsSync(iosGitignorePath)) {
+  const current = await readFile(iosGitignorePath, "utf8");
+  const next = current
+    .split("\n")
+    .filter((line) => line.trim() !== "App/App/capacitor.config.json")
+    .join("\n")
+    .replace(/\n*$/, "\n");
+  await writeFile(iosGitignorePath, next);
+}
+
+console.log("Hardened iOS native shell for HME Wallet.");
