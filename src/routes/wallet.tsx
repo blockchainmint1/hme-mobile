@@ -205,6 +205,19 @@ function WalletLayout() {
             )}
           </button>
 
+          <QrScanButton
+            onDetected={handleScan}
+            triggerLabel="Scan"
+            title="Scan payment QR"
+          >
+            <Button variant="ghost" size="icon" title="Scan QR">
+              <ScanLine className="h-5 w-5" />
+              <span className="sr-only">Scan QR</span>
+            </Button>
+          </QrScanButton>
+
+
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" title="Add wallet">
