@@ -256,30 +256,21 @@ function ImportPage() {
       if (activeQuick.length > 1) {
         setStatus("Found multiple wallet types — checking each…");
         const deep = await Promise.all(activeQuick.map((p) => scanKindForImport(root, p.kind)));
-        setCandidates(deep);
-        setBusy(false);
-        setStatus("");
+        // Auto-pick the one with the most activity (tx count, then balance).
+        const best = deep.slice().sort((a, b) => b.txCount - a.txCount || b.balanceSats - a.balanceSats)[0];
+        await finish(best.kind);
         return;
       }
 
-      // No activity at index 0 — show picker (covers brand-new seeds and unusual gaps).
-      setCandidates(
-        quickProbes.map((p) => ({
-          kind: p.kind,
-          address: p.address,
-          txCount: 0,
-          balanceSats: 0,
-          usedAddresses: 0,
-        })),
-      );
-      setBusy(false);
-      setStatus("");
+      // No activity found anywhere — assume Legacy (old TXC Wallet default) and continue.
+      await finish("bip44");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed");
       setBusy(false);
       setStatus("");
     }
   }
+
 
 
   if (candidates) {
