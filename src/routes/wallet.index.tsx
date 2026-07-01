@@ -129,6 +129,7 @@ function WalletHome() {
                     onRefresh={() => account.refetch()}
                     refreshing={account.isFetching}
                     label={unlocked?.label ?? "TXC Wallet"}
+                    onOpenDetails={() => setTileOpen("txc")}
                   />
                 ) : (
                   <EvmTile
@@ -139,6 +140,7 @@ function WalletHome() {
                     onRefresh={() =>
                       evmBalances[evmEnabled.indexOf(id as EvmChainId)]?.refetch()
                     }
+                    onOpenDetails={() => setTileOpen(id)}
                   />
                 )}
               </div>
