@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { TXC_NETWORK } from "@/lib/txc/network";
 import { address as addrLib } from "bitcoinjs-lib";
-import { ContactPicker } from "@/components/ContactPicker";
+import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
+import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 
 export const Route = createFileRoute("/wallet/send")({
   head: () => ({ meta: [{ title: "Send — HME Wallet" }] }),
