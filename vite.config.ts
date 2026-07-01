@@ -11,14 +11,13 @@ export default defineConfig({
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
-    // Capacitor needs a static index.html entry point. TanStack Start's SPA shell
-    // is the correct native-webview bundle because iOS/Android do not run our SSR
-    // worker locally. Output it as /index.html instead of the default /_shell.html.
+    // Capacitor needs a static index.html entry point. The built-in TanStack
+    // SPA prerender currently looks for dist/server/server.js, while Nitro emits
+    // dist/server/index.mjs in this project. Keep framework prerender disabled
+    // and generate the native webview shell in scripts/generate-capacitor-index.mjs.
     spa: {
-      enabled: true,
-      prerender: {
-        outputPath: "/index",
-      },
+      enabled: false,
     },
+    prerender: { enabled: false },
   },
 });
