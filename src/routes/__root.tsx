@@ -153,6 +153,13 @@ function RootComponent() {
     };
   }, [router]);
 
+  // Configure iOS/Android status bar + keyboard once on mount. No-op on web.
+  useEffect(() => {
+    import("../lib/native/ui").then(({ initNativeChrome }) => {
+      initNativeChrome();
+    });
+  }, []);
+
 
 
   return (
