@@ -375,18 +375,51 @@ function EvmSend() {
 
           {error && <p className="text-sm text-rose-400">{error}</p>}
 
-          <Button
-            onClick={() => {
-              setError(null);
-              send.mutate();
-            }}
-            disabled={!to || !amount || send.isPending}
-            className="w-full"
-            size="lg"
-          >
-            {send.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Send {symbol}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                onClick={() => setError(null)}
+                disabled={!to || !amount || send.isPending}
+                className="w-full"
+                size="lg"
+              >
+                {send.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Send {symbol}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm transaction</AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      Send <strong>{amount} {symbol}</strong> on {meta.name} to
+                    </div>
+                    <code className="block font-mono break-all text-xs bg-muted rounded p-2">
+                      {to}
+                    </code>
+                    {asset.kind === "erc20" && (
+                      <div className="text-muted-foreground text-xs">
+                        Gas paid in {meta.nativeSymbol}.
+                      </div>
+                    )}
+                    <div className="text-destructive text-xs pt-1">
+                      Blockchain transactions are irreversible.
+                    </div>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={send.isPending}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => send.mutate()}
+                  disabled={send.isPending}
+                >
+                  Confirm & send
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
 
@@ -397,6 +430,7 @@ function EvmSend() {
     </main>
   );
 }
+
 
 function AssetChip({
   selected,
