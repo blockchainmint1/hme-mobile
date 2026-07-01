@@ -16,6 +16,7 @@ import { TXC_NETWORK } from "@/lib/txc/network";
 import { address as addrLib } from "bitcoinjs-lib";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
+import { hapticSuccess, hapticError } from "@/lib/native/ui";
 
 const searchSchema = z.object({
   to: z.string().optional(),
