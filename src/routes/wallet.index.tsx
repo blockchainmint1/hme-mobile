@@ -77,22 +77,24 @@ function WalletHome() {
   };
 
 
-  // TXC data
+  // TXC data — balance/frontier scan runs always so the portfolio total is
+  // accurate at open. With the persisted scan-hint this is only ~5–10
+  // mempool.space calls after the first deep scan.
   const account = useQuery({
     queryKey: ["account", unlocked?.kind, root?.neutered().toBase58().slice(0, 24)],
     enabled: !!root && !!unlocked,
     queryFn: () => scanAccount(root!, unlocked!.kind),
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
   });
   const price = useQuery({
     queryKey: ["txc-price"],
     queryFn: () => fetchPrice(),
-    staleTime: 60_000,
+    staleTime: 10 * 60_000, // prices don't need per-open freshness
   });
+  // TX history is heavy (one call per used address). Only fetch it when the
+  // TXC tile is actually being viewed; cached data still renders on swipe-in.
   const txs = useQuery({
     queryKey: ["txs", account.data?.external.map((a) => a.address).join(",")],
-    enabled: !!account.data,
+    enabled: !!account.data && activeChain === "txc",
     queryFn: async () => {
       const all = await Promise.all(
         [...(account.data?.external ?? []), ...(account.data?.internal ?? [])].map((a) =>
@@ -113,18 +115,20 @@ function WalletHome() {
   // EVM data (only for enabled EVM chains)
   const evmEnabled = enabled.filter((c) => c in EVM_CHAINS) as EvmChainId[];
   const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
+  // Prices are cheap and needed for portfolio total. Long stale time.
   const allPrices = useQuery({
     queryKey: ["all-prices"],
     queryFn: () => fetchAllPrices(),
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
     enabled: evmEnabled.length > 0,
   });
+  // Native balances always run for all enabled EVM chains so the portfolio
+  // total is complete on open. One RPC call each = cheap.
   const evmBalances = useQueries({
     queries: evmEnabled.map((id) => ({
       queryKey: ["evm-balance", id, evmAddress],
       enabled: !!evmAddress,
       queryFn: () => evmClient(id).getBalance({ address: evmAddress! }),
-      staleTime: 30_000,
     })),
   });
 
@@ -507,16 +511,14 @@ function EvmActivity({
     queryKey: ["erc20-usdc", chainId, address],
     enabled: !!address,
     queryFn: () => readErc20Balance(chainId, USDC_BY_CHAIN[chainId], address as `0x${string}`),
-    staleTime: 30_000,
   });
 
   const history = useQuery({
     queryKey: ["evm-history", chainId, address],
     enabled: !!address,
     queryFn: () => fetchHistory({ data: { chain: chainId, address: address! } }),
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
   });
+
 
   const usdcRaw = usdc.data ?? 0n;
   const usdcAmt = usdcRaw > 0n ? tokenAmountFromRaw(usdcRaw, USDC_BY_CHAIN[chainId].decimals) : "0";

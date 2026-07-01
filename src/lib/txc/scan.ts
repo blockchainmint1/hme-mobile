@@ -18,6 +18,13 @@ import {
 } from "./mempool";
 
 const GAP_LIMIT = 20;
+// Fast-refresh frontier: after we've done at least one deep scan and know
+// how many addresses are actually used, we only re-check that range plus a
+// small buffer of unused addresses on each refresh. This drops a typical
+// refresh from ~40 mempool.space calls down to ~5–10 without losing the
+// ability to detect new activity on the next receive address.
+const FAST_FRONTIER = 5;
+const HINT_VERSION = 1;
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -36,6 +43,42 @@ export interface AccountSnapshot {
   nextChangeIndex: number;
   balanceSats: number;
   utxos: AccountUtxo[];
+}
+
+interface ScanHint {
+  v: number;
+  extUsed: number;
+  intUsed: number;
+}
+
+function hintKey(root: BIP32Interface, kind: AddressKind): string {
+  // Neutered xpub is safe to key on (no secrets) and stable per account.
+  return `hme.scan-hint.${kind}.${root.neutered().toBase58().slice(0, 32)}`;
+}
+
+function readHint(root: BIP32Interface, kind: AddressKind): ScanHint | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(hintKey(root, kind));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ScanHint;
+    if (parsed?.v !== HINT_VERSION) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeHint(root: BIP32Interface, kind: AddressKind, extUsed: number, intUsed: number): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(
+      hintKey(root, kind),
+      JSON.stringify({ v: HINT_VERSION, extUsed, intUsed } satisfies ScanHint),
+    );
+  } catch {
+    // storage full / disabled — hint is optional, just fall back to deep scan next time
+  }
 }
 
 async function scanChain(
@@ -69,11 +112,68 @@ async function scanChain(
   return { all, firstUnusedIndex: firstUnused };
 }
 
+/**
+ * Fast refresh path: only re-check the known-used range plus a small buffer
+ * of unused addresses ahead. If new activity appears at the very edge of the
+ * buffer, extend the window so we never silently miss funds — but if the edge
+ * pushes past the full 20-address gap limit, bail to a full deep scan.
+ */
+async function scanChainFast(
+  root: BIP32Interface,
+  kind: AddressKind,
+  change: 0 | 1,
+  knownUsed: number,
+): Promise<{ all: DerivedAddress[]; firstUnusedIndex: number; overflowed: boolean }> {
+  const all: DerivedAddress[] = [];
+  let firstUnused = 0;
+  let limit = knownUsed + FAST_FRONTIER;
+  let i = 0;
+  while (i < limit) {
+    const d = deriveAddress(root, kind, change, i);
+    all.push(d);
+    try {
+      const stats = await getAddressStats(d.address);
+      if (stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0) {
+        firstUnused = i + 1;
+        limit = Math.max(limit, i + 1 + FAST_FRONTIER);
+      }
+    } catch {
+      // treat unreachable as unused for this pass
+    }
+    if (limit - knownUsed > GAP_LIMIT) {
+      return { all, firstUnusedIndex: firstUnused, overflowed: true };
+    }
+    i++;
+  }
+  return { all, firstUnusedIndex: firstUnused, overflowed: false };
+}
+
+
 export async function scanAccount(
   root: BIP32Interface,
   kind: AddressKind,
+  opts?: { deep?: boolean },
 ): Promise<AccountSnapshot> {
-  const [ext, int] = await Promise.all([scanChain(root, kind, 0), scanChain(root, kind, 1)]);
+  const hint = opts?.deep ? null : readHint(root, kind);
+  let ext: { all: DerivedAddress[]; firstUnusedIndex: number };
+  let int: { all: DerivedAddress[]; firstUnusedIndex: number };
+  if (hint) {
+    const [e, i] = await Promise.all([
+      scanChainFast(root, kind, 0, hint.extUsed),
+      scanChainFast(root, kind, 1, hint.intUsed),
+    ]);
+    if (e.overflowed || i.overflowed) {
+      // Activity blew past our fast window — fall back to full gap-limit walk.
+      [ext, int] = await Promise.all([scanChain(root, kind, 0), scanChain(root, kind, 1)]);
+    } else {
+      ext = e;
+      int = i;
+    }
+  } else {
+    [ext, int] = await Promise.all([scanChain(root, kind, 0), scanChain(root, kind, 1)]);
+  }
+  writeHint(root, kind, ext.firstUnusedIndex, int.firstUnusedIndex);
+
 
   // Pull UTXOs only from addresses up to firstUnusedIndex on each chain.
   const usedExt = ext.all.slice(0, Math.max(ext.firstUnusedIndex, 1));

@@ -8,8 +8,14 @@ export const getRouter = () => {
     defaultOptions: {
       queries: {
         // Show cached data instantly on mount; refetch in background.
-        staleTime: 30_000,
+        // 90s stale time means a reopen within 90s of the last fetch
+        // spends zero API calls — hits the persisted cache directly.
+        staleTime: 90_000,
         gcTime: 24 * 60 * 60 * 1000, // keep in memory for 24h so persister can rehydrate it
+        // Never silently re-hit APIs when the tab regains focus; users have
+        // explicit per-tile refresh buttons plus manual pull-to-refresh.
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
       },
     },
   });
