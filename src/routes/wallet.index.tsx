@@ -580,6 +580,8 @@ function EvmTile({
 }) {
   const [hidden] = useHideBalances();
   const [refreshing, setRefreshing] = useState(false);
+  const [swapEnabled] = useFeature("evmSwap");
+
   const meta = EVM_CHAINS[chainId];
   const balanceEth = balanceWei != null ? Number(balanceWei) / 1e18 : null;
   const balanceUsd = balanceEth != null && priceUsd != null ? balanceEth * priceUsd : null;
@@ -619,27 +621,50 @@ function EvmTile({
     >
       <div className="flex items-center justify-between">
         <p className="text-sm opacity-80">{meta.name}</p>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={async (e) => {
-            e.stopPropagation();
-            if (refreshing) return;
-            setRefreshing(true);
-            try {
-              await onRefresh();
-            } finally {
-              setRefreshing(false);
-            }
-          }}
-          className="opacity-80 hover:opacity-100"
-          aria-label="Refresh"
-        >
-          <RefreshCw
-            className={`h-4 w-4 ${refreshing || loading ? "animate-spin" : ""}`}
-          />
-        </span>
+        <div className="flex items-center gap-3">
+          {swapEnabled && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                const map: Record<EvmChainId, string> = { eth: "ethereum", base: "base", bsc: "bnb" };
+                window.open(
+                  `https://app.uniswap.org/swap?chain=${map[chainId]}`,
+                  "_blank",
+                  "noopener,noreferrer",
+                );
+              }}
+              className="opacity-80 hover:opacity-100"
+              aria-label="Swap on Uniswap"
+              title="Swap on Uniswap"
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+            </span>
+          )}
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (refreshing) return;
+              setRefreshing(true);
+              try {
+                await onRefresh();
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+            className="opacity-80 hover:opacity-100"
+            aria-label="Refresh"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${refreshing || loading ? "animate-spin" : ""}`}
+            />
+          </span>
+        </div>
       </div>
+
       <p className="mt-3 text-[10px] uppercase tracking-widest opacity-70">Native</p>
       <p className="mt-0.5 text-4xl font-bold tracking-tight">
         {hidden ? maskAmount(balText) : balText}
