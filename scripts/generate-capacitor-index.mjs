@@ -103,6 +103,13 @@ for (const route of staticSpaRoutes) {
 }
 
 for (const outputDir of outputDirs) {
+  if (outputDir !== publicDir) {
+    await mkdir(dirname(outputDir), { recursive: true });
+    await cp(publicDir, outputDir, { recursive: true, force: true });
+  }
+}
+
+for (const outputDir of outputDirs) {
   await mkdir(outputDir, { recursive: true });
   await writeFile(resolve(outputDir, "index.html"), routeHtml.get(""));
   for (const route of staticSpaRoutes) {
