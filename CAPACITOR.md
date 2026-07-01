@@ -35,7 +35,9 @@ If Xcode crashes after an incomplete Capacitor add/sync, remove the half-built
 native project and generated web output, then rebuild in this order:
 
 ```bash
-rm -rf ios node_modules dist .output
+rm -rf ios node_modules dist .output \
+  ~/Library/Saved\ Application\ State/com.apple.dt.Xcode.savedState \
+  ~/Library/Developer/Xcode/DerivedData/*
 bun install
 bun run build
 bunx cap add ios
@@ -43,6 +45,10 @@ bunx cap sync ios
 bun run cap:assets
 bunx cap open ios
 ```
+
+Do not run `~/Library/Developer/Xcode/DerivedData/*` by itself — that tries to
+execute the first DerivedData folder and zsh correctly returns "permission
+denied". It must be part of an `rm -rf ...` cleanup command.
 
 ## Generate app icons and splash screens
 
