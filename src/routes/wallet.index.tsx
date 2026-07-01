@@ -16,6 +16,8 @@ import { getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { EVM_CHAINS, deriveEvmAccount, evmClient, formatEth, type EvmChainId } from "@/lib/chains/evm";
 import { TxDetailSheet, type TxDetail } from "@/components/wallet/TxDetailSheet";
+import { WalletDetailSheet } from "@/components/wallet/WalletDetailSheet";
+import { useHideBalances, maskAmount } from "@/lib/hide-balances";
 
 export const Route = createFileRoute("/wallet/")({
   component: WalletHome,
@@ -53,6 +55,8 @@ function WalletHome() {
 
   // Selected transaction (opens in-page detail sheet)
   const [detail, setDetail] = useState<TxDetail | null>(null);
+  // Which wallet tile's details are open
+  const [tileOpen, setTileOpen] = useState<ChainId | null>(null);
 
   // TXC data
   const account = useQuery({
@@ -125,6 +129,7 @@ function WalletHome() {
                     onRefresh={() => account.refetch()}
                     refreshing={account.isFetching}
                     label={unlocked?.label ?? "TXC Wallet"}
+                    onOpenDetails={() => setTileOpen("txc")}
                   />
                 ) : (
                   <EvmTile
@@ -135,6 +140,7 @@ function WalletHome() {
                     onRefresh={() =>
                       evmBalances[evmEnabled.indexOf(id as EvmChainId)]?.refetch()
                     }
+                    onOpenDetails={() => setTileOpen(id)}
                   />
                 )}
               </div>
@@ -255,6 +261,43 @@ function WalletHome() {
         </div>
       </div>
       <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
+      {tileOpen === "txc" && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="txc"
+          balanceText={`${formatTxc(account.data?.balanceSats ?? 0)} TXC`}
+          fiatText={
+            price.data?.usd != null
+              ? formatFiat(satsToTxc(account.data?.balanceSats ?? 0) * price.data.usd)
+              : null
+          }
+          receiveAddress={account.data?.nextReceiveAddress ?? null}
+          txCount={txs.data?.length ?? null}
+        />
+      )}
+      {tileOpen && tileOpen !== "txc" && tileOpen in EVM_CHAINS && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="evm"
+          chainId={tileOpen as EvmChainId}
+          address={evmAddress}
+          balanceText={(() => {
+            const idx = evmEnabled.indexOf(tileOpen as EvmChainId);
+            const wei = evmBalances[idx]?.data ?? null;
+            const sym = EVM_CHAINS[tileOpen as EvmChainId].nativeSymbol;
+            return `${wei != null ? formatEth(wei) : "0"} ${sym}`;
+          })()}
+          fiatText={(() => {
+            const idx = evmEnabled.indexOf(tileOpen as EvmChainId);
+            const wei = evmBalances[idx]?.data ?? null;
+            const p = allPrices.data?.prices[EVM_CHAINS[tileOpen as EvmChainId].priceSymbol];
+            if (wei == null || p == null) return null;
+            return formatFiat((Number(wei) / 1e18) * p);
+          })()}
+        />
+      )}
     </main>
   );
 }
@@ -312,6 +355,7 @@ function TxcTile({
   onRefresh,
   refreshing,
   label,
+  onOpenDetails,
 }: {
   balanceSats: number;
   loading: boolean;
@@ -319,27 +363,40 @@ function TxcTile({
   onRefresh: () => void;
   refreshing: boolean;
   label: string;
+  onOpenDetails: () => void;
 }) {
+  const [hidden] = useHideBalances();
   const balanceUsd = priceUsd ? satsToTxc(balanceSats) * priceUsd : null;
+  const balText = loading ? "..." : formatTxc(balanceSats);
+  const fiatText = balanceUsd != null ? formatFiat(balanceUsd) : "Price unavailable";
   return (
-    <section className="rounded-2xl bg-gradient-to-br from-amber-600 via-orange-700 to-amber-900 p-6 text-white shadow-xl shadow-amber-950/30">
+    <button
+      type="button"
+      onClick={onOpenDetails}
+      className="w-full text-left rounded-2xl bg-gradient-to-br from-amber-600 via-orange-700 to-amber-900 p-6 text-white shadow-xl shadow-amber-950/30 active:scale-[0.99] transition-transform"
+    >
       <div className="flex items-center justify-between">
         <p className="text-sm text-amber-100/80">{label}</p>
-        <button
-          onClick={onRefresh}
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRefresh();
+          }}
           className="text-amber-100/80 hover:text-white"
           aria-label="Refresh"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-        </button>
+        </span>
       </div>
       <p className="mt-2 text-4xl font-bold tracking-tight">
-        {loading ? "..." : formatTxc(balanceSats)}
+        {hidden ? maskAmount(balText) : balText}
       </p>
       <p className="text-amber-100/80 text-sm">
-        {balanceUsd != null ? formatFiat(balanceUsd) : "Price unavailable"}
+        {hidden ? maskAmount(fiatText) : fiatText}
       </p>
-    </section>
+    </button>
   );
 }
 
@@ -349,34 +406,51 @@ function EvmTile({
   loading,
   priceUsd,
   onRefresh,
+  onOpenDetails,
 }: {
   chainId: EvmChainId;
   balanceWei: bigint | null;
   loading: boolean;
   priceUsd: number | null;
   onRefresh: () => void;
+  onOpenDetails: () => void;
 }) {
+  const [hidden] = useHideBalances();
   const meta = EVM_CHAINS[chainId];
   const balanceEth = balanceWei != null ? Number(balanceWei) / 1e18 : null;
   const balanceUsd = balanceEth != null && priceUsd != null ? balanceEth * priceUsd : null;
+  const balText = loading
+    ? "..."
+    : `${balanceWei != null ? formatEth(balanceWei) : "0"} ${meta.nativeSymbol}`;
+  const fiatText =
+    balanceUsd != null ? formatFiat(balanceUsd) : priceUsd == null ? "Price unavailable" : "—";
   return (
-    <section
-      className="rounded-2xl p-6 text-white shadow-xl"
+    <button
+      type="button"
+      onClick={onOpenDetails}
+      className="w-full text-left rounded-2xl p-6 text-white shadow-xl active:scale-[0.99] transition-transform"
       style={{ background: `linear-gradient(135deg, ${meta.accent} 0%, ${meta.accent}CC 60%, #111 140%)` }}
     >
       <div className="flex items-center justify-between">
         <p className="text-sm opacity-80">{meta.name}</p>
-        <button onClick={onRefresh} className="opacity-80 hover:opacity-100" aria-label="Refresh">
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRefresh();
+          }}
+          className="opacity-80 hover:opacity-100"
+          aria-label="Refresh"
+        >
           <RefreshCw className="h-4 w-4" />
-        </button>
+        </span>
       </div>
       <p className="mt-2 text-4xl font-bold tracking-tight">
-        {loading ? "..." : `${balanceWei != null ? formatEth(balanceWei) : "0"} ${meta.nativeSymbol}`}
+        {hidden ? maskAmount(balText) : balText}
       </p>
-      <p className="text-sm opacity-80">
-        {balanceUsd != null ? formatFiat(balanceUsd) : priceUsd == null ? "Price unavailable" : "—"}
-      </p>
-    </section>
+      <p className="text-sm opacity-80">{hidden ? maskAmount(fiatText) : fiatText}</p>
+    </button>
   );
 }
 
