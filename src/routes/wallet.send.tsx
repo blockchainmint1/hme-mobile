@@ -284,7 +284,11 @@ function SendPage() {
                   <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
                 </div>
               )}
-              <Button type="submit" className="w-full" disabled={!to || !amount || account.isLoading}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={!to || (!sendAll && !amount) || account.isLoading}
+              >
                 Review
               </Button>
             </form>
@@ -298,15 +302,18 @@ function SendPage() {
             <CardTitle>Review and send</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="To"><code className="font-mono break-all">{to}</code></Row>
-            <Row label="Amount">{formatTxc(amountSats)}</Row>
+            <Row label="To"><code className="font-mono break-all">{to.trim()}</code></Row>
+            <Row label="Amount">
+              {formatTxc(reviewedOutSats)}
+              {sendAll && <span className="text-muted-foreground text-xs ml-1">(all)</span>}
+            </Row>
             <Row label="Network fee">
               {formatTxc(stage.feeSats)}{" "}
               <span className="text-muted-foreground text-xs">
                 ({stage.vsize} vB × {feeRate} sat/vB)
               </span>
             </Row>
-            <Row label="Total">{formatTxc(amountSats + stage.feeSats)}</Row>
+            <Row label="Total">{formatTxc(reviewedOutSats + stage.feeSats)}</Row>
             {error && (
               <div className="flex items-start gap-2 text-sm text-destructive">
                 <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
