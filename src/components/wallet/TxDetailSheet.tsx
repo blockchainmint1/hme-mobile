@@ -142,7 +142,7 @@ function Field({
           <button
             className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
             onClick={async () => {
-              await copyText(value);
+              await copyToClipboard(value);
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
