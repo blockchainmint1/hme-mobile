@@ -129,7 +129,7 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
             ? error
             : supported === false
               ? "QR scanning not supported"
-              : "Point the camera at a TEXITcoin address QR code."}
+              : "Point the camera at a wallet address QR code."}
         </div>
       </DialogContent>
     </Dialog>

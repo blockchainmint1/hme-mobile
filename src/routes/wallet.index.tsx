@@ -8,7 +8,7 @@ import { formatTxc, formatTxcCompact, formatFiat, satsToTxc, compactNumberString
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
 import { getEvmHistory } from "@/lib/chains/history.functions";
-import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
+import { readErc20Balance, tokenAmountFromRaw, TOKENS_BY_CHAIN, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock } from "lucide-react";
@@ -602,11 +602,15 @@ function EvmActivity({
 }) {
   const meta = EVM_CHAINS[chainId];
   const fetchHistory = useServerFn(getEvmHistory);
+  const tokens = TOKENS_BY_CHAIN[chainId];
 
-  const usdc = useQuery({
-    queryKey: ["erc20-usdc", chainId, address],
-    enabled: !!address,
-    queryFn: () => readErc20Balance(chainId, USDC_BY_CHAIN[chainId], address as `0x${string}`),
+  const tokenBalances = useQueries({
+    queries: tokens.map((t) => ({
+      queryKey: ["erc20-balance", chainId, t.address, address],
+      enabled: !!address,
+      queryFn: () => readErc20Balance(chainId, t, address as `0x${string}`),
+      staleTime: 30_000,
+    })),
   });
 
   const history = useQuery({
@@ -615,34 +619,52 @@ function EvmActivity({
     queryFn: () => fetchHistory({ data: { chain: chainId, address: address! } }),
   });
 
-
-  const usdcRaw = usdc.data ?? 0n;
-  const usdcAmt = usdcRaw > 0n ? tokenAmountFromRaw(usdcRaw, USDC_BY_CHAIN[chainId].decimals) : "0";
-
   return (
     <>
       <section className="mt-8 px-4">
         <h2 className="text-lg font-semibold mb-3">Tokens</h2>
         <ul className="space-y-2">
-          <li className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3">
-            <div className="w-9 h-9 rounded-full bg-blue-500/15 text-blue-400 flex items-center justify-center text-xs font-bold">
-              $
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">USDC</p>
-              <p className="text-xs text-muted-foreground">on {meta.name}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-semibold">
-                {usdc.isLoading ? "…" : Number(usdcAmt).toLocaleString(undefined, { maximumFractionDigits: 4 })}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {usdc.data != null ? formatFiat(Number(usdcAmt)) : "—"}
-              </p>
-            </div>
-          </li>
+          {tokens.map((t, i) => {
+            const q = tokenBalances[i];
+            const raw = q?.data ?? 0n;
+            const amt = raw > 0n ? tokenAmountFromRaw(raw, t.decimals) : "0";
+            const accent =
+              t.symbol === "USDC"
+                ? "bg-blue-500/15 text-blue-400"
+                : t.symbol === "USDT"
+                  ? "bg-emerald-500/15 text-emerald-400"
+                  : "bg-muted text-foreground";
+            return (
+              <li key={t.address}>
+                <Link
+                  to="/wallet/evm/$chain/send"
+                  params={{ chain: chainId }}
+                  search={{ asset: t.symbol }}
+                  className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors"
+                >
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${accent}`}>
+                    $
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{t.symbol}</p>
+                    <p className="text-xs text-muted-foreground">on {meta.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold">
+                      {q?.isLoading ? "…" : Number(amt).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {q?.data != null && t.symbol.startsWith("USD") ? formatFiat(Number(amt)) : "—"}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </section>
+
 
       <section className="mt-6 px-4">
         <div className="flex items-center justify-between mb-3">

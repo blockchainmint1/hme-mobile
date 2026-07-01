@@ -1,8 +1,7 @@
 /**
- * Minimal ERC20 helpers — currently only USDC across the three EVM chains
- * we support. Decimals are hard-coded per chain (USDC is 6 on Ethereum/Base,
- * 18 on BSC — easy gotcha) so we never accidentally truncate or 1e12 a
- * decimal.
+ * Minimal ERC20 helpers plus per-chain token registry (USDC, USDT).
+ * Decimals vary by chain — USDC/USDT are 6 on Ethereum/Base, 18 on BSC —
+ * hard-coded here so we never accidentally truncate or 1e12 a decimal.
  */
 import { encodeFunctionData, erc20Abi, parseUnits, formatUnits, type Address } from "viem";
 import { evmClient, type EvmChainId } from "./evm";
@@ -13,24 +12,31 @@ export interface Erc20TokenMeta {
   decimals: number;
 }
 
-/** Canonical USDC contracts. Decimals vary by chain — see header note. */
+/** Canonical USDC contracts. */
 export const USDC_BY_CHAIN: Record<EvmChainId, Erc20TokenMeta> = {
-  eth: {
-    symbol: "USDC",
-    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    decimals: 6,
-  },
-  base: {
-    symbol: "USDC",
-    address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    decimals: 6,
-  },
-  bsc: {
-    symbol: "USDC",
-    address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    decimals: 18,
-  },
+  eth: { symbol: "USDC", address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", decimals: 6 },
+  base: { symbol: "USDC", address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", decimals: 6 },
+  bsc: { symbol: "USDC", address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals: 18 },
 };
+
+/** Canonical USDT contracts. Base uses the USD₮0 bridge contract. */
+export const USDT_BY_CHAIN: Record<EvmChainId, Erc20TokenMeta> = {
+  eth: { symbol: "USDT", address: "0xdAC17F958D2ee523a2206206994597C13D831ec7", decimals: 6 },
+  base: { symbol: "USDT", address: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2", decimals: 6 },
+  bsc: { symbol: "USDT", address: "0x55d398326f99059fF775485246999027B3197955", decimals: 18 },
+};
+
+/** All ERC20 tokens we display + support for send. Order = display order. */
+export const TOKENS_BY_CHAIN: Record<EvmChainId, Erc20TokenMeta[]> = {
+  eth: [USDC_BY_CHAIN.eth, USDT_BY_CHAIN.eth],
+  base: [USDC_BY_CHAIN.base, USDT_BY_CHAIN.base],
+  bsc: [USDC_BY_CHAIN.bsc, USDT_BY_CHAIN.bsc],
+};
+
+export function findToken(chain: EvmChainId, symbol: string): Erc20TokenMeta | null {
+  const s = symbol.toUpperCase();
+  return TOKENS_BY_CHAIN[chain].find((t) => t.symbol.toUpperCase() === s) ?? null;
+}
 
 /** Read an ERC20 balance. Returns the raw integer (units of `decimals`). */
 export async function readErc20Balance(
