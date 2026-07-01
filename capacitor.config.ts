@@ -15,10 +15,16 @@ const config: CapacitorConfig = {
   webDir: "dist/client",
   backgroundColor: "#0b0f14",
   server: {
+    // Load the published web app directly in the WKWebView. The web build works
+    // reliably and Capacitor native plugins (biometrics, camera, clipboard,
+    // secure storage, deep links) all continue to function against a remote URL.
+    // Keeping this pointed at the live domain sidesteps the bundled-asset issues
+    // seen in native builds 2-4 while we debug the offline shell separately.
+    url: "https://mobile.honest.money",
+    cleartext: false,
     androidScheme: "https",
-    // Allowlist only the domains we intentionally load in the WebView
-    // (e.g. universal-link entry). External links use Browser.open() so
-    // this stays tight; wildcard would defeat the point.
+    iosScheme: "https",
+    hostname: "mobile.honest.money",
     allowNavigation: ["mobile.honest.money", "nectar-pay.com"],
   },
   ios: {
