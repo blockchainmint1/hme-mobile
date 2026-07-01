@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
-import { formatTxc, formatFiat, satsToTxc } from "@/lib/txc/units";
+import { formatTxc, formatTxcCompact, formatFiat, satsToTxc, compactNumberString } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
 import { getEvmHistory } from "@/lib/chains/history.functions";
@@ -367,7 +367,7 @@ function TxcTile({
 }) {
   const [hidden] = useHideBalances();
   const balanceUsd = priceUsd ? satsToTxc(balanceSats) * priceUsd : null;
-  const balText = loading ? "..." : formatTxc(balanceSats);
+  const balText = loading ? "..." : formatTxcCompact(balanceSats);
   const fiatText = balanceUsd != null ? formatFiat(balanceUsd) : "Price unavailable";
   return (
     <button
@@ -392,6 +392,7 @@ function TxcTile({
       </div>
       <p className="mt-2 text-4xl font-bold tracking-tight">
         {hidden ? maskAmount(balText) : balText}
+        <span className="ml-2 text-2xl font-semibold opacity-90">TXC</span>
       </p>
       <p className="text-amber-100/80 text-sm">
         {hidden ? maskAmount(fiatText) : fiatText}
@@ -419,9 +420,9 @@ function EvmTile({
   const meta = EVM_CHAINS[chainId];
   const balanceEth = balanceWei != null ? Number(balanceWei) / 1e18 : null;
   const balanceUsd = balanceEth != null && priceUsd != null ? balanceEth * priceUsd : null;
-  const balText = loading
-    ? "..."
-    : `${balanceWei != null ? formatEth(balanceWei) : "0"} ${meta.nativeSymbol}`;
+  const rawEthText = balanceWei != null ? formatEth(balanceWei) : "0";
+  const compactEthText = compactNumberString(rawEthText, 10, 5);
+  const balText = loading ? "..." : `${compactEthText} ${meta.nativeSymbol}`;
   const fiatText =
     balanceUsd != null ? formatFiat(balanceUsd) : priceUsd == null ? "Price unavailable" : "—";
   return (
