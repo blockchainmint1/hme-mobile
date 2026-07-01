@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { DerivationKind } from "@/lib/txc/network";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { QrScanButton } from "@/components/wallet/QrScanButton";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/import")({
   head: () => ({
@@ -41,6 +43,58 @@ const KIND_LABEL: Record<DerivationKind, string> = {
 const IMPORT_GAP_LIMIT = 20;
 const IMPORT_MAX_INDEX = 120;
 const IMPORT_PROBE_TIMEOUT_MS = 4500;
+
+/**
+ * Extract a BIP39 seed phrase from arbitrary QR payload text.
+ * Accepts: raw words, JSON `{ mnemonic|seed|words: "..." }`, or URI-ish
+ * strings that contain the words in a query param or after a scheme.
+ * Returns null when nothing plausibly-seed-shaped is found.
+ */
+function extractSeedFromQr(raw: string): string | null {
+  const text = raw.trim();
+  if (!text) return null;
+
+  const tryValidate = (candidate: string): string | null => {
+    const normalized = normalizeMnemonic(candidate);
+    if (!normalized) return null;
+    const count = normalized.split(" ").length;
+    if (count !== 12 && count !== 15 && count !== 18 && count !== 21 && count !== 24) return null;
+    return validateMnemonic(normalized) ? normalized : null;
+  };
+
+  // 1) JSON payload
+  if (text.startsWith("{")) {
+    try {
+      const obj = JSON.parse(text) as Record<string, unknown>;
+      for (const key of ["mnemonic", "seed", "words", "phrase"]) {
+        const v = obj[key];
+        if (typeof v === "string") {
+          const ok = tryValidate(v);
+          if (ok) return ok;
+        }
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  // 2) URI with query params (e.g. bip39://import?mnemonic=...)
+  try {
+    const url = new URL(text);
+    for (const key of ["mnemonic", "seed", "words", "phrase"]) {
+      const v = url.searchParams.get(key);
+      if (v) {
+        const ok = tryValidate(v);
+        if (ok) return ok;
+      }
+    }
+  } catch {
+    // not a URL
+  }
+
+  // 3) Raw text — try as-is, then strip any leading scheme like "bip39:"
+  return tryValidate(text) ?? tryValidate(text.replace(/^[a-zA-Z0-9+.-]+:/, ""));
+}
 
 interface Candidate {
   kind: DerivationKind;
@@ -328,8 +382,23 @@ function ImportPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Seed phrase</CardTitle>
-          <CardDescription>12 or 24 words, separated by spaces.</CardDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle>Seed phrase</CardTitle>
+              <CardDescription>12 or 24 words, separated by spaces.</CardDescription>
+            </div>
+            <QrScanButton
+              onScan={(text) => {
+                const extracted = extractSeedFromQr(text);
+                if (!extracted) {
+                  toast.error("That QR doesn't contain a valid seed phrase.");
+                  return;
+                }
+                setPhrase(extracted);
+                toast.success("Seed phrase loaded from QR.");
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -346,6 +415,7 @@ function ImportPage() {
               className="font-mono"
               autoFocus
             />
+
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
