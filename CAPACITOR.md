@@ -1,4 +1,4 @@
-# TEXITcoin Wallet — Native (Capacitor) builds
+# HME Wallet — Native (Capacitor) builds
 
 This app ships as a Progressive Web App **and** as a native iOS / Android
 binary via [Capacitor](https://capacitorjs.com). The native shell is what
@@ -19,12 +19,24 @@ them to whichever native repo you ship from.
 ## Build + sync the web bundle into the native projects
 
 ```bash
-bun run build
-bunx cap sync
+bun run cap:sync        # = bun run build && bunx cap sync
 ```
 
 `vite build` writes to `dist/client`, which `capacitor.config.ts` points at
 via `webDir`.
+
+## Generate app icons and splash screens
+
+Source PNGs live in `assets/` (`icon.png` 1024×1024, `splash.png` 1920×1920).
+After the native projects exist, generate every required size in one shot:
+
+```bash
+bun run cap:assets
+```
+
+That runs `@capacitor/assets` which writes into
+`ios/App/App/Assets.xcassets` and `android/app/src/main/res`. Re-run it any
+time you change the source PNGs.
 
 ## Run on a device
 
@@ -54,9 +66,9 @@ iOS — add to `ios/App/App/Info.plist`:
 
 ```xml
 <key>NSFaceIDUsageDescription</key>
-<string>Unlock your TEXITcoin wallet with Face ID.</string>
+<string>Unlock your HME wallet with Face ID.</string>
 <key>NSCameraUsageDescription</key>
-<string>Scan TEXITcoin addresses and payment QR codes.</string>
+<string>Scan addresses and payment QR codes.</string>
 ```
 
 Android — `android/app/src/main/AndroidManifest.xml`:
@@ -70,8 +82,9 @@ Android — `android/app/src/main/AndroidManifest.xml`:
 ## Store identity
 
 - App ID: `money.honest.txcwallet`
-- Display name: `TEXITcoin Wallet`
-- Icon source: `src/assets/txc-icon-512.png`
+- Display name: `HME Wallet`
+- Icon source: `assets/icon.png` (1024×1024)
+- Splash source: `assets/splash.png` (1920×1920)
 
 ## Migration from the old TXC Wallet
 
