@@ -318,6 +318,7 @@ function TxcTile({
   onRefresh,
   refreshing,
   label,
+  onOpenDetails,
 }: {
   balanceSats: number;
   loading: boolean;
@@ -325,27 +326,40 @@ function TxcTile({
   onRefresh: () => void;
   refreshing: boolean;
   label: string;
+  onOpenDetails: () => void;
 }) {
+  const [hidden] = useHideBalances();
   const balanceUsd = priceUsd ? satsToTxc(balanceSats) * priceUsd : null;
+  const balText = loading ? "..." : formatTxc(balanceSats);
+  const fiatText = balanceUsd != null ? formatFiat(balanceUsd) : "Price unavailable";
   return (
-    <section className="rounded-2xl bg-gradient-to-br from-amber-600 via-orange-700 to-amber-900 p-6 text-white shadow-xl shadow-amber-950/30">
+    <button
+      type="button"
+      onClick={onOpenDetails}
+      className="w-full text-left rounded-2xl bg-gradient-to-br from-amber-600 via-orange-700 to-amber-900 p-6 text-white shadow-xl shadow-amber-950/30 active:scale-[0.99] transition-transform"
+    >
       <div className="flex items-center justify-between">
         <p className="text-sm text-amber-100/80">{label}</p>
-        <button
-          onClick={onRefresh}
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRefresh();
+          }}
           className="text-amber-100/80 hover:text-white"
           aria-label="Refresh"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-        </button>
+        </span>
       </div>
       <p className="mt-2 text-4xl font-bold tracking-tight">
-        {loading ? "..." : formatTxc(balanceSats)}
+        {hidden ? maskAmount(balText) : balText}
       </p>
       <p className="text-amber-100/80 text-sm">
-        {balanceUsd != null ? formatFiat(balanceUsd) : "Price unavailable"}
+        {hidden ? maskAmount(fiatText) : fiatText}
       </p>
-    </section>
+    </button>
   );
 }
 
