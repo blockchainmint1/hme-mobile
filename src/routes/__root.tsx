@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -169,7 +169,60 @@ function RootComponent() {
     });
   }, []);
 
+  // Android hardware back button: navigate in-app when we can, otherwise
+  // minimize the app instead of exiting so users don't lose transient state.
+  useEffect(() => {
+    let remove: (() => void) | undefined;
+    void (async () => {
+      try {
+        const { isNative, nativePlatform } = await import("../lib/native/platform");
+        if (!isNative() || nativePlatform() !== "android") return;
+        const { App } = await import("@capacitor/app");
+        const sub = await App.addListener("backButton", ({ canGoBack }) => {
+          if (canGoBack && window.history.length > 1) window.history.back();
+          else App.minimizeApp().catch(() => {});
+        });
+        remove = () => sub.remove().catch(() => {});
+      } catch {
+        /* plugin missing */
+      }
+    })();
+    return () => remove?.();
+  }, []);
 
+  // Simple offline banner — @capacitor/network is only wired natively; on
+  // the web we fall back to the browser's navigator.onLine + events.
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    let remove: (() => void) | undefined;
+    void (async () => {
+      try {
+        const { isNative } = await import("../lib/native/platform");
+        if (isNative()) {
+          const { Network } = await import("@capacitor/network");
+          const status = await Network.getStatus();
+          setOffline(!status.connected);
+          const sub = await Network.addListener("networkStatusChange", (s) => {
+            setOffline(!s.connected);
+          });
+          remove = () => sub.remove().catch(() => {});
+          return;
+        }
+      } catch {
+        /* fall through to web */
+      }
+      const on = () => setOffline(false);
+      const off = () => setOffline(true);
+      setOffline(typeof navigator !== "undefined" && navigator.onLine === false);
+      window.addEventListener("online", on);
+      window.addEventListener("offline", off);
+      remove = () => {
+        window.removeEventListener("online", on);
+        window.removeEventListener("offline", off);
+      };
+    })();
+    return () => remove?.();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -177,8 +230,13 @@ function RootComponent() {
         <WalletProvider>
           {/* Mobile-only frame: on phones it fills the screen; on larger screens
               we center a phone-width column so the app always feels like a mobile app. */}
-          <div className="min-h-[100dvh] w-full bg-muted/40 sm:py-6">
-            <div className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:min-h-[calc(100dvh-3rem)] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-border overflow-hidden">
+          <div data-wallet-frame className="min-h-[100dvh] w-full bg-muted/40 sm:py-6">
+            <div data-wallet-frame className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:min-h-[calc(100dvh-3rem)] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-border overflow-hidden">
+              {offline && (
+                <div className="bg-amber-500/15 text-amber-300 text-xs text-center py-1.5 px-3 border-b border-amber-500/30">
+                  You&apos;re offline — balances and prices may be out of date.
+                </div>
+              )}
               <div className="flex-1 pt-[env(safe-area-inset-top)]">
                 <Outlet />
               </div>
