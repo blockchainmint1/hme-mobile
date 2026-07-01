@@ -110,14 +110,14 @@ function Home() {
   return (
     <main className="mx-auto max-w-3xl px-4 pt-16 pb-12">
       <header className="text-center mb-12">
-        <div aria-label="Honest Money Ecosystem" role="img" className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-800 shadow-lg shadow-amber-900/40">
-          <svg aria-hidden="true" viewBox="0 0 64 64" className="h-12 w-12 drop-shadow-sm">
-            <circle cx="32" cy="32" r="25" fill="#111827" opacity="0.95" />
-            <path d="M18 42V22h7.2v7.1h13.6V22H46v20h-7.2v-7.2H25.2V42H18Z" fill="#facc15" />
-            <path d="M16 47h32" stroke="#fef3c7" strokeWidth="4" strokeLinecap="round" opacity="0.9" />
-          </svg>
-          <span className="sr-only">HME</span>
-        </div>
+        <img
+          src={hmeIcon.url}
+          alt="Honest Money Ecosystem"
+          width={64}
+          height={64}
+          className="mx-auto mb-5 h-16 w-16 rounded-2xl shadow-lg shadow-amber-900/40"
+        />
+
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">HME Wallet</h1>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
           A self-custodial wallet for TEXITcoin (TXC), Iskander Coin (ISK), Zero
