@@ -93,7 +93,7 @@ function parseEvmUri(
     const to = params.get("address") ?? "";
     const raw = params.get("uint256") ?? params.get("value") ?? "";
     // Match token by contract address (case-insensitive)
-    const known = TOKENS_BY_CHAIN[chain].find(
+    const known = getKnownTokens(chain).find(
       (t) => t.address.toLowerCase() === target.toLowerCase(),
     );
     const amount = known && raw ? safeFormatUnits(raw, known.decimals) : undefined;
@@ -130,7 +130,7 @@ function EvmSend() {
   const search = useSearch({ from: "/wallet/evm/$chain/send" });
   const chainId = chain as EvmChainId;
   const meta = EVM_CHAINS[chainId];
-  const tokens = TOKENS_BY_CHAIN[chainId];
+  const tokens = useTokensForChain(chainId);
   const { root } = useWallet();
   const navigate = useNavigate();
 
@@ -140,7 +140,7 @@ function EvmSend() {
   const initialAsset: AssetKind = useMemo(() => {
     const wanted = search.asset?.toUpperCase();
     if (wanted && wanted !== meta.nativeSymbol.toUpperCase()) {
-      const t = findToken(chainId, wanted);
+      const t = findKnownToken(chainId, wanted);
       if (t) return { kind: "erc20", token: t };
     }
     return { kind: "native" };
@@ -191,7 +191,7 @@ function EvmSend() {
     if (parsed.address) setTo(parsed.address);
     if (parsed.amount) setAmount(parsed.amount);
     if (parsed.assetSymbol) {
-      const t = findToken(chainId, parsed.assetSymbol);
+      const t = findKnownToken(chainId, parsed.assetSymbol);
       if (t) setAsset({ kind: "erc20", token: t });
     }
   };
