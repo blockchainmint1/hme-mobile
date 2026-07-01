@@ -720,3 +720,273 @@ function EvmActivity({
     </>
   );
 }
+
+/**
+ * Watch-only tile. Distinct dark/slate treatment + Eye badge so it reads at a
+ * glance as "look but don't touch" — no send button, no key material.
+ */
+function WatchOnlyTile({
+  wallet,
+  stats,
+  loading,
+  priceUsd,
+  onRefresh,
+  onOpenDetails,
+}: {
+  wallet: WatchWallet;
+  stats: import("@/lib/txc/mempool").MempoolAddressStats | null;
+  loading: boolean;
+  priceUsd: number | null;
+  onRefresh: () => void;
+  onOpenDetails: () => void;
+}) {
+  const [hidden] = useHideBalances();
+  const balSats = stats
+    ? stats.chain_stats.funded_txo_sum -
+      stats.chain_stats.spent_txo_sum +
+      stats.mempool_stats.funded_txo_sum -
+      stats.mempool_stats.spent_txo_sum
+    : 0;
+  const balUsd = priceUsd != null ? satsToTxc(balSats) * priceUsd : null;
+  const balText = loading && !stats ? "..." : formatTxcCompact(balSats);
+  const fiatText = balUsd != null ? formatFiat(balUsd) : "Price unavailable";
+  return (
+    <button
+      type="button"
+      onClick={onOpenDetails}
+      className="w-full text-left rounded-2xl p-6 text-white shadow-xl shadow-black/40 active:scale-[0.99] transition-transform relative overflow-hidden"
+      style={{
+        background:
+          "linear-gradient(135deg, #1f2937 0%, #0f172a 55%, #000 140%)",
+      }}
+    >
+      {/* subtle diagonal hatch so watch-only reads differently from live tiles */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-[0.06] pointer-events-none"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(135deg, #fff 0 2px, transparent 2px 10px)",
+        }}
+      />
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+              <Eye className="h-3 w-3" /> Watch-only
+            </span>
+            <p className="text-sm text-white/80 truncate">{wallet.label}</p>
+          </div>
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRefresh();
+            }}
+            className="text-white/70 hover:text-white"
+            aria-label="Refresh"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </span>
+        </div>
+        <p className="mt-2 text-4xl font-bold tracking-tight">
+          {hidden ? maskAmount(balText) : balText}
+          <span className="ml-2 text-2xl font-semibold opacity-90">TXC</span>
+        </p>
+        <p className="text-white/70 text-sm">{hidden ? maskAmount(fiatText) : fiatText}</p>
+        <p className="mt-3 text-[11px] font-mono text-white/50 truncate">
+          {wallet.address}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+/**
+ * Activity list for a watch-only address. We only know one address, so
+ * incoming/outgoing is inferred by whether that address appears in vouts
+ * (received) or as an input's prevout (spent).
+ */
+function WatchOnlyActivity({
+  wallet,
+  txs,
+  loading,
+  error,
+  onRefresh,
+  onOpen,
+}: {
+  wallet: WatchWallet;
+  txs: MempoolTx[] | null;
+  loading: boolean;
+  error: boolean;
+  onRefresh: () => void;
+  onOpen: (tx: MempoolTx, net: number, incoming: boolean) => void;
+}) {
+  const own = wallet.address;
+  return (
+    <section className="mt-8 px-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold">Recent activity</h2>
+        <button
+          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          onClick={onRefresh}
+        >
+          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Refresh
+        </button>
+      </div>
+      {loading && !txs ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-16 rounded-lg bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">
+            Couldn't reach mempool.texitcoin.org.
+          </CardContent>
+        </Card>
+      ) : (txs?.length ?? 0) === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">
+            No transactions on this address yet.
+          </CardContent>
+        </Card>
+      ) : (
+        <ul className="space-y-2">
+          {txs!.slice(0, 50).map((tx) => {
+            const inSum = tx.vin
+              .filter((v) => v.prevout.scriptpubkey_address === own)
+              .reduce((s, v) => s + v.prevout.value, 0);
+            const outToOwn = tx.vout
+              .filter((v) => v.scriptpubkey_address === own)
+              .reduce((s, v) => s + v.value, 0);
+            const net = outToOwn - inSum;
+            const incoming = net > 0;
+            return (
+              <li key={tx.txid}>
+                <button
+                  type="button"
+                  onClick={() => onOpen(tx, net, incoming)}
+                  className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors text-left"
+                >
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                      incoming
+                        ? "bg-emerald-500/15 text-emerald-400"
+                        : "bg-rose-500/15 text-rose-400"
+                    }`}
+                  >
+                    {incoming ? (
+                      <ArrowDown className="h-4 w-4" />
+                    ) : (
+                      <ArrowUp className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{incoming ? "Received" : "Sent"}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {tx.status.confirmed
+                        ? new Date((tx.status.block_time ?? 0) * 1000).toLocaleString()
+                        : "Pending"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-sm font-semibold ${incoming ? "text-emerald-400" : ""}`}
+                    >
+                      {incoming ? "+" : "−"}
+                      {formatTxc(Math.abs(net))}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Bottom actions when a watch-only tile is active. Receive shows the address
+ * (people scanning a Cold Storage Coin often want to display it again to a
+ * payer); Send is intentionally disabled — we don't hold the key.
+ */
+function WatchOnlyBottomActions({ wallet }: { wallet: WatchWallet }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button size="lg" variant="outline" onClick={() => setOpen(true)}>
+        <QrCode className="h-4 w-4 mr-2" /> Show address
+      </Button>
+      <Button size="lg" disabled title="Watch-only wallets cannot send">
+        <Lock className="h-4 w-4 mr-2" /> Watch-only
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" /> {wallet.label}
+            </DialogTitle>
+            <DialogDescription>
+              Watch-only address. Share to receive TXC — signing must happen on the
+              device that holds the key (e.g. your Cold Storage Coin).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-3">
+            <div className="rounded-lg bg-white p-3">
+              <QrCodeSvg value={wallet.address} size={220} />
+            </div>
+            <code className="text-xs break-all text-center px-2">{wallet.address}</code>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/**
+ * Confirm removing a watch-only entry. Since no key material is stored, this
+ * is purely cosmetic — the address on-chain is untouched — but we still ask
+ * before deleting so a stray long-press doesn't nuke someone's tile.
+ */
+function WatchRemoveDialog({
+  wallet,
+  onClose,
+}: {
+  wallet: WatchWallet | null;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={!!wallet} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Remove watch-only wallet?</DialogTitle>
+          <DialogDescription>
+            {wallet?.label} — this only removes the tile from your app. The
+            address itself is not affected on-chain, and you can add it back
+            anytime.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              if (wallet) removeWatchWallet(wallet.id);
+              onClose();
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-1" /> Remove
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
