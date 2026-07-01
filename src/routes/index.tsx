@@ -3,15 +3,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Fingerprint } from "lucide-react";
 import { hasWallet } from "@/lib/txc/storage";
 import { useWallet } from "@/lib/txc/wallet-context";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   getBiometricStatus,
   unlockWithBiometric,
 } from "@/lib/native/biometric";
-
-const HOME_ICON_URL = "/icon-512.webp";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -91,18 +89,12 @@ function Home() {
     else navigate({ to: "/wallet" });
   }
 
-  // Belt-and-suspenders navigation. On native, if TanStack Router hasn't
-  // finished hydrating a raw `<a href="/import">` click causes WKWebView
-  // to try to load `capacitor://localhost/import` (blank/404). Doing it
-  // through the router imperatively guarantees SPA navigation.
+  // Belt-and-suspenders navigation. Prefer the router once React is hydrated;
+  // the native static shell also has a tiny fallback script for pre-hydration
+  // taps. Do not bypass the router on Capacitor when React is alive.
   const goImport = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      const isNativeShell = window.location.protocol === "capacitor:";
-      if (isNativeShell) {
-        window.location.assign("/import");
-        return;
-      }
       void navigate({ to: "/import" }).catch(() => window.location.assign("/import"));
     },
     [navigate],
@@ -110,11 +102,6 @@ function Home() {
   const goCreate = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
-      const isNativeShell = window.location.protocol === "capacitor:";
-      if (isNativeShell) {
-        window.location.assign("/create");
-        return;
-      }
       void navigate({ to: "/create" }).catch(() => window.location.assign("/create"));
     },
     [navigate],
@@ -123,12 +110,12 @@ function Home() {
   return (
     <main className="mx-auto max-w-3xl px-4 pt-16 pb-12">
       <header className="text-center mb-12">
-        <div
-          aria-label="Honest Money Ecosystem"
-          role="img"
-          className="mx-auto mb-5 h-16 w-16 rounded-2xl bg-primary bg-cover bg-center shadow-lg shadow-amber-900/40"
-          style={{ backgroundImage: `url(${HOME_ICON_URL})` }}
-        >
+        <div aria-label="Honest Money Ecosystem" role="img" className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-amber-300 via-yellow-500 to-amber-800 shadow-lg shadow-amber-900/40">
+          <svg aria-hidden="true" viewBox="0 0 64 64" className="h-12 w-12 drop-shadow-sm">
+            <circle cx="32" cy="32" r="25" fill="#111827" opacity="0.95" />
+            <path d="M18 42V22h7.2v7.1h13.6V22H46v20h-7.2v-7.2H25.2V42H18Z" fill="#facc15" />
+            <path d="M16 47h32" stroke="#fef3c7" strokeWidth="4" strokeLinecap="round" opacity="0.9" />
+          </svg>
           <span className="sr-only">HME</span>
         </div>
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">HME Wallet</h1>
@@ -166,9 +153,7 @@ function Home() {
                     Use biometrics
                   </Button>
                 )}
-                <Button asChild variant="ghost">
-                  <a href="/import" onClick={goImport}>Import a different wallet</a>
-                </Button>
+                <a href="/import" data-native-route="/import" onClick={goImport} className={buttonVariants({ variant: "ghost" })}>Import a different wallet</a>
               </div>
             </form>
           </CardContent>
@@ -184,9 +169,7 @@ function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild className="w-full">
-                <a href="/import" onClick={goImport}>Import seed phrase</a>
-              </Button>
+              <a href="/import" data-native-route="/import" onClick={goImport} className={buttonVariants({ className: "w-full" })}>Import seed phrase</a>
             </CardContent>
           </Card>
 
@@ -198,9 +181,7 @@ function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild variant="secondary" className="w-full">
-                <a href="/create" onClick={goCreate}>Create new wallet</a>
-              </Button>
+              <a href="/create" data-native-route="/create" onClick={goCreate} className={buttonVariants({ variant: "secondary", className: "w-full" })}>Create new wallet</a>
             </CardContent>
           </Card>
         </div>

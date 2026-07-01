@@ -44,9 +44,17 @@ const config: CapacitorConfig = {
       backgroundColor: "#0b0f14",
     },
     PrivacyScreen: {
-      enable: true,
+      // Do NOT enable at app startup. On iOS 17+ the screenshot-prevention
+      // implementation wraps the app window in a secure UITextField, and that
+      // can swallow every tap on the landing page. We still enable the privacy
+      // screen explicitly only while the seed phrase is being shown.
+      enable: false,
       imageName: "Splash",
       contentMode: "center",
+      // Keep the app-switcher privacy cover, but avoid the iOS secure-textfield
+      // screenshot hack globally; it is the most likely cause of the "nothing is
+      // clickable" native build.
+      preventScreenshots: false,
     },
   },
 };
