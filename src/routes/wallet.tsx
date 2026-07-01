@@ -20,6 +20,7 @@ import { listWatchWallets, watchChangedEvent, type WatchWallet } from "@/lib/wat
 import { getAddressStats } from "@/lib/txc/mempool";
 import { getEnabledChains } from "@/lib/chain-prefs";
 import { parsePaymentUri } from "@/lib/pay-uri";
+import { rootFingerprintHex } from "@/lib/txc/fingerprint";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { toast } from "sonner";
 import {
@@ -56,7 +57,7 @@ function WalletLayout() {
   });
 
   const account = useQuery({
-    queryKey: ["account", unlocked?.kind, root ? Buffer.from(root.fingerprint).toString("hex") : null],
+    queryKey: ["account", unlocked?.kind, root ? rootFingerprintHex(root) : null],
     enabled: !!root && !!unlocked,
     queryFn: () => scanAccount(root!, unlocked!.kind),
     staleTime: 30_000,

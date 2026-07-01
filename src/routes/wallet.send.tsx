@@ -17,6 +17,7 @@ import { address as addrLib } from "bitcoinjs-lib";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";
+import { rootFingerprintHex } from "@/lib/txc/fingerprint";
 
 const searchSchema = z.object({
   to: z.string().optional(),
@@ -59,7 +60,7 @@ function SendPage() {
   const navigate = useNavigate();
   const { root, unlocked } = useWallet();
   const account = useQuery({
-    queryKey: ["account", unlocked?.kind, root ? Buffer.from(root.fingerprint).toString("hex") : null],
+    queryKey: ["account", unlocked?.kind, root ? rootFingerprintHex(root) : null],
     enabled: !!root && !!unlocked,
     queryFn: () => scanAccount(root!, unlocked!.kind),
     staleTime: 30_000,
