@@ -46,6 +46,7 @@ import { getKnownTokens, useTokensForChain } from "@/lib/token-prefs";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";
+import { confirmWithBiometric } from "@/lib/native/biometric";
 import { useFeature } from "@/lib/feature-prefs";
 
 function findKnownToken(chain: EvmChainId, symbol: string): Erc20TokenMeta | null {
@@ -209,6 +210,10 @@ function EvmSend() {
         }
       }
       if (!amount || Number(amount) <= 0) throw new Error("Enter an amount");
+
+      const ok = await confirmWithBiometric(`Confirm sending ${symbol}`);
+      if (!ok) throw new Error("Biometric confirmation was cancelled");
+
 
       const walletClient = createWalletClient({
         account,
