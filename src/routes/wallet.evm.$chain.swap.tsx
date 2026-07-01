@@ -32,7 +32,6 @@ import {
   EVM_CHAINS,
   deriveEvmAccount,
   evmClient,
-  formatEth,
   type EvmChainId,
 } from "@/lib/chains/evm";
 import {
