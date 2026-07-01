@@ -11,10 +11,11 @@ import { getEvmHistory } from "@/lib/chains/history.functions";
 import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowDown, ArrowUp, ExternalLink, RefreshCw, Send, QrCode } from "lucide-react";
-import { explorerTxUrl, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
+import { ArrowDown, ArrowUp, ChevronRight, RefreshCw, Send, QrCode } from "lucide-react";
+import { getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { EVM_CHAINS, deriveEvmAccount, evmClient, formatEth, type EvmChainId } from "@/lib/chains/evm";
+import { TxDetailSheet, type TxDetail } from "@/components/wallet/TxDetailSheet";
 
 export const Route = createFileRoute("/wallet/")({
   component: WalletHome,
@@ -49,6 +50,9 @@ function WalletHome() {
   }, [enabled.length]);
 
   const activeChain: ChainId = enabled[activeIdx] ?? "txc";
+
+  // Selected transaction (opens in-page detail sheet)
+  const [detail, setDetail] = useState<TxDetail | null>(null);
 
   // TXC data
   const account = useQuery({
@@ -190,11 +194,10 @@ function WalletHome() {
                     const incoming = net > 0;
                     return (
                       <li key={tx.txid}>
-                        <a
-                          href={explorerTxUrl(tx.txid)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors"
+                        <button
+                          type="button"
+                          onClick={() => setDetail({ kind: "txc", tx, net, incoming })}
+                          className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors text-left"
                         >
                           <div
                             className={`w-9 h-9 rounded-full flex items-center justify-center ${
@@ -217,8 +220,8 @@ function WalletHome() {
                               {formatTxc(Math.abs(net))}
                             </p>
                           </div>
-                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                        </a>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </button>
                       </li>
                     );
                   })}
@@ -227,7 +230,11 @@ function WalletHome() {
             </section>
           )}
           {activeChain !== "txc" && activeChain in EVM_CHAINS && (
-            <EvmActivity chainId={activeChain as EvmChainId} address={evmAddress} />
+            <EvmActivity
+              chainId={activeChain as EvmChainId}
+              address={evmAddress}
+              onOpen={(t) => setDetail({ kind: "evm", chain: activeChain as EvmChainId, transfer: t })}
+            />
           )}
           {activeChain !== "txc" && !(activeChain in EVM_CHAINS) && (
             <section className="mt-8 px-4">
@@ -247,6 +254,7 @@ function WalletHome() {
           <BottomActions chain={activeChain} />
         </div>
       </div>
+      <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
     </main>
   );
 }
@@ -372,7 +380,15 @@ function EvmTile({
   );
 }
 
-function EvmActivity({ chainId, address }: { chainId: EvmChainId; address: string | null }) {
+function EvmActivity({
+  chainId,
+  address,
+  onOpen,
+}: {
+  chainId: EvmChainId;
+  address: string | null;
+  onOpen: (t: import("@/lib/chains/history.functions").EvmTransfer) => void;
+}) {
   const meta = EVM_CHAINS[chainId];
   const fetchHistory = useServerFn(getEvmHistory);
 
@@ -461,11 +477,10 @@ function EvmActivity({ chainId, address }: { chainId: EvmChainId; address: strin
           <ul className="space-y-2">
             {history.data!.transfers.map((t) => (
               <li key={`${t.hash}-${t.category}-${t.outgoing ? "o" : "i"}`}>
-                <a
-                  href={meta.explorerTx(t.hash)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors"
+                <button
+                  type="button"
+                  onClick={() => onOpen(t)}
+                  className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors text-left"
                 >
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center ${
@@ -486,8 +501,8 @@ function EvmActivity({ chainId, address }: { chainId: EvmChainId; address: strin
                       {Number(t.value).toLocaleString(undefined, { maximumFractionDigits: 6 })} {t.asset}
                     </p>
                   </div>
-                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                </a>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
               </li>
             ))}
           </ul>
