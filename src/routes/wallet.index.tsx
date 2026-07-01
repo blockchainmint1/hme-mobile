@@ -200,13 +200,7 @@ function WalletHome() {
             {slots.map((slot, slotIdx) => {
               const key = slot.kind === "chain" ? `c:${slot.chain}` : `w:${slot.watch.id}`;
               const onLongPress =
-                slot.kind === "watch"
-                  ? () => {
-                      longPressFired.current = true;
-                      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
-                      setWatchRemove(slot.watch);
-                    }
-                  : () => setReorderOpen(true);
+                slot.kind === "watch" ? () => setWatchRemove(slot.watch) : undefined;
               return (
                 <div
                   key={key}
