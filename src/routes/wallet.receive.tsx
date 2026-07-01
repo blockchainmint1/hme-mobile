@@ -42,11 +42,7 @@ function ReceivePage() {
   // firstUnusedIndex without waiting for a payment to come in.
   const [manualBump, setManualBump] = useState(0);
 
-  const firstUnused = account.data?.nextReceiveAddress
-    ? account.data.external.length // firstUnusedIndex is not exported directly
-    : 0;
-  // The scan snapshot's `external` array is sliced to firstUnusedIndex, so its
-  // length equals firstUnusedIndex. This keeps us honest without a scan change.
+  const firstUnused = account.data?.nextReceiveIndex ?? 0;
 
   const shown = useMemo(() => {
     if (!root || !unlocked || !accountId) return null;
