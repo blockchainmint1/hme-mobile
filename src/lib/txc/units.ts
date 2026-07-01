@@ -40,6 +40,22 @@ export function formatTxcCompact(sats: number | bigint): string {
   return fixed;
 }
 
+/**
+ * Trim a numeric string (e.g. "1.234567") so the whole string is at most
+ * maxLen characters and has at most maxDec decimal places. No rounding of
+ * integer part — huge integers pass through unchanged.
+ */
+export function compactNumberString(s: string, maxLen = 10, maxDec = 5): string {
+  if (!s.includes(".")) return s;
+  const [whole, fracRaw] = s.split(".");
+  const frac = fracRaw.replace(/0+$/, "");
+  if (!frac) return whole;
+  const room = maxLen - whole.length - 1; // for "."
+  const decimals = Math.max(0, Math.min(maxDec, frac.length, room));
+  if (decimals <= 0) return whole;
+  return `${whole}.${frac.slice(0, decimals)}`;
+}
+
 
 export function formatFiat(usd: number | null | undefined): string {
   if (usd == null || !Number.isFinite(usd)) return "—";

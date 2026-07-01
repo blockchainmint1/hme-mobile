@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
-import { formatTxc, formatTxcCompact, formatFiat, satsToTxc } from "@/lib/txc/units";
+import { formatTxc, formatTxcCompact, formatFiat, satsToTxc, compactNumberString } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
 import { getEvmHistory } from "@/lib/chains/history.functions";
