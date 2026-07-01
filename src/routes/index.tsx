@@ -46,6 +46,9 @@ function Home() {
   useEffect(() => {
     setExists(hasWallet());
     getBiometricStatus().then(setBio).catch(() => undefined);
+    // Hide the native launch splash once we've mounted the unlock UI so users
+    // never see a flash of unstyled content. No-op on web.
+    void import("@/lib/native/ui").then(({ hideSplash }) => hideSplash());
   }, []);
 
   useEffect(() => {

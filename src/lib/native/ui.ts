@@ -83,13 +83,31 @@ export async function initNativeChrome(): Promise<void> {
       import("@capacitor/status-bar"),
       import("@capacitor/keyboard"),
     ]);
-    await StatusBar.setStyle({ style: Style.Dark }).catch(() => {});
+    const isDark = document.documentElement.classList.contains("dark");
+    await StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light }).catch(() => {});
     // Let the web view draw under the status bar so our safe-area padding
     // (env(safe-area-inset-top)) controls the look — matches native apps.
     await StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
-    await Keyboard.setResizeMode({ mode: KeyboardResize.Native }).catch(() => {});
+    // KeyboardResize.Body is more predictable across Android WebView versions
+    // than Native — pair with env(keyboard-inset-height) padding for iOS.
+    await Keyboard.setResizeMode({ mode: KeyboardResize.Body }).catch(() => {});
     await Keyboard.setAccessoryBarVisible({ isVisible: true }).catch(() => {});
   } catch {
     /* plugin not present on this build */
+  }
+}
+
+/**
+ * Hide the launch splash. Called from the first mounted route once React has
+ * committed the unlock UI so users never see a flash of unstyled content.
+ * Safe to call multiple times / on web (no-op).
+ */
+export async function hideSplash(): Promise<void> {
+  if (!isNative()) return;
+  try {
+    const { SplashScreen } = await import("@capacitor/splash-screen");
+    await SplashScreen.hide({ fadeOutDuration: 200 });
+  } catch {
+    /* noop */
   }
 }

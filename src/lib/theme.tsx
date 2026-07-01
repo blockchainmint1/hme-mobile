@@ -20,6 +20,17 @@ function apply(theme: Theme): "light" | "dark" {
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", resolved === "dark" ? "#0b0f14" : "#ffffff");
   }
+  // Keep the native status bar in sync so text/icons stay readable. No-op on web.
+  void (async () => {
+    try {
+      const { isNative } = await import("@/lib/native/platform");
+      if (!isNative()) return;
+      const { StatusBar, Style } = await import("@capacitor/status-bar");
+      await StatusBar.setStyle({ style: resolved === "dark" ? Style.Dark : Style.Light });
+    } catch {
+      /* plugin not present */
+    }
+  })();
   return resolved;
 }
 
