@@ -511,16 +511,14 @@ function EvmActivity({
     queryKey: ["erc20-usdc", chainId, address],
     enabled: !!address,
     queryFn: () => readErc20Balance(chainId, USDC_BY_CHAIN[chainId], address as `0x${string}`),
-    staleTime: 30_000,
   });
 
   const history = useQuery({
     queryKey: ["evm-history", chainId, address],
     enabled: !!address,
     queryFn: () => fetchHistory({ data: { chain: chainId, address: address! } }),
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
   });
+
 
   const usdcRaw = usdc.data ?? 0n;
   const usdcAmt = usdcRaw > 0n ? tokenAmountFromRaw(usdcRaw, USDC_BY_CHAIN[chainId].decimals) : "0";
