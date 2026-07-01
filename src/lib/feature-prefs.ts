@@ -38,7 +38,8 @@ function write(m: FeatureMap) {
 }
 
 export function isFeatureEnabled(id: FeatureId): boolean {
-  return !!read()[id];
+  const v = read()[id];
+  return v === undefined ? DEFAULTS[id] : v;
 }
 
 export function setFeatureEnabled(id: FeatureId, enabled: boolean) {
