@@ -37,11 +37,12 @@ export function FeaturesCard() {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Label htmlFor="feat-evm-swap" className="text-sm font-medium">
-              EVM Swap (via Uniswap)
+              In-app Swap
             </Label>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Adds a Swap button next to Send / Receive on Ethereum, Base, and BSC tiles.
-              Opens the Uniswap app in your browser — HME Wallet never holds your swap.
+              Adds a Swap button on Ethereum, Base, and BSC tiles. Quotes and routing
+              are powered by LI.FI; transactions are signed on this device and
+              broadcast through HME Wallet — no external wallet connect required.
             </p>
           </div>
           <Switch
