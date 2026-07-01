@@ -29,6 +29,19 @@ entry point. If the adapter writes public assets to `.output/public`, the build
 script mirrors them into `dist/client` so `bunx cap sync ios` always uses the
 same web directory.
 
+For the current iOS release, the native shell is pinned to
+`https://mobile.honest.money` in both `capacitor.config.ts` and
+`ios/App/App/AppViewController.swift`. After a clean archive, the Xcode console
+must say:
+
+```text
+Loading app at https://mobile.honest.money...
+```
+
+If it still says `Loading app at capacitor://localhost...`, Xcode is running an
+old build product or an old native project. Clean Build Folder, delete the app
+from the device/simulator, and build the `ios/App/App.xcodeproj` in this repo.
+
 ## Clean iOS rebuild after a failed first add
 
 If Xcode crashes after an incomplete Capacitor add/sync, remove the half-built
