@@ -254,6 +254,7 @@ function WalletHome() {
           <BottomActions chain={activeChain} />
         </div>
       </div>
+      <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
     </main>
   );
 }
