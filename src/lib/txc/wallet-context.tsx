@@ -94,12 +94,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     };
 
     scheduleLock();
-    const events: Array<keyof WindowEventMap> = [
-      "pointerdown",
-      "keydown",
-      "touchstart",
-      "visibilitychange",
-    ];
+    const events = ["pointerdown", "keydown", "touchstart", "visibilitychange"] as const;
     for (const ev of events) window.addEventListener(ev, onActivity, { passive: true });
 
     return () => {
@@ -107,6 +102,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (autoLockTimer.current) clearTimeout(autoLockTimer.current);
     };
   }, [unlocked, lock]);
+
 
   const value = useMemo<WalletContextValue>(
     () => ({ unlocked, root, unlock, lock, forget, loadFromMemory, rename }),
