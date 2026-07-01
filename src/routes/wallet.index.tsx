@@ -692,6 +692,12 @@ function EvmActivity({
     enabled: !!address,
     queryFn: () => fetchHistory({ data: { chain: chainId, address: address! } }),
   });
+  const [hideSpam] = useFeature("hideSpamTokens");
+  const visibleTransfers = useMemo(() => {
+    const list = history.data?.transfers ?? [];
+    return hideSpam ? list.filter((t) => !t.spam) : list;
+  }, [history.data, hideSpam]);
+  const spamCount = (history.data?.transfers.length ?? 0) - visibleTransfers.length;
 
   return (
     <>
