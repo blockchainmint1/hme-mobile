@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { flushSync } from "react-dom";
 import type { BIP32Interface } from "bip32";
 import { rootFromSeed, seedFromMnemonic } from "./wallet";
-import { deleteWallet, unlockWallet, type UnlockedWallet } from "./storage";
+import { deleteWallet, renameStoredWallet, unlockWallet, type UnlockedWallet } from "./storage";
 
 interface WalletContextValue {
   unlocked: UnlockedWallet | null;
@@ -16,6 +16,7 @@ interface WalletContextValue {
   lock: () => void;
   forget: () => void;
   loadFromMemory: (w: UnlockedWallet) => Promise<void>;
+  rename: (label: string) => void;
 }
 
 const Ctx = createContext<WalletContextValue | null>(null);
@@ -54,9 +55,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setRoot(null);
   }, []);
 
+  const rename = useCallback((label: string) => {
+    renameStoredWallet(label);
+    setUnlocked((prev) => (prev ? { ...prev, label } : prev));
+  }, []);
+
   const value = useMemo<WalletContextValue>(
-    () => ({ unlocked, root, unlock, lock, forget, loadFromMemory }),
-    [unlocked, root, unlock, lock, forget, loadFromMemory],
+    () => ({ unlocked, root, unlock, lock, forget, loadFromMemory, rename }),
+    [unlocked, root, unlock, lock, forget, loadFromMemory, rename],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

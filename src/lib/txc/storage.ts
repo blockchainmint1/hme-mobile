@@ -139,6 +139,18 @@ export function deleteWallet(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+/**
+ * Rename the stored wallet without re-encrypting. The label is metadata
+ * only — the encrypted seed material is untouched.
+ */
+export function renameStoredWallet(newLabel: string): StoredWalletEnvelope | null {
+  const env = loadEnvelope();
+  if (!env) return null;
+  const next: StoredWalletEnvelope = { ...env, label: newLabel };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  return next;
+}
+
 export function hasWallet(): boolean {
   return loadEnvelope() !== null;
 }
