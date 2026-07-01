@@ -90,13 +90,43 @@ function Home() {
     else navigate({ to: "/wallet" });
   }
 
+  // Belt-and-suspenders navigation. On native, if TanStack Router hasn't
+  // finished hydrating a raw `<a href="/import">` click causes WKWebView
+  // to try to load `capacitor://localhost/import` (blank/404). Doing it
+  // through the router imperatively guarantees SPA navigation.
+  const goImport = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      navigate({ to: "/import" });
+    },
+    [navigate],
+  );
+  const goCreate = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      navigate({ to: "/create" });
+    },
+    [navigate],
+  );
+
   return (
     <main className="mx-auto max-w-3xl px-4 pt-16 pb-12">
       <header className="text-center mb-12">
         <img
           src={walletIcon}
           alt="Honest Money Ecosystem"
-          className="w-16 h-16 rounded-2xl mb-5 shadow-lg shadow-amber-900/40"
+          width={64}
+          height={64}
+          onError={(e) => {
+            // If the hashed asset can't be resolved inside the native
+            // shell for any reason, fall back to a stable unhashed copy.
+            const img = e.currentTarget;
+            if (!img.dataset.fallback) {
+              img.dataset.fallback = "1";
+              img.src = "/icon-512.webp";
+            }
+          }}
+          className="w-16 h-16 rounded-2xl mb-5 mx-auto block shadow-lg shadow-amber-900/40"
         />
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">HME Wallet</h1>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
