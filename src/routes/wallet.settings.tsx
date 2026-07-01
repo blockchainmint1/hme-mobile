@@ -99,6 +99,12 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
+      <div className="mt-5">
+        <ChainsCard />
+      </div>
+
+
+
       <Card className="mt-5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
