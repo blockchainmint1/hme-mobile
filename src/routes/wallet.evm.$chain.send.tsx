@@ -341,26 +341,11 @@ function EvmSend() {
             <label className="text-xs uppercase tracking-wide text-muted-foreground flex justify-between">
               <span>Amount ({symbol})</span>
               {balanceDisplay != null && (
-                <button
-                  type="button"
-                  className="underline hover:text-foreground"
-                  onClick={() => {
-                    if (asset.kind === "native" && nativeBal.data != null) {
-                      setAmount(formatEth(nativeBal.data, 18));
-                    } else if (asset.kind === "erc20") {
-                      const idx = tokens.findIndex(
-                        (t) => t.address === asset.token.address,
-                      );
-                      const raw = tokenBalances[idx]?.data;
-                      if (raw != null) {
-                        setAmount(tokenAmountFromRaw(raw, asset.token.decimals));
-                      }
-                    }
-                  }}
-                >
-                  Max: {balanceDisplay}
-                </button>
+                <span className="text-muted-foreground">
+                  Balance: {balanceDisplay}
+                </span>
               )}
+
             </label>
             <Input
               value={amount}
