@@ -1,5 +1,5 @@
 /**
- * Biometric unlock for the TEXITcoin Wallet.
+ * Biometric unlock for the HME Wallet.
  *
  * Design:
  *  - The wallet itself is always encrypted on disk with the user's password

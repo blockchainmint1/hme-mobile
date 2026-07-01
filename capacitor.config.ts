@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 /**
- * Capacitor config for the TEXITcoin Wallet mobile app.
+ * Capacitor config for the HME Wallet mobile app.
  *
  * The web app is served from the bundled dist/ output. `webDir` points at the
  * Vite client build. When developing against a live Lovable preview, set
