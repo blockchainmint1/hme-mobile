@@ -27,17 +27,10 @@ const prerenderedNativeRoutes = new Set(["create", "import"]);
 const stableRootAssets = ["icon-512.webp"];
 const nativeClickFallbackScript = `<script>(function(){if(window.__HME_NATIVE_NAV_FALLBACK__)return;window.__HME_NATIVE_NAV_FALLBACK__=true;function routeFromEvent(e){var t=e.target;if(!t||!t.closest)return null;var a=t.closest('a[data-native-route],a[href="/import"],a[href="/create"]');if(!a)return null;var h=a.getAttribute('data-native-route')||a.getAttribute('href');return h==='/import'||h==='/create'?h:null}function go(e){if(document.documentElement&&document.documentElement.dataset&&document.documentElement.dataset.hmeHydrated==='true')return;var h=routeFromEvent(e);if(!h)return;e.preventDefault();e.stopPropagation();location.assign(h)}document.addEventListener('pointerup',go,true);document.addEventListener('touchend',go,true);document.addEventListener('click',go,true);})();</script>`;
 
-const inlineHomeIcon = `<div aria-label="Honest Money Ecosystem" role="img" style="width:64px;height:64px;margin:0 auto 20px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(135deg,#fcd34d,#eab308,#92400e);box-shadow:0 12px 32px rgba(120,53,15,.45)"><svg aria-hidden="true" viewBox="0 0 64 64" style="width:48px;height:48px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))"><circle cx="32" cy="32" r="25" fill="#111827" opacity=".95"></circle><path d="M18 42V22h7.2v7.1h13.6V22H46v20h-7.2v-7.2H25.2V42H18Z" fill="#facc15"></path><path d="M16 47h32" stroke="#fef3c7" stroke-width="4" stroke-linecap="round" opacity=".9"></path></svg><span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">HME</span></div>`;
-
 function hardenNativeHomeHtml(html) {
-  return html
-    .replace(/<link\s+rel="preload"\s+as="image"\s+href="[^"]*icon-512[^"]*"\s*\/?>/g, "")
-    .replace(
-      /<header class="text-center mb-12"><img[^>]*alt="Honest Money Ecosystem"[^>]*\/?>/,
-      `<header class="text-center mb-12">${inlineHomeIcon}`,
-    )
-    .replace(/<a href="\/(import|create)" class=/g, '<a href="/$1" data-native-route="/$1" class=');
+  return html.replace(/<a href="\/(import|create)" class=/g, '<a href="/$1" data-native-route="/$1" class=');
 }
+
 
 async function isDirectory(path) {
   try {
