@@ -235,9 +235,18 @@ function WalletHome() {
                       priceUsd={
                         allPrices.data?.prices[EVM_CHAINS[slot.chain as EvmChainId].priceSymbol] ?? null
                       }
-                      onRefresh={() =>
-                        evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.refetch()
-                      }
+                      onRefresh={async () => {
+                        const chain = slot.chain as EvmChainId;
+                        const addr = evmAddress;
+                        // Refetch native balance
+                        await evmBalances[evmEnabled.indexOf(chain)]?.refetch();
+                        // Invalidate ERC-20 balances and tx history for this chain+address
+                        await Promise.all([
+                          qc.invalidateQueries({ queryKey: ["erc20-balance", chain] }),
+                          qc.invalidateQueries({ queryKey: ["evm-history", chain, addr] }),
+                          qc.invalidateQueries({ queryKey: ["all-prices"] }),
+                        ]);
+                      }}
                       onOpenDetails={() => {
                         if (longPressFired.current) return;
                         setTileOpen(slot.chain);
