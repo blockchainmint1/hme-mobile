@@ -313,7 +313,7 @@ function EvmSend() {
             </div>
           </div>
 
-          {isAddress(to) && (
+          {isAddress(to) && confirmLast4Enabled && (
             <div>
               <label className="text-xs uppercase tracking-wide text-muted-foreground">
                 Confirm last 4 of address
