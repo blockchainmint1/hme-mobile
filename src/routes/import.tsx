@@ -264,12 +264,13 @@ function ImportPage() {
 
       // No activity found anywhere — assume Legacy (old TXC Wallet default) and continue.
       await finish("bip44");
-
+    } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed");
       setBusy(false);
       setStatus("");
     }
   }
+
 
 
   if (candidates) {
