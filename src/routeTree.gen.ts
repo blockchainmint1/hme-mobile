@@ -26,6 +26,7 @@ import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as WalletEvmChainRouteImport } from './routes/wallet.evm.$chain'
 import { Route as ApiEvmChainRouteImport } from './routes/api/evm.$chain'
+import { Route as WalletEvmChainSwapRouteImport } from './routes/wallet.evm.$chain.swap'
 import { Route as WalletEvmChainSendRouteImport } from './routes/wallet.evm.$chain.send'
 import { Route as WalletEvmChainReceiveRouteImport } from './routes/wallet.evm.$chain.receive'
 import { Route as ApiNectarPayInvoiceIdRouteImport } from './routes/api/nectar.pay.$invoiceId'
@@ -115,6 +116,11 @@ const ApiEvmChainRoute = ApiEvmChainRouteImport.update({
   path: '/api/evm/$chain',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WalletEvmChainSwapRoute = WalletEvmChainSwapRouteImport.update({
+  id: '/swap',
+  path: '/swap',
+  getParentRoute: () => WalletEvmChainRoute,
+} as any)
 const WalletEvmChainSendRoute = WalletEvmChainSendRouteImport.update({
   id: '/send',
   path: '/send',
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
+  '/wallet/evm/$chain/swap': typeof WalletEvmChainSwapRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
+  '/wallet/evm/$chain/swap': typeof WalletEvmChainSwapRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
+  '/wallet/evm/$chain/swap': typeof WalletEvmChainSwapRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -220,6 +229,7 @@ export interface FileRouteTypes {
     | '/api/nectar/pay/$invoiceId'
     | '/wallet/evm/$chain/receive'
     | '/wallet/evm/$chain/send'
+    | '/wallet/evm/$chain/swap'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -241,6 +251,7 @@ export interface FileRouteTypes {
     | '/api/nectar/pay/$invoiceId'
     | '/wallet/evm/$chain/receive'
     | '/wallet/evm/$chain/send'
+    | '/wallet/evm/$chain/swap'
   id:
     | '__root__'
     | '/'
@@ -263,6 +274,7 @@ export interface FileRouteTypes {
     | '/api/nectar/pay/$invoiceId'
     | '/wallet/evm/$chain/receive'
     | '/wallet/evm/$chain/send'
+    | '/wallet/evm/$chain/swap'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -399,6 +411,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEvmChainRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wallet/evm/$chain/swap': {
+      id: '/wallet/evm/$chain/swap'
+      path: '/swap'
+      fullPath: '/wallet/evm/$chain/swap'
+      preLoaderRoute: typeof WalletEvmChainSwapRouteImport
+      parentRoute: typeof WalletEvmChainRoute
+    }
     '/wallet/evm/$chain/send': {
       id: '/wallet/evm/$chain/send'
       path: '/send'
@@ -426,11 +445,13 @@ declare module '@tanstack/react-router' {
 interface WalletEvmChainRouteChildren {
   WalletEvmChainReceiveRoute: typeof WalletEvmChainReceiveRoute
   WalletEvmChainSendRoute: typeof WalletEvmChainSendRoute
+  WalletEvmChainSwapRoute: typeof WalletEvmChainSwapRoute
 }
 
 const WalletEvmChainRouteChildren: WalletEvmChainRouteChildren = {
   WalletEvmChainReceiveRoute: WalletEvmChainReceiveRoute,
   WalletEvmChainSendRoute: WalletEvmChainSendRoute,
+  WalletEvmChainSwapRoute: WalletEvmChainSwapRoute,
 }
 
 const WalletEvmChainRouteWithChildren = WalletEvmChainRoute._addFileChildren(
