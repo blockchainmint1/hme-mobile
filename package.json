@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "cap:assets": "capacitor-assets generate --iconBackgroundColor '#0b0f14' --iconBackgroundColorDark '#0b0f14' --splashBackgroundColor '#0b0f14' --splashBackgroundColorDark '#0b0f14'",
     "cap:sync": "bun run build && bunx cap sync",
-    "ios:setup": "bun install && bun run build && (test -d ios || bunx cap add ios) && bun run cap:assets && bunx cap sync ios && bunx cap open ios"
+    "ios:setup": "bun install && bun run build && (test -d ios || bunx cap add ios) && bun run cap:assets && bunx cap sync ios && bunx cap open ios",
+    "ios:reset": "rm -rf ios && bun run build && bunx cap add ios && bun run cap:assets && bunx cap sync ios && bunx cap open ios"
   },
   "dependencies": {
     "@aparajita/capacitor-biometric-auth": "^10.0.0",
