@@ -692,6 +692,12 @@ function EvmActivity({
     enabled: !!address,
     queryFn: () => fetchHistory({ data: { chain: chainId, address: address! } }),
   });
+  const [hideSpam] = useFeature("hideSpamTokens");
+  const visibleTransfers = useMemo(() => {
+    const list = history.data?.transfers ?? [];
+    return hideSpam ? list.filter((t) => !t.spam) : list;
+  }, [history.data, hideSpam]);
+  const spamCount = (history.data?.transfers.length ?? 0) - visibleTransfers.length;
 
   return (
     <>
@@ -772,15 +778,17 @@ function EvmActivity({
               )}
             </CardContent>
           </Card>
-        ) : (history.data?.transfers.length ?? 0) === 0 ? (
+        ) : visibleTransfers.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-sm text-muted-foreground">
-              No transactions on {meta.name} yet.
+              {spamCount > 0
+                ? `${spamCount} spam / imposter ${spamCount === 1 ? "transfer" : "transfers"} hidden. Toggle "Hide worthless / spam tokens" in Settings to view.`
+                : `No transactions on ${meta.name} yet.`}
             </CardContent>
           </Card>
         ) : (
           <ul className="space-y-2">
-            {history.data!.transfers.map((t) => (
+            {visibleTransfers.map((t) => (
               <li key={`${t.hash}-${t.category}-${t.outgoing ? "o" : "i"}`}>
                 <button
                   type="button"
@@ -795,7 +803,14 @@ function EvmActivity({
                     {t.outgoing ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{t.outgoing ? "Sent" : "Received"}</p>
+                    <p className="text-sm font-medium">
+                      {t.outgoing ? "Sent" : "Received"}
+                      {t.spam && (
+                        <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-400/80">
+                          suspicious
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {t.timestamp ? new Date(t.timestamp).toLocaleString() : `Block ${t.blockNum}`}
                     </p>
@@ -810,6 +825,11 @@ function EvmActivity({
                 </button>
               </li>
             ))}
+            {hideSpam && spamCount > 0 && (
+              <li className="pt-1 text-center text-xs text-muted-foreground">
+                {spamCount} spam / imposter {spamCount === 1 ? "transfer" : "transfers"} hidden
+              </li>
+            )}
           </ul>
         )}
       </section>
