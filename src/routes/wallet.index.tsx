@@ -476,6 +476,21 @@ function BottomActions({ chain }: { chain: ChainId }) {
             <QrCode className="h-4 w-4 mr-2" /> Receive
           </Link>
         </Button>
+        {swapEnabled && (
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            onClick={() => {
+              const map: Record<EvmChainId, string> = { eth: "ethereum", base: "base", bsc: "bnb" };
+              const url = `https://app.uniswap.org/swap?chain=${map[c]}`;
+              window.open(url, "_blank", "noopener,noreferrer");
+            }}
+            aria-label="Swap on Uniswap"
+          >
+            <ArrowLeftRight className="h-4 w-4 mr-2" /> Swap
+          </Button>
+        )}
         <Button asChild size="lg">
           <Link to="/wallet/evm/$chain/send" params={{ chain: c }}>
             <Send className="h-4 w-4 mr-2" /> Send
@@ -484,6 +499,7 @@ function BottomActions({ chain }: { chain: ChainId }) {
       </>
     );
   }
+
   return (
     <>
       <Button size="lg" variant="outline" disabled>
