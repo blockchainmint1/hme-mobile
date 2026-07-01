@@ -17,6 +17,7 @@ import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { EVM_CHAINS, deriveEvmAccount, evmClient, formatEth, type EvmChainId } from "@/lib/chains/evm";
 import { TxDetailSheet, type TxDetail } from "@/components/wallet/TxDetailSheet";
 import { WalletDetailSheet } from "@/components/wallet/WalletDetailSheet";
+import { ReorderTilesSheet } from "@/components/wallet/ReorderTilesSheet";
 import { useHideBalances, maskAmount } from "@/lib/hide-balances";
 
 export const Route = createFileRoute("/wallet/")({
@@ -57,6 +58,24 @@ function WalletHome() {
   const [detail, setDetail] = useState<TxDetail | null>(null);
   // Which wallet tile's details are open
   const [tileOpen, setTileOpen] = useState<ChainId | null>(null);
+  // Long-press to rearrange
+  const [reorderOpen, setReorderOpen] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFired = useRef(false);
+  const startLongPress = () => {
+    longPressFired.current = false;
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true;
+      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
+      setReorderOpen(true);
+    }, 550);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = null;
+  };
+
 
   // TXC data
   const account = useQuery({
@@ -120,7 +139,16 @@ function WalletHome() {
             style={{ scrollbarWidth: "none" }}
           >
             {enabled.map((id) => (
-              <div key={id} className="snap-center shrink-0 w-full px-4 pt-6">
+              <div
+                key={id}
+                className="snap-center shrink-0 w-full px-4 pt-6"
+                onPointerDown={startLongPress}
+                onPointerUp={cancelLongPress}
+                onPointerMove={cancelLongPress}
+                onPointerCancel={cancelLongPress}
+                onPointerLeave={cancelLongPress}
+                onContextMenu={(e) => e.preventDefault()}
+              >
                 {id === "txc" ? (
                   <TxcTile
                     balanceSats={account.data?.balanceSats ?? 0}
@@ -129,7 +157,10 @@ function WalletHome() {
                     onRefresh={() => account.refetch()}
                     refreshing={account.isFetching}
                     label={unlocked?.label ?? "TXC Wallet"}
-                    onOpenDetails={() => setTileOpen("txc")}
+                    onOpenDetails={() => {
+                      if (longPressFired.current) return;
+                      setTileOpen("txc");
+                    }}
                   />
                 ) : (
                   <EvmTile
@@ -140,11 +171,15 @@ function WalletHome() {
                     onRefresh={() =>
                       evmBalances[evmEnabled.indexOf(id as EvmChainId)]?.refetch()
                     }
-                    onOpenDetails={() => setTileOpen(id)}
+                    onOpenDetails={() => {
+                      if (longPressFired.current) return;
+                      setTileOpen(id);
+                    }}
                   />
                 )}
               </div>
             ))}
+
           </div>
 
           {/* Dots indicator */}
@@ -261,6 +296,7 @@ function WalletHome() {
         </div>
       </div>
       <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
+      <ReorderTilesSheet open={reorderOpen} onClose={() => setReorderOpen(false)} />
       {tileOpen === "txc" && (
         <WalletDetailSheet
           open
