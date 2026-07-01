@@ -16,6 +16,8 @@ import { getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { EVM_CHAINS, deriveEvmAccount, evmClient, formatEth, type EvmChainId } from "@/lib/chains/evm";
 import { TxDetailSheet, type TxDetail } from "@/components/wallet/TxDetailSheet";
+import { WalletDetailSheet } from "@/components/wallet/WalletDetailSheet";
+import { useHideBalances, maskAmount } from "@/lib/hide-balances";
 
 export const Route = createFileRoute("/wallet/")({
   component: WalletHome,
@@ -53,6 +55,8 @@ function WalletHome() {
 
   // Selected transaction (opens in-page detail sheet)
   const [detail, setDetail] = useState<TxDetail | null>(null);
+  // Which wallet tile's details are open
+  const [tileOpen, setTileOpen] = useState<ChainId | null>(null);
 
   // TXC data
   const account = useQuery({
