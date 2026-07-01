@@ -718,10 +718,11 @@ function EvmActivity({
       <section className="mt-8 px-4">
         <h2 className="text-lg font-semibold mb-3">Tokens</h2>
         <ul className="space-y-2">
-          {tokens.map((t, i) => {
+          {visibleTokens.map(({ token: t, index: i }) => {
             const q = tokenBalances[i];
             const raw = q?.data ?? 0n;
             const amt = raw > 0n ? tokenAmountFromRaw(raw, t.decimals) : "0";
+            const isStable = t.symbol.startsWith("USD");
             const accent =
               t.symbol === "USDC"
                 ? "bg-blue-500/15 text-blue-400"
@@ -748,7 +749,7 @@ function EvmActivity({
                       {q?.isLoading ? "…" : Number(amt).toLocaleString(undefined, { maximumFractionDigits: 4 })}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {q?.data != null && t.symbol.startsWith("USD") ? formatFiat(Number(amt)) : "—"}
+                      {q?.isError ? "unavailable" : isStable ? formatFiat(Number(amt)) : "—"}
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -756,6 +757,11 @@ function EvmActivity({
               </li>
             );
           })}
+          {hideSpam && hiddenTokenCount > 0 && (
+            <li className="text-xs text-muted-foreground text-center pt-1">
+              {hiddenTokenCount} zero-balance {hiddenTokenCount === 1 ? "token" : "tokens"} hidden
+            </li>
+          )}
         </ul>
       </section>
 
