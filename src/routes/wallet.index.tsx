@@ -661,7 +661,7 @@ function EvmActivity({
 }) {
   const meta = EVM_CHAINS[chainId];
   const fetchHistory = useServerFn(getEvmHistory);
-  const tokens = TOKENS_BY_CHAIN[chainId];
+  const tokens = useTokensForChain(chainId);
 
   const tokenBalances = useQueries({
     queries: tokens.map((t) => ({
