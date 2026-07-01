@@ -10,7 +10,7 @@ import {
   getBiometricStatus,
   unlockWithBiometric,
 } from "@/lib/native/biometric";
-import txcIcon from "@/assets/txc-icon-512.png.asset.json";
+import walletIcon from "@/assets/icons/icon-512.webp";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -91,8 +91,8 @@ function Home() {
     <main className="mx-auto max-w-3xl px-4 pt-16 pb-12">
       <header className="text-center mb-12">
         <img
-          src={txcIcon.url}
-          alt="TEXITcoin"
+          src={walletIcon}
+          alt="Honest Money Ecosystem"
           className="w-16 h-16 rounded-2xl mb-5 shadow-lg shadow-amber-900/40"
         />
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">HME Wallet</h1>
