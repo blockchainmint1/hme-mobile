@@ -8,8 +8,9 @@ import { DERIVATION_PATHS } from "@/lib/txc/network";
 import { QrCode } from "@/components/wallet/QrCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Copy, Plus } from "lucide-react";
+import { Copy, Plus, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { shareText } from "@/lib/native/ui";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
   getDisplayIndex,
