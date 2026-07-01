@@ -202,9 +202,11 @@ function EvmSend() {
     mutationFn: async () => {
       if (!account) throw new Error("Wallet locked");
       if (!isAddress(to)) throw new Error("Invalid address");
-      const last4 = to.slice(-4).toLowerCase();
-      if (confirmTail.toLowerCase() !== last4) {
-        throw new Error("Re-type the last 4 characters of the address to confirm");
+      if (confirmLast4Enabled) {
+        const last4 = to.slice(-4).toLowerCase();
+        if (confirmTail.toLowerCase() !== last4) {
+          throw new Error("Re-type the last 4 characters of the address to confirm");
+        }
       }
       if (!amount || Number(amount) <= 0) throw new Error("Enter an amount");
 
