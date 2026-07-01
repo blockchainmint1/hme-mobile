@@ -399,7 +399,7 @@ function WalletHome() {
 
       {/* Fixed bottom send/receive — routes based on the active slot */}
       <div className="fixed bottom-0 inset-x-0 z-10 border-t border-border/60 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-        <div className="mx-auto max-w-3xl px-4 py-3 grid grid-cols-2 gap-3">
+        <div className="mx-auto max-w-3xl px-4 py-3 flex gap-2">
           {activeWatch ? (
             <WatchOnlyBottomActions wallet={activeWatch} />
           ) : (
@@ -452,17 +452,17 @@ function WalletHome() {
 }
 
 function BottomActions({ chain }: { chain: ChainId }) {
-
+  const [swapEnabled] = useFeature("evmSwap");
 
   if (chain === "txc") {
     return (
       <>
-        <Button asChild size="lg" variant="outline">
+        <Button asChild size="lg" variant="outline" className="flex-1">
           <Link to="/wallet/receive">
             <QrCode className="h-4 w-4 mr-2" /> Receive
           </Link>
         </Button>
-        <Button asChild size="lg">
+        <Button asChild size="lg" className="flex-1">
           <Link to="/wallet/send">
             <Send className="h-4 w-4 mr-2" /> Send
           </Link>
@@ -472,29 +472,45 @@ function BottomActions({ chain }: { chain: ChainId }) {
   }
   if (chain in EVM_CHAINS) {
     const c = chain as EvmChainId;
+    const map: Record<EvmChainId, string> = { eth: "ethereum", base: "base", bsc: "bnb" };
     return (
       <>
-        <Button asChild size="lg" variant="outline">
+        <Button asChild size="lg" variant="outline" className="flex-1">
           <Link to="/wallet/evm/$chain/receive" params={{ chain: c }}>
             <QrCode className="h-4 w-4 mr-2" /> Receive
           </Link>
         </Button>
-        <Button asChild size="lg">
+        <Button asChild size="lg" className="flex-1">
           <Link to="/wallet/evm/$chain/send" params={{ chain: c }}>
             <Send className="h-4 w-4 mr-2" /> Send
           </Link>
         </Button>
+        {swapEnabled && (
+          <Button
+            size="lg"
+            variant="secondary"
+            className="flex-1"
+            onClick={() =>
+              window.open(
+                `https://app.uniswap.org/swap?chain=${map[c]}`,
+                "_blank",
+                "noopener,noreferrer",
+              )
+            }
+          >
+            <ArrowLeftRight className="h-4 w-4 mr-2" /> Swap
+          </Button>
+        )}
       </>
     );
   }
 
-
   return (
     <>
-      <Button size="lg" variant="outline" disabled>
+      <Button size="lg" variant="outline" disabled className="flex-1">
         <QrCode className="h-4 w-4 mr-2" /> Coming soon
       </Button>
-      <Button size="lg" disabled>
+      <Button size="lg" disabled className="flex-1">
         <Send className="h-4 w-4 mr-2" /> Coming soon
       </Button>
     </>
@@ -580,7 +596,6 @@ function EvmTile({
 }) {
   const [hidden] = useHideBalances();
   const [refreshing, setRefreshing] = useState(false);
-  const [swapEnabled] = useFeature("evmSwap");
 
   const meta = EVM_CHAINS[chainId];
   const balanceEth = balanceWei != null ? Number(balanceWei) / 1e18 : null;
@@ -622,26 +637,6 @@ function EvmTile({
       <div className="flex items-center justify-between">
         <p className="text-sm opacity-80">{meta.name}</p>
         <div className="flex items-center gap-3">
-          {swapEnabled && (
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                const map: Record<EvmChainId, string> = { eth: "ethereum", base: "base", bsc: "bnb" };
-                window.open(
-                  `https://app.uniswap.org/swap?chain=${map[chainId]}`,
-                  "_blank",
-                  "noopener,noreferrer",
-                );
-              }}
-              className="opacity-80 hover:opacity-100"
-              aria-label="Swap on Uniswap"
-              title="Swap on Uniswap"
-            >
-              <ArrowLeftRight className="h-4 w-4" />
-            </span>
-          )}
           <span
             role="button"
             tabIndex={0}
