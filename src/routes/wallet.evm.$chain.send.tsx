@@ -49,6 +49,8 @@ import { QrScanButton } from "@/components/wallet/QrScanButton";
 
 const searchSchema = z.object({
   asset: z.string().optional(),
+  to: z.string().optional(),
+  amount: z.string().optional(),
 });
 
 export const Route = createFileRoute("/wallet/evm/$chain/send")({
@@ -140,9 +142,9 @@ function EvmSend() {
   }, [search.asset, chainId, meta.nativeSymbol]);
   const [asset, setAsset] = useState<AssetKind>(initialAsset);
 
-  const [to, setTo] = useState("");
+  const [to, setTo] = useState(search.to ?? "");
   const [confirmTail, setConfirmTail] = useState("");
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState(search.amount ?? "");
   const [error, setError] = useState<string | null>(null);
 
   // Native balance (always fetched — used for gas visibility and native sends).

@@ -15,9 +15,21 @@ import { scanAccount } from "@/lib/txc/scan";
 import { satsToTxc, formatFiat } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
-import { EVM_CHAIN_LIST, deriveEvmAccount, evmClient } from "@/lib/chains/evm";
+import { EVM_CHAIN_LIST, deriveEvmAccount, evmClient, type EvmChainId } from "@/lib/chains/evm";
 import { listWatchWallets, watchChangedEvent, type WatchWallet } from "@/lib/watch-only";
 import { getAddressStats } from "@/lib/txc/mempool";
+import { getEnabledChains } from "@/lib/chain-prefs";
+import { parsePaymentUri } from "@/lib/pay-uri";
+import { QrScanButton } from "@/components/wallet/QrScanButton";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
@@ -112,6 +124,57 @@ function WalletLayout() {
     return total;
   }, [price.data, account.data, evmBalances, allPrices.data, watchList, watchBalances]);
 
+  // EVM chain picker when a scanned URI doesn't specify a chain.
+  const [pickChain, setPickChain] = useState<
+    | { address: string; assetSymbol?: string; amount?: string }
+    | null
+  >(null);
+
+  function handleScan(raw: string) {
+    const intent = parsePaymentUri(raw);
+    if (intent.kind === "txc") {
+      navigate({
+        to: "/wallet/send",
+        search: { to: intent.address, amount: intent.amount },
+      });
+      return;
+    }
+    if (intent.kind === "evm") {
+      if (!intent.address) {
+        toast.error("QR is missing a recipient address");
+        return;
+      }
+      const enabledEvm = getEnabledChains().filter((c) =>
+        (["eth", "base", "bsc"] as string[]).includes(c),
+      ) as EvmChainId[];
+      if (intent.chain && enabledEvm.includes(intent.chain)) {
+        navigate({
+          to: "/wallet/evm/$chain/send",
+          params: { chain: intent.chain },
+          search: {
+            to: intent.address,
+            amount: intent.amount,
+            asset: intent.assetSymbol,
+          },
+        });
+        return;
+      }
+      // No chain in URI (or chain disabled) — ask the user which EVM network to use.
+      setPickChain({
+        address: intent.address,
+        assetSymbol: intent.assetSymbol,
+        amount: intent.amount,
+      });
+      return;
+    }
+    if (intent.kind === "nectar-invoice") {
+      // Hosted checkout — open in system browser; tap-to-pay handoff kicks in from there.
+      window.open(intent.url, "_blank", "noopener");
+      return;
+    }
+    toast.error("Couldn't recognize that QR code");
+  }
+
   if (!unlocked) return null;
 
   return (
@@ -141,6 +204,11 @@ function WalletLayout() {
               </div>
             )}
           </button>
+
+          <QrScanButton onScan={handleScan} />
+
+
+
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -179,6 +247,50 @@ function WalletLayout() {
       <div className="flex-1 flex flex-col min-h-0">
         <Outlet />
       </div>
+
+      <Dialog open={!!pickChain} onOpenChange={(o) => !o && setPickChain(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Which network?</DialogTitle>
+            <DialogDescription>
+              This payment request didn&apos;t specify a chain. Pick the network to send{" "}
+              {pickChain?.assetSymbol ?? "the payment"} on.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            {(getEnabledChains().filter((c) =>
+              (["eth", "base", "bsc"] as string[]).includes(c),
+            ) as EvmChainId[]).map((c) => (
+              <Button
+                key={c}
+                variant="outline"
+                className="justify-start"
+                onClick={() => {
+                  if (!pickChain) return;
+                  const target = pickChain;
+                  setPickChain(null);
+                  navigate({
+                    to: "/wallet/evm/$chain/send",
+                    params: { chain: c },
+                    search: {
+                      to: target.address,
+                      amount: target.amount,
+                      asset: target.assetSymbol,
+                    },
+                  });
+                }}
+              >
+                {c.toUpperCase()}
+              </Button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPickChain(null)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
