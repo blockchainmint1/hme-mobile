@@ -167,6 +167,25 @@ function WalletHome() {
     })),
   });
 
+  // Watch-only balances + tx history. Balance query is always on so the
+  // tile shows a number without needing to swipe to it; history only fires
+  // when the tile is actually the active one (single-address = 1 API call
+  // either way, but we still avoid the burst on cold open with many entries).
+  const watchStats = useQueries({
+    queries: watchList.map((w) => ({
+      queryKey: ["watch-stats", w.chain, w.address],
+      queryFn: () => getAddressStats(w.address),
+    })),
+  });
+  const activeWatchTxs = useQuery({
+    queryKey: ["watch-txs", activeWatch?.address],
+    enabled: !!activeWatch,
+    queryFn: () => getAddressTxs(activeWatch!.address),
+  });
+
+  // Long-press to remove a watch-only entry (chain tiles use reorder sheet).
+  const [watchRemove, setWatchRemove] = useState<WatchWallet | null>(null);
+
   return (
     <main className="flex-1 flex flex-col min-h-0">
       <div className="flex-1 overflow-y-auto pb-28">
