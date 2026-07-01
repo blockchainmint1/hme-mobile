@@ -148,6 +148,7 @@ function RootComponent() {
   // Wire up Nectar.Pay tap-to-pay deep links (nectar:// + https universal
   // link). Native-only — no-op on web. See lib/native/deeplink.ts.
   useEffect(() => {
+    document.documentElement.dataset.hmeHydrated = "true";
     let cancel: (() => void) | undefined;
     let cancelled = false;
     import("../lib/native/deeplink").then(({ registerPayDeepLinkListener }) => {
