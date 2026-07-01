@@ -399,7 +399,7 @@ function WalletHome() {
 
       {/* Fixed bottom send/receive — routes based on the active slot */}
       <div className="fixed bottom-0 inset-x-0 z-10 border-t border-border/60 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-        <div className="mx-auto max-w-3xl px-4 py-3 grid grid-cols-2 gap-3">
+        <div className="mx-auto max-w-3xl px-4 py-3 flex gap-2">
           {activeWatch ? (
             <WatchOnlyBottomActions wallet={activeWatch} />
           ) : (
