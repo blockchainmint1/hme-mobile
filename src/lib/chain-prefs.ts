@@ -42,6 +42,53 @@ export const CHAIN_META: Record<ChainId, ChainMeta> = {
 
 export const CHAIN_ORDER: ChainId[] = ["txc", "eth", "base", "bsc", "isk", "zcu"];
 
+const ORDER_KEY = "hme.chains.order.v1";
+
+function readOrder(): ChainId[] {
+  if (typeof localStorage === "undefined") return [...CHAIN_ORDER];
+  try {
+    const raw = localStorage.getItem(ORDER_KEY);
+    if (!raw) return [...CHAIN_ORDER];
+    const parsed = JSON.parse(raw) as string[];
+    const seen = new Set<ChainId>();
+    const out: ChainId[] = [];
+    for (const id of parsed) {
+      if ((CHAIN_ORDER as string[]).includes(id) && !seen.has(id as ChainId)) {
+        out.push(id as ChainId);
+        seen.add(id as ChainId);
+      }
+    }
+    // Append any chains missing from the saved order (new chains added later).
+    for (const id of CHAIN_ORDER) if (!seen.has(id)) out.push(id);
+    return out;
+  } catch {
+    return [...CHAIN_ORDER];
+  }
+}
+
+export function getChainOrder(): ChainId[] {
+  return readOrder();
+}
+
+export function setChainOrder(order: ChainId[]): void {
+  // Normalize: keep only valid ids, dedupe, append missing.
+  const seen = new Set<ChainId>();
+  const normalized: ChainId[] = [];
+  for (const id of order) {
+    if ((CHAIN_ORDER as string[]).includes(id) && !seen.has(id)) {
+      normalized.push(id);
+      seen.add(id);
+    }
+  }
+  for (const id of CHAIN_ORDER) if (!seen.has(id)) normalized.push(id);
+  try {
+    localStorage.setItem(ORDER_KEY, JSON.stringify(normalized));
+    window.dispatchEvent(new CustomEvent("hme:chains-changed"));
+  } catch {
+    /* ignore */
+  }
+}
+
 const STORAGE_KEY = "hme.chains.enabled.v1";
 const DEFAULT_ENABLED: Record<ChainId, boolean> = {
   txc: true,
@@ -76,7 +123,7 @@ export function getChainPrefs(): Record<ChainId, boolean> {
 
 export function getEnabledChains(): ChainId[] {
   const prefs = read();
-  return CHAIN_ORDER.filter((c) => prefs[c]);
+  return readOrder().filter((c) => prefs[c]);
 }
 
 export function setChainEnabled(id: ChainId, enabled: boolean): void {
