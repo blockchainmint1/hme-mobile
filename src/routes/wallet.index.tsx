@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
@@ -43,6 +43,7 @@ function WalletHome() {
   const { root, unlocked } = useWallet();
   const fetchPrice = useServerFn(getTxcPriceUsd);
   const fetchAllPrices = useServerFn(getAllPricesUsd);
+  const qc = useQueryClient();
 
   // Reactive enabled chain list
   const [enabled, setEnabled] = useState<ChainId[]>(() => getEnabledChains());
@@ -235,9 +236,18 @@ function WalletHome() {
                       priceUsd={
                         allPrices.data?.prices[EVM_CHAINS[slot.chain as EvmChainId].priceSymbol] ?? null
                       }
-                      onRefresh={() =>
-                        evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.refetch()
-                      }
+                      onRefresh={async () => {
+                        const chain = slot.chain as EvmChainId;
+                        const addr = evmAddress;
+                        // Refetch native balance
+                        await evmBalances[evmEnabled.indexOf(chain)]?.refetch();
+                        // Invalidate ERC-20 balances and tx history for this chain+address
+                        await Promise.all([
+                          qc.invalidateQueries({ queryKey: ["erc20-balance", chain] }),
+                          qc.invalidateQueries({ queryKey: ["evm-history", chain, addr] }),
+                          qc.invalidateQueries({ queryKey: ["all-prices"] }),
+                        ]);
+                      }}
                       onOpenDetails={() => {
                         if (longPressFired.current) return;
                         setTileOpen(slot.chain);
@@ -559,10 +569,11 @@ function EvmTile({
   balanceWei: bigint | null;
   loading: boolean;
   priceUsd: number | null;
-  onRefresh: () => void;
+  onRefresh: () => void | Promise<void>;
   onOpenDetails: () => void;
 }) {
   const [hidden] = useHideBalances();
+  const [refreshing, setRefreshing] = useState(false);
   const meta = EVM_CHAINS[chainId];
   const balanceEth = balanceWei != null ? Number(balanceWei) / 1e18 : null;
   const balanceUsd = balanceEth != null && priceUsd != null ? balanceEth * priceUsd : null;
@@ -605,14 +616,22 @@ function EvmTile({
         <span
           role="button"
           tabIndex={0}
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation();
-            onRefresh();
+            if (refreshing) return;
+            setRefreshing(true);
+            try {
+              await onRefresh();
+            } finally {
+              setRefreshing(false);
+            }
           }}
           className="opacity-80 hover:opacity-100"
           aria-label="Refresh"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw
+            className={`h-4 w-4 ${refreshing || loading ? "animate-spin" : ""}`}
+          />
         </span>
       </div>
       <p className="mt-3 text-[10px] uppercase tracking-widest opacity-70">Native</p>
