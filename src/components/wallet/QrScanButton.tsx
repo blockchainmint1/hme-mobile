@@ -1,12 +1,12 @@
 /**
- * QR scan button. Opens a modal that streams the rear camera and detects
- * QR codes via the native BarcodeDetector API. Falls back to a manual
- * message when the browser lacks support.
+ * QR scan button. Uses native Capacitor scanning on iOS/Android,
+ * falls back to the web BarcodeDetector API in the browser.
  */
 import { useEffect, useRef, useState } from "react";
 import { Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { isNative } from "@/lib/native/platform";
 
 type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
@@ -20,13 +20,34 @@ declare global {
 
 export function QrScanButton({ onScan }: { onScan: (text: string) => void }) {
   const [open, setOpen] = useState(false);
+
+  async function handleClick() {
+    if (isNative()) {
+      try {
+        const { BarcodeScanner } = await import("@capacitor-community/barcode-scanner");
+        await BarcodeScanner.checkPermission({ force: true });
+        await BarcodeScanner.hideBackground();
+        const result = await BarcodeScanner.startScan();
+        await BarcodeScanner.showBackground();
+        await BarcodeScanner.stopScan();
+        if (result.hasContent && result.content) {
+          onScan(result.content);
+        }
+      } catch (e) {
+        // ignore cancel / permission denial
+      }
+      return;
+    }
+    setOpen(true);
+  }
+
   return (
     <>
       <Button
         type="button"
         variant="outline"
         size="icon"
-        onClick={() => setOpen(true)}
+        onClick={handleClick}
         title="Scan QR"
         aria-label="Scan QR"
       >
