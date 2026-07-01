@@ -7,8 +7,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "build": "vite build && bun scripts/generate-capacitor-index.mjs",
+    "build:dev": "vite build --mode development && bun scripts/generate-capacitor-index.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",

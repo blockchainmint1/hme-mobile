@@ -9,6 +9,7 @@ Keychain / Keystore. The same web bundle runs in both.
 
 ```bash
 bun install
+bun run build
 bunx cap add ios
 bunx cap add android
 ```
@@ -22,8 +23,26 @@ them to whichever native repo you ship from.
 bun run cap:sync        # = bun run build && bunx cap sync
 ```
 
-`vite build` writes to `dist/client`, which `capacitor.config.ts` points at
-via `webDir`.
+`bun run build` runs `vite build` and then renders TanStack Start's SPA shell to
+`dist/client/index.html`. That is the file Capacitor needs as its native-webview
+entry point. If the adapter writes public assets to `.output/public`, the build
+script mirrors them into `dist/client` so `bunx cap sync ios` always uses the
+same web directory.
+
+## Clean iOS rebuild after a failed first add
+
+If Xcode crashes after an incomplete Capacitor add/sync, remove the half-built
+native project and generated web output, then rebuild in this order:
+
+```bash
+rm -rf ios node_modules dist .output
+bun install
+bun run build
+bunx cap add ios
+bunx cap sync ios
+bun run cap:assets
+bunx cap open ios
+```
 
 ## Generate app icons and splash screens
 

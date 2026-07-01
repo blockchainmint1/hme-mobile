@@ -3,9 +3,11 @@ import type { CapacitorConfig } from "@capacitor/cli";
 /**
  * Capacitor config for the HME Wallet mobile app.
  *
- * The web app is served from the bundled dist/ output. `webDir` points at the
- * Vite client build. When developing against a live Lovable preview, set
- * `server.url` to the preview URL instead of bundling.
+ * The web app is served from TanStack Start's static SPA output.
+ * `bun run build` writes or mirrors the static bundle to `dist/client` and
+ * generates `dist/client/index.html`, which is the native webview entry point.
+ * When developing against a live Lovable preview, set `server.url` to the
+ * preview URL instead of bundling.
  */
 const config: CapacitorConfig = {
   appId: "money.honest.txcwallet",
