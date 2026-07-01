@@ -196,56 +196,88 @@ function WalletHome() {
             className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar"
             style={{ scrollbarWidth: "none" }}
           >
-            {enabled.map((id) => (
-              <div
-                key={id}
-                className="snap-center shrink-0 w-full px-4 pt-6"
-                onPointerDown={startLongPress}
-                onPointerUp={cancelLongPress}
-                onPointerMove={cancelLongPress}
-                onPointerCancel={cancelLongPress}
-                onPointerLeave={cancelLongPress}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                {id === "txc" ? (
-                  <TxcTile
-                    balanceSats={account.data?.balanceSats ?? 0}
-                    loading={account.isLoading}
-                    priceUsd={price.data?.usd ?? null}
-                    onRefresh={() => account.refetch()}
-                    refreshing={account.isFetching}
-                    label={unlocked?.label ?? "TXC Wallet"}
-                    onOpenDetails={() => {
-                      if (longPressFired.current) return;
-                      setTileOpen("txc");
-                    }}
-                  />
-                ) : (
-                  <EvmTile
-                    chainId={id as EvmChainId}
-                    balanceWei={evmBalances[evmEnabled.indexOf(id as EvmChainId)]?.data ?? null}
-                    loading={evmBalances[evmEnabled.indexOf(id as EvmChainId)]?.isLoading ?? true}
-                    priceUsd={allPrices.data?.prices[EVM_CHAINS[id as EvmChainId].priceSymbol] ?? null}
-                    onRefresh={() =>
-                      evmBalances[evmEnabled.indexOf(id as EvmChainId)]?.refetch()
+            {slots.map((slot, slotIdx) => {
+              const key = slot.kind === "chain" ? `c:${slot.chain}` : `w:${slot.watch.id}`;
+              const onLongPress =
+                slot.kind === "watch"
+                  ? () => {
+                      longPressFired.current = true;
+                      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
+                      setWatchRemove(slot.watch);
                     }
-                    onOpenDetails={() => {
-                      if (longPressFired.current) return;
-                      setTileOpen(id);
-                    }}
-                  />
-                )}
-              </div>
-            ))}
+                  : () => setReorderOpen(true);
+              return (
+                <div
+                  key={key}
+                  className="snap-center shrink-0 w-full px-4 pt-6"
+                  onPointerDown={() => startLongPress(onLongPress)}
+                  onPointerUp={cancelLongPress}
+                  onPointerMove={cancelLongPress}
+                  onPointerCancel={cancelLongPress}
+                  onPointerLeave={cancelLongPress}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  {slot.kind === "chain" && slot.chain === "txc" && (
+                    <TxcTile
+                      balanceSats={account.data?.balanceSats ?? 0}
+                      loading={account.isLoading}
+                      priceUsd={price.data?.usd ?? null}
+                      onRefresh={() => account.refetch()}
+                      refreshing={account.isFetching}
+                      label={unlocked?.label ?? "TXC Wallet"}
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setTileOpen("txc");
+                      }}
+                    />
+                  )}
+                  {slot.kind === "chain" && slot.chain !== "txc" && (
+                    <EvmTile
+                      chainId={slot.chain as EvmChainId}
+                      balanceWei={evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.data ?? null}
+                      loading={evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.isLoading ?? true}
+                      priceUsd={
+                        allPrices.data?.prices[EVM_CHAINS[slot.chain as EvmChainId].priceSymbol] ?? null
+                      }
+                      onRefresh={() =>
+                        evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.refetch()
+                      }
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setTileOpen(slot.chain);
+                      }}
+                    />
+                  )}
+                  {slot.kind === "watch" && (
+                    <WatchOnlyTile
+                      wallet={slot.watch}
+                      stats={watchStats[watchList.findIndex((w) => w.id === slot.watch.id)]?.data ?? null}
+                      loading={
+                        watchStats[watchList.findIndex((w) => w.id === slot.watch.id)]?.isLoading ?? true
+                      }
+                      priceUsd={price.data?.usd ?? null}
+                      onRefresh={() =>
+                        watchStats[watchList.findIndex((w) => w.id === slot.watch.id)]?.refetch()
+                      }
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        // Scroll into view for tap-select if needed
+                        setActiveIdx(slotIdx);
+                      }}
+                    />
+                  )}
+                </div>
+              );
+            })}
 
           </div>
 
           {/* Dots indicator */}
-          {enabled.length > 1 && (
+          {slots.length > 1 && (
             <div className="flex justify-center gap-1.5 mt-3">
-              {enabled.map((id, i) => (
+              {slots.map((s, i) => (
                 <span
-                  key={id}
+                  key={s.kind === "chain" ? `c:${s.chain}` : `w:${s.watch.id}`}
                   className={`h-1.5 rounded-full transition-all ${
                     i === activeIdx ? "w-6 bg-foreground" : "w-1.5 bg-muted-foreground/40"
                   }`}
