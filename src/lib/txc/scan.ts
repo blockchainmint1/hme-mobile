@@ -152,8 +152,28 @@ async function scanChainFast(
 export async function scanAccount(
   root: BIP32Interface,
   kind: AddressKind,
+  opts?: { deep?: boolean },
 ): Promise<AccountSnapshot> {
-  const [ext, int] = await Promise.all([scanChain(root, kind, 0), scanChain(root, kind, 1)]);
+  const hint = opts?.deep ? null : readHint(root, kind);
+  let ext: { all: DerivedAddress[]; firstUnusedIndex: number };
+  let int: { all: DerivedAddress[]; firstUnusedIndex: number };
+  if (hint) {
+    const [e, i] = await Promise.all([
+      scanChainFast(root, kind, 0, hint.extUsed),
+      scanChainFast(root, kind, 1, hint.intUsed),
+    ]);
+    if (e.overflowed || i.overflowed) {
+      // Activity blew past our fast window — fall back to full gap-limit walk.
+      [ext, int] = await Promise.all([scanChain(root, kind, 0), scanChain(root, kind, 1)]);
+    } else {
+      ext = e;
+      int = i;
+    }
+  } else {
+    [ext, int] = await Promise.all([scanChain(root, kind, 0), scanChain(root, kind, 1)]);
+  }
+  writeHint(root, kind, ext.firstUnusedIndex, int.firstUnusedIndex);
+
 
   // Pull UTXOs only from addresses up to firstUnusedIndex on each chain.
   const usedExt = ext.all.slice(0, Math.max(ext.firstUnusedIndex, 1));
