@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { DerivationKind } from "@/lib/txc/network";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { QrScanButton } from "@/components/wallet/QrScanButton";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/import")({
   head: () => ({
