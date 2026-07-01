@@ -8,8 +8,9 @@ import { DERIVATION_PATHS } from "@/lib/txc/network";
 import { QrCode } from "@/components/wallet/QrCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Copy, Plus } from "lucide-react";
+import { Copy, Plus, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { shareText } from "@/lib/native/ui";
 import { copyToClipboard } from "@/lib/clipboard";
 import {
   getDisplayIndex,
@@ -98,7 +99,23 @@ function ReceivePage() {
                     else toast.error("Could not copy. Long-press the address to select it.");
                   }}
                 >
-                  <Copy className="h-4 w-4 mr-2" /> Copy address
+                  <Copy className="h-4 w-4 mr-2" /> Copy
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    const ok = await shareText({
+                      title: "My TXC address",
+                      text: address,
+                      dialogTitle: "Share TXC address",
+                    });
+                    if (!ok) {
+                      const copied = await copyToClipboard(address);
+                      if (copied) toast.success("Address copied");
+                    }
+                  }}
+                >
+                  <Share2 className="h-4 w-4 mr-2" /> Share
                 </Button>
                 <Button
                   variant="outline"
@@ -108,7 +125,7 @@ function ReceivePage() {
                     toast.success("Fresh address generated");
                   }}
                 >
-                  <Plus className="h-4 w-4 mr-2" /> New address
+                  <Plus className="h-4 w-4 mr-2" /> New
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground text-center max-w-xs">

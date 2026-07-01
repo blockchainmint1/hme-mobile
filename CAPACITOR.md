@@ -66,9 +66,15 @@ iOS — add to `ios/App/App/Info.plist`:
 
 ```xml
 <key>NSFaceIDUsageDescription</key>
-<string>Unlock your HME wallet with Face ID.</string>
+<string>Unlock your HME Wallet with Face ID.</string>
 <key>NSCameraUsageDescription</key>
-<string>Scan addresses and payment QR codes.</string>
+<string>Scan wallet addresses and payment QR codes.</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Import wallet addresses from QR codes saved to your photos.</string>
+<key>UIRequiresFullScreen</key>
+<false/>
+<key>UIViewControllerBasedStatusBarAppearance</key>
+<true/>
 ```
 
 Android — `android/app/src/main/AndroidManifest.xml`:
@@ -77,7 +83,32 @@ Android — `android/app/src/main/AndroidManifest.xml`:
 <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 <uses-permission android:name="android.permission.CAMERA" />
 <uses-permission android:name="android.permission.INTERNET" />
+<uses-permission android:name="android.permission.VIBRATE" />
 ```
+
+## iOS pre-flight checklist
+
+Before archiving for TestFlight, verify:
+
+- [ ] `bun run cap:assets` was re-run after the latest `assets/icon.png` and `assets/splash.png` (icon set + LaunchScreen storyboard both update).
+- [ ] `assets/icon.png` has no transparency and no rounded corners (iOS masks it).
+- [ ] In Xcode → Signing & Capabilities, **Associated Domains** contains `applinks:nectar-pay.com` (Nectar universal-link handoff, see below).
+- [ ] Info.plist includes all four strings above. Missing `NSFaceIDUsageDescription` = crash-on-first-Face-ID-prompt.
+- [ ] Deployment target ≥ iOS 14 (biometric-auth plugin requirement).
+- [ ] "Encryption Export Compliance" — wallet uses only standard crypto (AES-GCM, secp256k1). In App Store Connect, answer "Yes, uses encryption" → "No, only exempt encryption (standard iOS APIs and open-source algorithms)". No ERN required.
+- [ ] Test in dark mode + light mode (`ThemeProvider` respects system preference).
+- [ ] Test with iPhone SE (small screen) and iPhone 15 Pro Max (large + Dynamic Island safe area).
+- [ ] Kill-and-relaunch after enabling biometric unlock — Face ID prompt should appear on cold-start.
+
+## iOS-only niceties baked into the web layer
+
+These already work without any Xcode changes — they light up automatically inside the Capacitor shell:
+
+- **Haptics** on successful/failed sends (`@capacitor/haptics`).
+- **Native share sheet** on the Receive screen (`@capacitor/share`).
+- **Status bar overlay** with matching background — configured on mount in `src/lib/native/ui.ts` via `initNativeChrome()`.
+- **Keyboard resize** in native mode so form fields aren't hidden.
+- **Safe-area padding** top and bottom in the root layout (`env(safe-area-inset-*)`).
 
 ## Store identity
 

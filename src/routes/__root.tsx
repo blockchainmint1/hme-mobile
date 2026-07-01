@@ -88,24 +88,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "HME Wallet" },
       { name: "format-detection", content: "telephone=no" },
-      { title: "TXC Mobile Wallet" },
+      { title: "HME Wallet — TEXITcoin & EVM multi-chain wallet" },
       {
         name: "description",
         content:
-          "Self-custodial TEXITcoin (TXC) wallet. Send, receive, and hold your own keys. Part of the honest.money ecosystem.",
+          "HME Wallet — a self-custodial multi-chain wallet for TEXITcoin (TXC), Ethereum, Base, and BSC. Part of the Honest Money ecosystem.",
       },
       { name: "theme-color", content: "#0b0f14" },
-      { property: "og:title", content: "TXC Mobile Wallet" },
+      { property: "og:title", content: "HME Wallet" },
       {
         property: "og:description",
-        content: "Self-custodial TEXITcoin (TXC) wallet. Hold your own keys.",
+        content:
+          "Self-custodial multi-chain wallet for TEXITcoin and EVM assets. Hold your own keys.",
       },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "TXC Mobile Wallet" },
-      { name: "description", content: "HME Wallet — a multi-chain wallet for TEXITcoin and EVM assets in the Honest Money ecosystem." },
-      { property: "og:description", content: "HME Wallet — a multi-chain wallet for TEXITcoin and EVM assets in the Honest Money ecosystem." },
-      { name: "twitter:description", content: "HME Wallet — a multi-chain wallet for TEXITcoin and EVM assets in the Honest Money ecosystem." },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "HME Wallet" },
+      {
+        name: "twitter:description",
+        content:
+          "Self-custodial multi-chain wallet for TEXITcoin and EVM assets. Hold your own keys.",
+      },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e5412ff3-3f36-4086-9590-b2e64dae9c49/id-preview-32bb6bc2--633f1235-4607-4b38-ad25-8b0c6b359acb.lovable.app-1782729338829.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e5412ff3-3f36-4086-9590-b2e64dae9c49/id-preview-32bb6bc2--633f1235-4607-4b38-ad25-8b0c6b359acb.lovable.app-1782729338829.png" },
     ],
@@ -153,6 +156,13 @@ function RootComponent() {
     };
   }, [router]);
 
+  // Configure iOS/Android status bar + keyboard once on mount. No-op on web.
+  useEffect(() => {
+    import("../lib/native/ui").then(({ initNativeChrome }) => {
+      initNativeChrome();
+    });
+  }, []);
+
 
 
   return (
@@ -166,7 +176,9 @@ function RootComponent() {
               <div className="flex-1 pt-[env(safe-area-inset-top)]">
                 <Outlet />
               </div>
-              <SiteFooter />
+              <div className="pb-[env(safe-area-inset-bottom)]">
+                <SiteFooter />
+              </div>
             </div>
           </div>
           <Toaster richColors closeButton position="top-center" />

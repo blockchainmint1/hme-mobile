@@ -46,6 +46,7 @@ import {
 } from "@/lib/chains/erc20";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
+import { hapticSuccess, hapticError } from "@/lib/native/ui";
 
 const searchSchema = z.object({
   asset: z.string().optional(),
@@ -224,8 +225,12 @@ function EvmSend() {
         value: 0n,
       });
     },
-    onError: (e: Error) => setError(e.message),
+    onError: (e: Error) => {
+      hapticError();
+      setError(e.message);
+    },
     onSuccess: () => {
+      hapticSuccess();
       navigate({ to: "/wallet" });
     },
   });
