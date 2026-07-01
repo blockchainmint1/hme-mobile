@@ -616,14 +616,22 @@ function EvmTile({
         <span
           role="button"
           tabIndex={0}
-          onClick={(e) => {
+          onClick={async (e) => {
             e.stopPropagation();
-            onRefresh();
+            if (refreshing) return;
+            setRefreshing(true);
+            try {
+              await onRefresh();
+            } finally {
+              setRefreshing(false);
+            }
           }}
           className="opacity-80 hover:opacity-100"
           aria-label="Refresh"
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw
+            className={`h-4 w-4 ${refreshing || loading ? "animate-spin" : ""}`}
+          />
         </span>
       </div>
       <p className="mt-3 text-[10px] uppercase tracking-widest opacity-70">Native</p>
