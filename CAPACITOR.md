@@ -140,7 +140,7 @@ These already work without any Xcode changes — they light up automatically ins
 - App ID: `money.honest.txcwallet`
 - Display name: `HME Wallet`
 - Icon source: `assets/icon.png` (1024×1024)
-- Splash source: `assets/splash.png` (1920×1920)
+- Splash source: `assets/splash.png` (2732×2732)
 
 ## Migration from the old TXC Wallet
 
