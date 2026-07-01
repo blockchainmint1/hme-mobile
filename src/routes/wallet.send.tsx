@@ -215,31 +215,44 @@ function SendPage() {
             <form onSubmit={review} className="space-y-4">
               <div>
                 <Label htmlFor="to">TEXITcoin address</Label>
-                <Input
-                  id="to"
-                  value={to}
-                  onChange={(e) => setTo(e.target.value)}
-                  placeholder="txc1..."
-                  className="mt-1 font-mono"
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                <div className="mt-2">
-                  <ContactPicker chain="txc" onPick={setTo} />
+                <div className="mt-1 flex gap-2">
+                  <Input
+                    id="to"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    placeholder="txc1... or T..."
+                    className="font-mono flex-1"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <QrScanButton onScan={applyUri} />
+                  <AddressBookButton chain="txc" onPick={(a) => setTo(a)} />
                 </div>
               </div>
               <div>
-                <Label htmlFor="amount">Amount (TXC)</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="amount">Amount (TXC)</Label>
+                  <label className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sendAll}
+                      onChange={(e) => setSendAll(e.target.checked)}
+                      className="h-3.5 w-3.5"
+                    />
+                    Send all
+                  </label>
+                </div>
                 <Input
                   id="amount"
                   type="number"
                   inputMode="decimal"
                   step="0.00000001"
                   min="0"
-                  value={amount}
+                  value={sendAll ? "" : amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.0"
+                  placeholder={sendAll ? "All available (minus fee)" : "0.0"}
                   className="mt-1"
+                  disabled={sendAll}
                 />
               </div>
               <div>
