@@ -9,7 +9,7 @@
  *    the mnemonic or private keys.
  *  - Custom (de)serializer handles bigint values (EVM balances).
  */
-import type { QueryClient, Query } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { persistQueryClient } from "@tanstack/react-query-persist-client";
 
@@ -57,11 +57,10 @@ export function installQueryPersistence(queryClient: QueryClient) {
       maxAge: 24 * 60 * 60 * 1000, // 24h
       buster: "v1",
       dehydrateOptions: {
-        shouldDehydrateQuery: (query: Query) => {
+        shouldDehydrateQuery: (query) => {
           const head = query.queryKey?.[0];
           if (typeof head !== "string") return false;
           if (!PERSIST_ALLOWLIST.has(head)) return false;
-          // Only persist successful results
           return query.state.status === "success";
         },
       },
