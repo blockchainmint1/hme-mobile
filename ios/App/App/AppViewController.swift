@@ -8,7 +8,7 @@ import UIKit
 /// sync. Pinning the production URL here gives the archive a second, native
 /// source of truth so the wallet loads the published mobile app reliably.
 class AppViewController: CAPBridgeViewController {
-    override open func instanceDescriptor() -> InstanceDescriptor {
+    override func instanceDescriptor() -> InstanceDescriptor {
         let descriptor = super.instanceDescriptor()
         descriptor.serverURL = "https://mobile.honest.money"
         descriptor.urlScheme = "https"
