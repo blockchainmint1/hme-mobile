@@ -10,14 +10,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Settings as Cog, Download, Sparkles, Eye } from "lucide-react";
+import { Plus, Settings as Cog, Download, Sparkles, Eye, ScanLine } from "lucide-react";
 import { scanAccount } from "@/lib/txc/scan";
 import { satsToTxc, formatFiat } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
-import { EVM_CHAIN_LIST, deriveEvmAccount, evmClient } from "@/lib/chains/evm";
+import { EVM_CHAIN_LIST, deriveEvmAccount, evmClient, type EvmChainId } from "@/lib/chains/evm";
 import { listWatchWallets, watchChangedEvent, type WatchWallet } from "@/lib/watch-only";
 import { getAddressStats } from "@/lib/txc/mempool";
+import { getEnabledChains } from "@/lib/chain-prefs";
+import { parsePaymentUri } from "@/lib/pay-uri";
+import { QrScanButton } from "@/components/wallet/QrScanButton";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
