@@ -97,13 +97,14 @@ function WalletHome() {
   const [reorderOpen, setReorderOpen] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
-  const startLongPress = () => {
+  const startLongPress = (action?: () => void) => {
     longPressFired.current = false;
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
       longPressFired.current = true;
       if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(15);
-      setReorderOpen(true);
+      if (action) action();
+      else setReorderOpen(true);
     }, 550);
   };
   const cancelLongPress = () => {
