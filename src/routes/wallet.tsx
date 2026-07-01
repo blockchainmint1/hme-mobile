@@ -68,6 +68,22 @@ function WalletLayout() {
     })),
   });
 
+  // Watch-only wallets contribute to the portfolio total too.
+  const [watchList, setWatchList] = useState<WatchWallet[]>(() => listWatchWallets());
+  useEffect(() => {
+    const h = () => setWatchList(listWatchWallets());
+    window.addEventListener(watchChangedEvent(), h);
+    return () => window.removeEventListener(watchChangedEvent(), h);
+  }, []);
+  const watchBalances = useQueries({
+    queries: watchList.map((w) => ({
+      queryKey: ["watch-stats", w.chain, w.address],
+      queryFn: () => getAddressStats(w.address),
+      staleTime: 60_000,
+      enabled: !!unlocked,
+    })),
+  });
+
   const portfolioUsd = useMemo(() => {
     let total = 0;
     if (price.data?.usd && account.data) {
@@ -80,8 +96,21 @@ function WalletLayout() {
         total += (Number(bal) / 1e18) * usd;
       }
     });
+    // Watch-only TXC balances (funded - spent, in sats).
+    if (price.data?.usd) {
+      watchList.forEach((_, i) => {
+        const s = watchBalances[i]?.data;
+        if (!s) return;
+        const bal =
+          s.chain_stats.funded_txo_sum -
+          s.chain_stats.spent_txo_sum +
+          s.mempool_stats.funded_txo_sum -
+          s.mempool_stats.spent_txo_sum;
+        total += satsToTxc(bal) * price.data!.usd;
+      });
+    }
     return total;
-  }, [price.data, account.data, evmBalances, allPrices.data]);
+  }, [price.data, account.data, evmBalances, allPrices.data, watchList, watchBalances]);
 
   if (!unlocked) return null;
 
