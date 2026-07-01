@@ -384,10 +384,14 @@ function WalletHome() {
         </div>
       </div>
 
-      {/* Fixed bottom send/receive — routes based on the active chain */}
+      {/* Fixed bottom send/receive — routes based on the active slot */}
       <div className="fixed bottom-0 inset-x-0 z-10 border-t border-border/60 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="mx-auto max-w-3xl px-4 py-3 grid grid-cols-2 gap-3">
-          <BottomActions chain={activeChain} />
+          {activeWatch ? (
+            <WatchOnlyBottomActions wallet={activeWatch} />
+          ) : (
+            <BottomActions chain={activeChain} />
+          )}
         </div>
       </div>
       <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
@@ -429,6 +433,7 @@ function WalletHome() {
           })()}
         />
       )}
+      <WatchRemoveDialog wallet={watchRemove} onClose={() => setWatchRemove(null)} />
     </main>
   );
 }
