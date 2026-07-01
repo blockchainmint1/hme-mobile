@@ -30,10 +30,7 @@ function BackupPage() {
     void (async () => {
       try {
         const { PrivacyScreen } = await import("@capacitor-community/privacy-screen");
-        await PrivacyScreen.enable({
-          android: { enable: true, dimBackground: true },
-          ios: { enable: true },
-        });
+        await PrivacyScreen.enable();
       } catch {
         /* plugin unavailable */
       }
