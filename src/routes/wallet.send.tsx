@@ -17,6 +17,7 @@ import { address as addrLib } from "bitcoinjs-lib";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";
+import { confirmWithBiometric } from "@/lib/native/biometric";
 import { rootFingerprintHex } from "@/lib/txc/fingerprint";
 
 const searchSchema = z.object({
@@ -155,6 +156,11 @@ function SendPage() {
   async function send() {
     if (!root || !unlocked || !account.data) return;
     if (stage.kind !== "review") return;
+    // Re-prompt biometrics right before broadcast so a malicious deeplink
+    // that auto-fills the form can't silently drain funds. No-op when
+    // biometrics isn't enabled on this device.
+    const ok = await confirmWithBiometric("Confirm sending TXC");
+    if (!ok) return;
     setBusy(true);
     setError(null);
     try {
