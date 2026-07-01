@@ -10,18 +10,20 @@
 export async function initObservability(): Promise<void> {
   const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
   if (!dsn) return;
+  // Indirect dynamic imports so Vite doesn't try to resolve optional deps at build time.
+  const dynImport = new Function("m", "return import(m)") as (m: string) => Promise<any>;
   try {
-    const [{ init: initCapacitor }, sentryReact] = await Promise.all([
-      import("@sentry/capacitor" as string),
-      import("@sentry/react" as string),
+    const [cap, react] = await Promise.all([
+      dynImport("@sentry/capacitor"),
+      dynImport("@sentry/react"),
     ]);
-    initCapacitor(
+    cap.init(
       {
         dsn,
         tracesSampleRate: 0.1,
         environment: import.meta.env.MODE,
       },
-      sentryReact.init,
+      react.init,
     );
   } catch {
     /* @sentry/capacitor not installed — silently skip */
