@@ -7,6 +7,7 @@ import { useFeature } from "@/lib/feature-prefs";
 export function FeaturesCard() {
   const [evmSwap, setEvmSwap] = useFeature("evmSwap");
   const [confirmLast4, setConfirmLast4] = useFeature("confirmLast4");
+  const [hideSpam, setHideSpam] = useFeature("hideSpamTokens");
   return (
     <Card>
       <CardHeader>
