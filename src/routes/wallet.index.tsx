@@ -472,7 +472,6 @@ function BottomActions({ chain }: { chain: ChainId }) {
   }
   if (chain in EVM_CHAINS) {
     const c = chain as EvmChainId;
-    const map: Record<EvmChainId, string> = { eth: "ethereum", base: "base", bsc: "bnb" };
     return (
       <>
         <Button asChild size="lg" variant="outline" className="flex-1">
@@ -486,19 +485,10 @@ function BottomActions({ chain }: { chain: ChainId }) {
           </Link>
         </Button>
         {swapEnabled && (
-          <Button
-            size="lg"
-            variant="secondary"
-            className="flex-1"
-            onClick={() =>
-              window.open(
-                `https://app.uniswap.org/swap?chain=${map[c]}`,
-                "_blank",
-                "noopener,noreferrer",
-              )
-            }
-          >
-            <ArrowLeftRight className="h-4 w-4 mr-2" /> Swap
+          <Button asChild size="lg" variant="secondary" className="flex-1">
+            <Link to="/wallet/evm/$chain/swap" params={{ chain: c }}>
+              <ArrowLeftRight className="h-4 w-4 mr-2" /> Swap
+            </Link>
           </Button>
         )}
       </>
