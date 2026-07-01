@@ -8,7 +8,8 @@ import { formatTxc, formatTxcCompact, formatFiat, satsToTxc, compactNumberString
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
 import { getEvmHistory } from "@/lib/chains/history.functions";
-import { readErc20Balance, tokenAmountFromRaw, TOKENS_BY_CHAIN, USDC_BY_CHAIN } from "@/lib/chains/erc20";
+import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
+import { useTokensForChain } from "@/lib/token-prefs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock } from "lucide-react";
