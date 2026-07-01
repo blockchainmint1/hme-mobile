@@ -5,7 +5,13 @@ import { useEffect, useState } from "react";
  * Kept off by default — every feature we surface is another button
  * that can go wrong or confuse a first-time user.
  */
-export type FeatureId = "evmSwap";
+export type FeatureId = "evmSwap" | "confirmLast4";
+
+/** Default value when the user hasn't set the toggle yet. */
+const DEFAULTS: Record<FeatureId, boolean> = {
+  evmSwap: false,
+  confirmLast4: true,
+};
 
 const STORAGE_KEY = "hme:features";
 const EVENT = "hme:features-changed";
@@ -32,7 +38,8 @@ function write(m: FeatureMap) {
 }
 
 export function isFeatureEnabled(id: FeatureId): boolean {
-  return !!read()[id];
+  const v = read()[id];
+  return v === undefined ? DEFAULTS[id] : v;
 }
 
 export function setFeatureEnabled(id: FeatureId, enabled: boolean) {
