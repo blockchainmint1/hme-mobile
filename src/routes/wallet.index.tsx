@@ -43,6 +43,7 @@ function WalletHome() {
   const { root, unlocked } = useWallet();
   const fetchPrice = useServerFn(getTxcPriceUsd);
   const fetchAllPrices = useServerFn(getAllPricesUsd);
+  const qc = useQueryClient();
 
   // Reactive enabled chain list
   const [enabled, setEnabled] = useState<ChainId[]>(() => getEnabledChains());
