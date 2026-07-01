@@ -46,6 +46,7 @@ import {
 } from "@/lib/chains/erc20";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
+import { hapticSuccess, hapticError } from "@/lib/native/ui";
 
 const searchSchema = z.object({
   asset: z.string().optional(),
