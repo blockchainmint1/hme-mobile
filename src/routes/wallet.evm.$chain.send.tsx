@@ -150,6 +150,7 @@ function EvmSend() {
 
   const [to, setTo] = useState(search.to ?? "");
   const [confirmTail, setConfirmTail] = useState("");
+  const [confirmLast4Enabled] = useFeature("confirmLast4");
   const [amount, setAmount] = useState(search.amount ?? "");
   const [error, setError] = useState<string | null>(null);
 
