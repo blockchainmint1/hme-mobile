@@ -330,8 +330,23 @@ function ImportPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Seed phrase</CardTitle>
-          <CardDescription>12 or 24 words, separated by spaces.</CardDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle>Seed phrase</CardTitle>
+              <CardDescription>12 or 24 words, separated by spaces.</CardDescription>
+            </div>
+            <QrScanButton
+              onScan={(text) => {
+                const extracted = extractSeedFromQr(text);
+                if (!extracted) {
+                  toast.error("That QR doesn't contain a valid seed phrase.");
+                  return;
+                }
+                setPhrase(extracted);
+                toast.success("Seed phrase loaded from QR.");
+              }}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -348,6 +363,7 @@ function ImportPage() {
               className="font-mono"
               autoFocus
             />
+
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
