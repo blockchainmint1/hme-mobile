@@ -585,7 +585,7 @@ function EvmTile({
     balanceUsd != null ? formatFiat(balanceUsd) : priceUsd == null ? "Price unavailable" : "—";
 
   // Token balances on this chain (USDC/USDT are ~$1 stables — safe to treat as USD 1:1)
-  const tokens = TOKENS_BY_CHAIN[chainId];
+  const tokens = useTokensForChain(chainId);
   const tokenBalances = useQueries({
     queries: tokens.map((t) => ({
       queryKey: ["erc20-balance", chainId, t.address, address],
