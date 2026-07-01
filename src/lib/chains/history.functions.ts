@@ -203,6 +203,15 @@ export const getEvmHistory = createServerFn({ method: "POST" })
       const push = (t: AlchemyTransfer, out: boolean) => {
         const key = `${t.hash}:${t.category}:${t.asset ?? ""}:${out ? "o" : "i"}`;
         if (map.has(key)) return;
+        const contract = t.rawContract?.address ? t.rawContract.address.toLowerCase() : null;
+        const { spam, reason } = classifySpam(
+          data.chain,
+          t.category,
+          t.asset,
+          contract,
+          out,
+          t.value,
+        );
         map.set(key, {
           hash: t.hash,
           from: t.from,
@@ -213,6 +222,9 @@ export const getEvmHistory = createServerFn({ method: "POST" })
           blockNum: parseInt(t.blockNum, 16),
           timestamp: t.metadata?.blockTimestamp ?? null,
           outgoing: out,
+          contractAddress: contract,
+          spam,
+          spamReason: reason,
         });
       };
       for (const t of outgoing) push(t, t.from.toLowerCase() === addrLower);
