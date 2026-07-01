@@ -6,6 +6,7 @@ const root = process.cwd();
 const iosDir = resolve(root, "ios");
 const infoPlistPath = resolve(root, "ios/App/App/Info.plist");
 const iosGitignorePath = resolve(root, "ios/.gitignore");
+const pbxprojPath = resolve(root, "ios/App/App.xcodeproj/project.pbxproj");
 
 if (!existsSync(iosDir)) {
   console.log("iOS project not present; skipping native hardening.");
