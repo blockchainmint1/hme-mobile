@@ -596,7 +596,6 @@ function EvmTile({
 }) {
   const [hidden] = useHideBalances();
   const [refreshing, setRefreshing] = useState(false);
-  const [swapEnabled] = useFeature("evmSwap");
 
   const meta = EVM_CHAINS[chainId];
   const balanceEth = balanceWei != null ? Number(balanceWei) / 1e18 : null;
