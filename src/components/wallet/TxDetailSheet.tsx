@@ -11,7 +11,7 @@ import { formatTxc } from "@/lib/txc/units";
 import { explorerTxUrl, type MempoolTx } from "@/lib/txc/mempool";
 import type { EvmTransfer } from "@/lib/chains/history.functions";
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
-import { copyText } from "@/lib/clipboard";
+import { copyToClipboard } from "@/lib/clipboard";
 
 export type TxDetail =
   | { kind: "txc"; tx: MempoolTx; net: number; incoming: boolean }
