@@ -35,7 +35,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setRoot(nextRoot);
       setUnlocked(w);
     });
-    saveSession(w);
+    await saveSession(w);
   }, []);
 
   const unlock = useCallback(
@@ -66,21 +66,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setUnlocked((prev) => {
       if (!prev) return prev;
       const next = { ...prev, label };
-      saveSession(next);
+      void saveSession(next);
       return next;
     });
   }, []);
 
   // Rehydrate from sessionStorage on mount (page reload within 5 min).
   useEffect(() => {
-    const cached = loadSession();
-    if (cached) {
-      void loadFromMemory(cached);
-    }
+    let cancelled = false;
+    void loadSession().then((cached) => {
+      if (!cancelled && cached) void loadFromMemory(cached);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [loadFromMemory]);
 
-  // Sliding auto-lock: bump lastActiveAt on user activity, and hard-lock
-  // AUTO_LOCK_MS after the last touch.
+  // Sliding auto-lock on activity + immediate lock on backgrounding.
   useEffect(() => {
     if (!unlocked) return;
 
@@ -92,14 +94,64 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       touchSession();
       scheduleLock();
     };
+    // Backgrounding the app must LOCK, not extend the session. A short
+    // grace window prevents an accidental home-swipe from wiping state.
+    const BACKGROUND_GRACE_MS = 15_000;
+    let bgTimer: ReturnType<typeof setTimeout> | null = null;
+    const armBackgroundLock = () => {
+      if (bgTimer) clearTimeout(bgTimer);
+      bgTimer = setTimeout(() => lock(), BACKGROUND_GRACE_MS);
+    };
+    const cancelBackgroundLock = () => {
+      if (bgTimer) {
+        clearTimeout(bgTimer);
+        bgTimer = null;
+      }
+    };
+    const onVisibility = () => {
+      if (document.hidden) armBackgroundLock();
+      else {
+        cancelBackgroundLock();
+        onActivity();
+      }
+    };
 
     scheduleLock();
-    const events = ["pointerdown", "keydown", "touchstart", "visibilitychange"] as const;
-    for (const ev of events) window.addEventListener(ev, onActivity, { passive: true });
+    const activityEvents = ["pointerdown", "keydown", "touchstart"] as const;
+    for (const ev of activityEvents) window.addEventListener(ev, onActivity, { passive: true });
+    document.addEventListener("visibilitychange", onVisibility);
+
+    // Native app-lifecycle: iOS WKWebView often does not fire visibilitychange
+    // when backgrounded under memory pressure, so listen to the Capacitor
+    // App plugin directly.
+    let removeAppListener: (() => void) | null = null;
+    void (async () => {
+      try {
+        const { isNative } = await import("@/lib/native/platform");
+        if (!isNative()) return;
+        const { App } = await import("@capacitor/app");
+        const sub = await App.addListener("appStateChange", ({ isActive }) => {
+          if (isActive) {
+            cancelBackgroundLock();
+            onActivity();
+          } else {
+            armBackgroundLock();
+          }
+        });
+        removeAppListener = () => {
+          sub.remove().catch(() => {});
+        };
+      } catch {
+        /* plugin not present on web */
+      }
+    })();
 
     return () => {
-      for (const ev of events) window.removeEventListener(ev, onActivity);
+      for (const ev of activityEvents) window.removeEventListener(ev, onActivity);
+      document.removeEventListener("visibilitychange", onVisibility);
       if (autoLockTimer.current) clearTimeout(autoLockTimer.current);
+      cancelBackgroundLock();
+      removeAppListener?.();
     };
   }, [unlocked, lock]);
 
