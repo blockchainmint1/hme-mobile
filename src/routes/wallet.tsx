@@ -106,7 +106,7 @@ function WalletLayout() {
           s.chain_stats.spent_txo_sum +
           s.mempool_stats.funded_txo_sum -
           s.mempool_stats.spent_txo_sum;
-        total += satsToTxc(bal) * price.data!.usd;
+        total += satsToTxc(bal) * (price.data?.usd ?? 0);
       });
     }
     return total;
