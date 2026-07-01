@@ -173,7 +173,9 @@ function RootComponent() {
               <div className="flex-1 pt-[env(safe-area-inset-top)]">
                 <Outlet />
               </div>
-              <SiteFooter />
+              <div className="pb-[env(safe-area-inset-bottom)]">
+                <SiteFooter />
+              </div>
             </div>
           </div>
           <Toaster richColors closeButton position="top-center" />
