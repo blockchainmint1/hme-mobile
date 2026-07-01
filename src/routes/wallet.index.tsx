@@ -452,17 +452,17 @@ function WalletHome() {
 }
 
 function BottomActions({ chain }: { chain: ChainId }) {
-
+  const [swapEnabled] = useFeature("evmSwap");
 
   if (chain === "txc") {
     return (
       <>
-        <Button asChild size="lg" variant="outline">
+        <Button asChild size="lg" variant="outline" className="flex-1">
           <Link to="/wallet/receive">
             <QrCode className="h-4 w-4 mr-2" /> Receive
           </Link>
         </Button>
-        <Button asChild size="lg">
+        <Button asChild size="lg" className="flex-1">
           <Link to="/wallet/send">
             <Send className="h-4 w-4 mr-2" /> Send
           </Link>
@@ -472,29 +472,45 @@ function BottomActions({ chain }: { chain: ChainId }) {
   }
   if (chain in EVM_CHAINS) {
     const c = chain as EvmChainId;
+    const map: Record<EvmChainId, string> = { eth: "ethereum", base: "base", bsc: "bnb" };
     return (
       <>
-        <Button asChild size="lg" variant="outline">
+        <Button asChild size="lg" variant="outline" className="flex-1">
           <Link to="/wallet/evm/$chain/receive" params={{ chain: c }}>
             <QrCode className="h-4 w-4 mr-2" /> Receive
           </Link>
         </Button>
-        <Button asChild size="lg">
+        <Button asChild size="lg" className="flex-1">
           <Link to="/wallet/evm/$chain/send" params={{ chain: c }}>
             <Send className="h-4 w-4 mr-2" /> Send
           </Link>
         </Button>
+        {swapEnabled && (
+          <Button
+            size="lg"
+            variant="secondary"
+            className="flex-1"
+            onClick={() =>
+              window.open(
+                `https://app.uniswap.org/swap?chain=${map[c]}`,
+                "_blank",
+                "noopener,noreferrer",
+              )
+            }
+          >
+            <ArrowLeftRight className="h-4 w-4 mr-2" /> Swap
+          </Button>
+        )}
       </>
     );
   }
 
-
   return (
     <>
-      <Button size="lg" variant="outline" disabled>
+      <Button size="lg" variant="outline" disabled className="flex-1">
         <QrCode className="h-4 w-4 mr-2" /> Coming soon
       </Button>
-      <Button size="lg" disabled>
+      <Button size="lg" disabled className="flex-1">
         <Send className="h-4 w-4 mr-2" /> Coming soon
       </Button>
     </>
