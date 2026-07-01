@@ -133,13 +133,15 @@ for (const outputDir of outputDirs) {
   }
 }
 
-try {
-  const capacitorConfigModule = await import(pathToFileURL(resolve(root, "capacitor.config.ts")).href + `?t=${Date.now()}`);
-  const capacitorConfig = capacitorConfigModule.default ?? capacitorConfigModule;
-  await mkdir(dirname(iosConfigPath), { recursive: true });
-  await writeFile(iosConfigPath, `${JSON.stringify(capacitorConfig, null, 2)}\n`);
-} catch (error) {
-  console.warn(`Could not stage iOS capacitor.config.json: ${error instanceof Error ? error.message : String(error)}`);
+if (iosExists) {
+  try {
+    const capacitorConfigModule = await import(pathToFileURL(resolve(root, "capacitor.config.ts")).href + `?t=${Date.now()}`);
+    const capacitorConfig = capacitorConfigModule.default ?? capacitorConfigModule;
+    await mkdir(dirname(iosConfigPath), { recursive: true });
+    await writeFile(iosConfigPath, `${JSON.stringify(capacitorConfig, null, 2)}\n`);
+  } catch (error) {
+    console.warn(`Could not stage iOS capacitor.config.json: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 console.log(`Generated Capacitor SPA entry: ${outputDirs.map((dir) => `${dir}/index.html`).join(", ")}`);
