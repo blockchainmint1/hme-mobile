@@ -229,6 +229,7 @@ function WalletHome() {
                   {slot.kind === "chain" && slot.chain !== "txc" && (
                     <EvmTile
                       chainId={slot.chain as EvmChainId}
+                      address={evmAddress}
                       balanceWei={evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.data ?? null}
                       loading={evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.isLoading ?? true}
                       priceUsd={
@@ -526,19 +527,27 @@ function TxcTile({
           <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
         </span>
       </div>
-      <p className="mt-2 text-4xl font-bold tracking-tight">
+      <p className="mt-3 text-[10px] uppercase tracking-widest text-amber-100/70">Native</p>
+      <p className="mt-0.5 text-4xl font-bold tracking-tight">
         {hidden ? maskAmount(balText) : balText}
         <span className="ml-2 text-2xl font-semibold opacity-90">TXC</span>
       </p>
       <p className="text-amber-100/80 text-sm">
         {hidden ? maskAmount(fiatText) : fiatText}
       </p>
+      <div className="mt-3 pt-3 border-t border-white/15">
+        <p className="text-[10px] uppercase tracking-widest text-amber-100/70">Chain total</p>
+        <p className="text-lg font-semibold">
+          {hidden ? maskAmount(fiatText) : fiatText}
+        </p>
+      </div>
     </button>
   );
 }
 
 function EvmTile({
   chainId,
+  address,
   balanceWei,
   loading,
   priceUsd,
@@ -546,6 +555,7 @@ function EvmTile({
   onOpenDetails,
 }: {
   chainId: EvmChainId;
+  address: string | null;
   balanceWei: bigint | null;
   loading: boolean;
   priceUsd: number | null;
@@ -561,6 +571,28 @@ function EvmTile({
   const balText = loading ? "..." : `${compactEthText} ${meta.nativeSymbol}`;
   const fiatText =
     balanceUsd != null ? formatFiat(balanceUsd) : priceUsd == null ? "Price unavailable" : "—";
+
+  // Token balances on this chain (USDC/USDT are ~$1 stables — safe to treat as USD 1:1)
+  const tokens = TOKENS_BY_CHAIN[chainId];
+  const tokenBalances = useQueries({
+    queries: tokens.map((t) => ({
+      queryKey: ["erc20-balance", chainId, t.address, address],
+      enabled: !!address,
+      queryFn: () => readErc20Balance(chainId, t, address as `0x${string}`),
+      staleTime: 30_000,
+    })),
+  });
+  const tokensUsd = tokens.reduce((sum, t, i) => {
+    const raw = tokenBalances[i]?.data ?? 0n;
+    if (raw <= 0n) return sum;
+    const amt = Number(tokenAmountFromRaw(raw, t.decimals));
+    // Stables are USD-pegged; if we ever add non-stable ERC-20s, price them here.
+    return sum + amt;
+  }, 0);
+  const chainTotalUsd =
+    balanceUsd != null || tokensUsd > 0 ? (balanceUsd ?? 0) + tokensUsd : null;
+  const chainTotalText = chainTotalUsd != null ? formatFiat(chainTotalUsd) : "—";
+
   return (
     <button
       type="button"
@@ -583,10 +615,17 @@ function EvmTile({
           <RefreshCw className="h-4 w-4" />
         </span>
       </div>
-      <p className="mt-2 text-4xl font-bold tracking-tight">
+      <p className="mt-3 text-[10px] uppercase tracking-widest opacity-70">Native</p>
+      <p className="mt-0.5 text-4xl font-bold tracking-tight">
         {hidden ? maskAmount(balText) : balText}
       </p>
       <p className="text-sm opacity-80">{hidden ? maskAmount(fiatText) : fiatText}</p>
+      <div className="mt-3 pt-3 border-t border-white/15">
+        <p className="text-[10px] uppercase tracking-widest opacity-70">Chain total</p>
+        <p className="text-lg font-semibold">
+          {hidden ? maskAmount(chainTotalText) : chainTotalText}
+        </p>
+      </div>
     </button>
   );
 }
