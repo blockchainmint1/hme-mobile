@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { BookUser, ChevronRight, Fingerprint, Palette } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ChainsCard } from "@/components/wallet/ChainsCard";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -97,6 +98,12 @@ function SettingsPage() {
           <ThemeToggle />
         </CardContent>
       </Card>
+
+      <div className="mt-5">
+        <ChainsCard />
+      </div>
+
+
 
       <Card className="mt-5">
         <CardHeader>
