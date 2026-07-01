@@ -26,7 +26,6 @@ function BackupPage() {
   // plugin no-ops if it's missing from this build.
   useEffect(() => {
     if (!shown || !isNative()) return;
-    let active = true;
     void (async () => {
       try {
         const { PrivacyScreen } = await import("@capacitor-community/privacy-screen");
@@ -36,7 +35,6 @@ function BackupPage() {
       }
     })();
     return () => {
-      active = false;
       void (async () => {
         try {
           const { PrivacyScreen } = await import("@capacitor-community/privacy-screen");
@@ -44,7 +42,6 @@ function BackupPage() {
         } catch {
           /* noop */
         }
-        void active;
       })();
     };
   }, [shown]);
