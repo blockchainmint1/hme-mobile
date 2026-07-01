@@ -114,6 +114,10 @@ function SettingsPage() {
         <RotationPolicyCard />
       </div>
 
+      <div className="mt-5">
+        <DeepRescanCard />
+      </div>
+
 
 
 
