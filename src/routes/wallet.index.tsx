@@ -12,7 +12,8 @@ import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chain
 import { useTokensForChain } from "@/lib/token-prefs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowDown, ArrowUp, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock } from "lucide-react";
+import { useFeature } from "@/lib/feature-prefs";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { EVM_CHAINS, deriveEvmAccount, evmClient, formatEth, type EvmChainId } from "@/lib/chains/evm";
@@ -451,6 +452,8 @@ function WalletHome() {
 }
 
 function BottomActions({ chain }: { chain: ChainId }) {
+  const [swapEnabled] = useFeature("evmSwap");
+
   if (chain === "txc") {
     return (
       <>
