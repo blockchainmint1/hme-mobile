@@ -26,16 +26,32 @@ export const USDT_BY_CHAIN: Record<EvmChainId, Erc20TokenMeta> = {
   bsc: { symbol: "USDT", address: "0x55d398326f99059fF775485246999027B3197955", decimals: 18 },
 };
 
-/** All ERC20 tokens we display + support for send. Order = display order. */
-export const TOKENS_BY_CHAIN: Record<EvmChainId, Erc20TokenMeta[]> = {
-  eth: [USDC_BY_CHAIN.eth, USDT_BY_CHAIN.eth],
+/** Canonical PayPal USD (PYUSD). Currently Ethereum mainnet only. */
+export const PYUSD_BY_CHAIN: Partial<Record<EvmChainId, Erc20TokenMeta>> = {
+  eth: { symbol: "PYUSD", address: "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8", decimals: 6 },
+};
+
+/**
+ * Built-in tokens we know about per chain. Display / enable state is layered
+ * on top via `token-prefs.ts` (users can hide any of these and add custom
+ * ERC-20s). Order = default display order.
+ */
+export const BUILTIN_TOKENS_BY_CHAIN: Record<EvmChainId, Erc20TokenMeta[]> = {
+  eth: [USDC_BY_CHAIN.eth, USDT_BY_CHAIN.eth, PYUSD_BY_CHAIN.eth!],
   base: [USDC_BY_CHAIN.base, USDT_BY_CHAIN.base],
   bsc: [USDC_BY_CHAIN.bsc, USDT_BY_CHAIN.bsc],
 };
 
+/**
+ * Back-compat alias: canonical built-in catalog. For the full known list
+ * including user-added custom tokens, use `getKnownTokens()` from
+ * `@/lib/token-prefs`.
+ */
+export const TOKENS_BY_CHAIN = BUILTIN_TOKENS_BY_CHAIN;
+
 export function findToken(chain: EvmChainId, symbol: string): Erc20TokenMeta | null {
   const s = symbol.toUpperCase();
-  return TOKENS_BY_CHAIN[chain].find((t) => t.symbol.toUpperCase() === s) ?? null;
+  return BUILTIN_TOKENS_BY_CHAIN[chain].find((t) => t.symbol.toUpperCase() === s) ?? null;
 }
 
 /** Read an ERC20 balance. Returns the raw integer (units of `decimals`). */
