@@ -638,26 +638,6 @@ function EvmTile({
       <div className="flex items-center justify-between">
         <p className="text-sm opacity-80">{meta.name}</p>
         <div className="flex items-center gap-3">
-          {swapEnabled && (
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                const map: Record<EvmChainId, string> = { eth: "ethereum", base: "base", bsc: "bnb" };
-                window.open(
-                  `https://app.uniswap.org/swap?chain=${map[chainId]}`,
-                  "_blank",
-                  "noopener,noreferrer",
-                );
-              }}
-              className="opacity-80 hover:opacity-100"
-              aria-label="Swap on Uniswap"
-              title="Swap on Uniswap"
-            >
-              <ArrowLeftRight className="h-4 w-4" />
-            </span>
-          )}
           <span
             role="button"
             tabIndex={0}
