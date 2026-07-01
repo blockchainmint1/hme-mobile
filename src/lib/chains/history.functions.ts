@@ -141,6 +141,7 @@ interface AlchemyTransfer {
   asset: string | null;
   category: string;
   blockNum: string;
+  rawContract?: { address?: string | null };
   metadata?: { blockTimestamp?: string };
 }
 
