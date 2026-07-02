@@ -532,6 +532,22 @@ function BottomActions({ chain }: { chain: ChainId }) {
       </>
     );
   }
+  if (chain === "isk") {
+    return (
+      <>
+        <Button asChild size="lg" variant="outline" className="flex-1">
+          <Link to="/wallet/isk/receive">
+            <QrCode className="h-4 w-4 mr-2" /> Receive
+          </Link>
+        </Button>
+        <Button asChild size="lg" className="flex-1">
+          <Link to="/wallet/isk/send">
+            <Send className="h-4 w-4 mr-2" /> Send
+          </Link>
+        </Button>
+      </>
+    );
+  }
   if (chain in EVM_CHAINS) {
     const c = chain as EvmChainId;
     return (
