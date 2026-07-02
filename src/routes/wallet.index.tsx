@@ -74,14 +74,26 @@ function WalletHome() {
     return () => window.removeEventListener(watchChangedEvent(), h);
   }, []);
 
-  // Unified carousel item list — chains first, then watch-only.
-  type Slot = { kind: "chain"; chain: ChainId } | { kind: "watch"; watch: WatchWallet };
+  // WIF (imported single-key) wallets. Each becomes its own tile.
+  const [wifList, setWifList] = useState<WifWalletEntry[]>(() => listWifWallets());
+  useEffect(() => {
+    const h = () => setWifList(listWifWallets());
+    window.addEventListener(WIF_CHANGED_EVENT, h);
+    return () => window.removeEventListener(WIF_CHANGED_EVENT, h);
+  }, []);
+
+  // Unified carousel item list — chains first, then watch-only, then WIF.
+  type Slot =
+    | { kind: "chain"; chain: ChainId }
+    | { kind: "watch"; watch: WatchWallet }
+    | { kind: "wif"; wif: WifWalletEntry };
   const slots: Slot[] = useMemo(
     () => [
       ...enabled.map((c) => ({ kind: "chain" as const, chain: c })),
       ...watchList.map((w) => ({ kind: "watch" as const, watch: w })),
+      ...wifList.map((w) => ({ kind: "wif" as const, wif: w })),
     ],
-    [enabled, watchList],
+    [enabled, watchList, wifList],
   );
 
   // Active tile tracked via scroll position
