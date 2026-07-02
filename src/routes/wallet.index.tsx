@@ -114,6 +114,7 @@ function WalletHome() {
   const activeSlot: Slot = slots[activeIdx] ?? { kind: "chain", chain: "txc" };
   const activeChain: ChainId = activeSlot.kind === "chain" ? activeSlot.chain : "txc";
   const activeWatch: WatchWallet | null = activeSlot.kind === "watch" ? activeSlot.watch : null;
+  const activeWif: WifWalletEntry | null = activeSlot.kind === "wif" ? activeSlot.wif : null;
 
   // Selected transaction (opens in-page detail sheet)
   const [detail, setDetail] = useState<TxDetail | null>(null);
