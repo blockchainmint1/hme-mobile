@@ -147,7 +147,7 @@ function WifSendPage() {
         setError("No funds available.");
         return;
       }
-      const vsize = estimateWifVsize(entry.kind, nIn, 1);
+      const vsize = estimateWifVsize(entry!.kind, nIn, 1);
       const feeSats = Math.ceil(vsize * feeRate);
       const outSats = totalAvailable - feeSats;
       if (outSats <= 546) {
@@ -168,7 +168,7 @@ function WifSendPage() {
     for (const u of sorted) {
       picked.push(u);
       acc += u.value;
-      vsize = estimateWifVsize(entry.kind, picked.length, 2);
+      vsize = estimateWifVsize(entry!.kind, picked.length, 2);
       feeSats = Math.ceil(vsize * feeRate);
       if (acc >= amountSats + feeSats) break;
     }
