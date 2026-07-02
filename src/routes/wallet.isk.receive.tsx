@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanIskAccount } from "@/lib/isk/scan";
 import { deriveAddress } from "@/lib/isk/wallet";
-import { ISK_DERIVATION_PATHS } from "@/lib/isk/network";
+import { ISK_DERIVATION_PATHS, ISK_DEFAULT_KIND } from "@/lib/isk/network";
 import { QrCode } from "@/components/wallet/QrCode";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,9 +31,9 @@ function ReceiveIskPage() {
     [root],
   );
   const account = useQuery({
-    queryKey: ["isk-account", unlocked?.kind, accountId],
+    queryKey: ["isk-account", ISK_DEFAULT_KIND, accountId],
     enabled: !!root && !!unlocked && !!accountId,
-    queryFn: () => scanIskAccount(root!, unlocked!.kind),
+    queryFn: () => scanIskAccount(root!, ISK_DEFAULT_KIND),
     staleTime: 30_000,
   });
 
@@ -43,7 +43,7 @@ function ReceiveIskPage() {
   const shown = useMemo(() => {
     if (!root || !unlocked) return null;
     const idx = Math.max(firstUnused, manualBump);
-    const derived = deriveAddress(root, unlocked.kind, 0, idx);
+    const derived = deriveAddress(root, ISK_DEFAULT_KIND, 0, idx);
     return { index: idx, address: derived.address, path: derived.path };
   }, [root, unlocked, firstUnused, manualBump]);
 
@@ -113,7 +113,7 @@ function ReceiveIskPage() {
               </div>
               <p className="text-[11px] text-muted-foreground text-center max-w-xs">
                 All addresses under{" "}
-                <span className="font-mono">{ISK_DERIVATION_PATHS[unlocked!.kind]}/0/i</span>{" "}
+                <span className="font-mono">{ISK_DERIVATION_PATHS[ISK_DEFAULT_KIND]}/0/i</span>{" "}
                 belong to this wallet.
               </p>
             </>

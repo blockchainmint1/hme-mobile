@@ -12,7 +12,7 @@ import {
   type FeeEstimates,
 } from "@/lib/isk/mempool";
 import { formatIsk, iskToSats } from "@/lib/isk/units";
-import { ISK_NETWORK } from "@/lib/isk/network";
+import { ISK_NETWORK, ISK_DEFAULT_KIND } from "@/lib/isk/network";
 import { address as addrLib } from "bitcoinjs-lib";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,9 +83,9 @@ function SendIskPage() {
   const navigate = useNavigate();
   const { root, unlocked } = useWallet();
   const account = useQuery({
-    queryKey: ["isk-account", unlocked?.kind, root ? rootFingerprintHex(root) : null],
+    queryKey: ["isk-account", ISK_DEFAULT_KIND, root ? rootFingerprintHex(root) : null],
     enabled: !!root && !!unlocked,
-    queryFn: () => scanIskAccount(root!, unlocked!.kind),
+    queryFn: () => scanIskAccount(root!, ISK_DEFAULT_KIND),
     staleTime: 30_000,
   });
 
@@ -137,7 +137,7 @@ function SendIskPage() {
         setError("No funds available.");
         return;
       }
-      const vsize = estimateVsize(unlocked.kind, nIn, 1);
+      const vsize = estimateVsize(ISK_DEFAULT_KIND, nIn, 1);
       const feeSats = Math.ceil(vsize * feeRate);
       const outSats = totalAvailable - feeSats;
       if (outSats <= 546) {
@@ -160,7 +160,7 @@ function SendIskPage() {
     for (const u of sorted) {
       picked.push(u);
       acc += u.value;
-      vsize = estimateVsize(unlocked.kind, picked.length, 2);
+      vsize = estimateVsize(ISK_DEFAULT_KIND, picked.length, 2);
       feeSats = Math.ceil(vsize * feeRate);
       if (acc >= amountSats + feeSats) break;
     }
@@ -186,7 +186,7 @@ function SendIskPage() {
       const outValue = sendAll ? totalAvailable - stage.feeSats : amountSats;
       const built = buildAndSignTx({
         root,
-        kind: unlocked.kind,
+        kind: ISK_DEFAULT_KIND,
         inputs: picked,
         outputs: [{ address: to.trim(), valueSats: outValue }],
         changeAddress: account.data.nextChangeAddress,
