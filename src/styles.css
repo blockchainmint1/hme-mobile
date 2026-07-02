@@ -169,3 +169,14 @@ html.qr-scanning [data-wallet-frame] {
     padding-bottom: env(keyboard-inset-height, 0);
   }
 }
+
+/* Prevent the dark WKWebView background from flashing through the top/bottom
+   rubber-band overscroll. `overscroll-behavior: none` disables scroll chaining
+   and — on iOS 16+ Safari/WKWebView — suppresses the bounce entirely. We also
+   paint html with the app background so any residual bounce matches the frame
+   instead of showing the native #0b0f14 splash color. */
+html,
+body {
+  overscroll-behavior: none;
+  background-color: var(--color-background);
+}
