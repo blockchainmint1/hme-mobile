@@ -6,7 +6,7 @@ import { isAddress } from "viem";
 import { address as addrLib } from "bitcoinjs-lib";
 import { TXC_NETWORK } from "./txc/network";
 
-export type ContactChain = "txc" | "eth" | "base" | "bsc";
+export type ContactChain = "txc" | "isk" | "eth" | "base" | "bsc";
 
 export interface Contact {
   id: string;
@@ -18,6 +18,7 @@ export interface Contact {
 
 export const CHAIN_LABELS: Record<ContactChain, string> = {
   txc: "TEXITcoin (TXC)",
+  isk: "IskanderCoin (ISK)",
   eth: "Ethereum (ETH)",
   base: "Base",
   bsc: "BNB Smart Chain",
