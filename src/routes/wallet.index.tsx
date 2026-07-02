@@ -260,9 +260,18 @@ function WalletHome() {
             style={{ scrollbarWidth: "none" }}
           >
             {slots.map((slot, slotIdx) => {
-              const key = slot.kind === "chain" ? `c:${slot.chain}` : `w:${slot.watch.id}`;
+              const key =
+                slot.kind === "chain"
+                  ? `c:${slot.chain}`
+                  : slot.kind === "watch"
+                    ? `w:${slot.watch.id}`
+                    : `k:${slot.wif.id}`;
               const onLongPress =
-                slot.kind === "watch" ? () => setWatchRemove(slot.watch) : undefined;
+                slot.kind === "watch"
+                  ? () => setWatchRemove(slot.watch)
+                  : slot.kind === "wif"
+                    ? () => setWifRemove(slot.wif)
+                    : undefined;
               return (
                 <div
                   key={key}
