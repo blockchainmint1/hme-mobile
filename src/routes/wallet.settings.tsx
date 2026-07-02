@@ -293,8 +293,8 @@ function SettingsPage() {
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div className="flex justify-between gap-3 border-b border-border/40 pb-2 last:border-0">
-      <span className="text-muted-foreground">{k}</span>
-      <span>{v}</span>
+      <span className="text-muted-foreground shrink-0">{k}</span>
+      <span className="min-w-0 text-right break-all">{v}</span>
     </div>
   );
 }
