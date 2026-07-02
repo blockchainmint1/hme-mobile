@@ -207,19 +207,90 @@ function TxcDetails(
   );
 }
 
+function RenamableName({
+  chain,
+}: {
+  chain: ChainId;
+}) {
+  const [label, setLabel] = useChainLabel(chain);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(label);
+  return (
+    <div className="rounded-lg border border-border/60 bg-card/40 px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Name</p>
+        {!editing && (
+          <button
+            type="button"
+            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            onClick={() => {
+              setDraft(label);
+              setEditing(true);
+            }}
+          >
+            <Pencil className="h-3 w-3" /> Rename
+          </button>
+        )}
+      </div>
+      {editing ? (
+        <div className="mt-2 flex items-center gap-2">
+          <Input
+            autoFocus
+            value={draft}
+            maxLength={40}
+            onChange={(e) => setDraft(e.target.value)}
+            className="h-9"
+          />
+          <Button
+            size="sm"
+            onClick={() => {
+              setLabel(draft.trim() || label);
+              setEditing(false);
+            }}
+          >
+            Save
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <p className="mt-1 text-sm font-medium">{label}</p>
+      )}
+    </div>
+  );
+}
+
+function IskDetails(
+  props: Extract<WalletDetailProps, { kind: "isk" }>,
+) {
+  const meta = CHAIN_META.isk;
+  const path = ISK_DERIVATION_BASE[ISK_DEFAULT_KIND];
+  return (
+    <>
+      <RenamableName chain="isk" />
+      <BalanceRow balance={props.balanceText} fiat={props.fiatText} />
+      <Field label="Chain" value={meta.name} />
+      <Field label="Address type" value={KIND_LABEL[ISK_DEFAULT_KIND] ?? ISK_DEFAULT_KIND} />
+      <Field label="Derivation path" value={`${path}/0/0`} mono />
+      {props.receiveAddress && (
+        <Field label="Current receive address" value={props.receiveAddress} mono copy />
+      )}
+      {props.txCount != null && (
+        <Field label="Transactions" value={String(props.txCount)} />
+      )}
+    </>
+  );
+}
+
 function EvmDetails(
   props: Extract<WalletDetailProps, { kind: "evm" }>,
 ) {
   const meta = EVM_CHAINS[props.chainId];
   return (
     <>
-      <div className="rounded-lg border border-border/60 bg-card/40 px-4 py-3">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Name</p>
-        <p className="mt-1 text-sm font-medium">{meta.name}</p>
-      </div>
-
+      <RenamableName chain={props.chainId as ChainId} />
       <BalanceRow balance={props.balanceText} fiat={props.fiatText} />
-
       <Field label="Native asset" value={meta.nativeSymbol} />
       <Field label="Chain ID" value={String(meta.viemChain.id)} />
       <Field label="Derivation path" value="m/44'/60'/0'/0/0" mono />
@@ -228,6 +299,7 @@ function EvmDetails(
       )}
     </>
   );
+
 }
 
 /** Reusable global toggle for use in Settings. */
