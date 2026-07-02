@@ -486,7 +486,22 @@ function WalletHome() {
           txCount={txs.data?.length ?? null}
         />
       )}
-      {tileOpen && tileOpen !== "txc" && tileOpen in EVM_CHAINS && (
+      {tileOpen === "isk" && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="txc"
+          balanceText={`${formatIsk(iskAccount.data?.balanceSats ?? 0)}`}
+          fiatText={
+            iskPrice.data?.usd != null
+              ? formatFiat(satsToIsk(iskAccount.data?.balanceSats ?? 0) * iskPrice.data.usd)
+              : null
+          }
+          receiveAddress={iskAccount.data?.nextReceiveAddress ?? null}
+          txCount={iskTxs.data?.length ?? null}
+        />
+      )}
+      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen in EVM_CHAINS && (
         <WalletDetailSheet
           open
           onClose={() => setTileOpen(null)}
