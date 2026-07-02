@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { BookUser, Plus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { contactsForChain, type Contact, type ContactChain } from "@/lib/address-book";
 
 export function AddressBookButton({
@@ -44,6 +44,9 @@ export function AddressBookButton({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Address book</DialogTitle>
+            <DialogDescription className="sr-only">
+              Pick a saved contact to fill the recipient address.
+            </DialogDescription>
           </DialogHeader>
           {items.length === 0 ? (
             <div className="text-sm text-muted-foreground">
