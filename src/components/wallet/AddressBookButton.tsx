@@ -44,6 +44,9 @@ export function AddressBookButton({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Address book</DialogTitle>
+            <DialogDescription className="sr-only">
+              Pick a saved contact to fill the recipient address.
+            </DialogDescription>
           </DialogHeader>
           {items.length === 0 ? (
             <div className="text-sm text-muted-foreground">
