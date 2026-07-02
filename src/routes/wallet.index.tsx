@@ -414,7 +414,7 @@ function WalletHome() {
           )}
 
           {/* Recent activity (TXC only for now) */}
-          {activeChain === "txc" && !activeWatch && (
+          {activeChain === "txc" && !activeWatch && !activeWif && (
             <section className="mt-8 px-4">
               <h2 className="text-lg font-semibold mb-3">Recent activity</h2>
               {account.isLoading || txs.isLoading ? (
