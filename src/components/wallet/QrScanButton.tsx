@@ -1,12 +1,21 @@
 /**
- * QR scan button. Uses native Capacitor scanning on iOS/Android,
- * falls back to the web BarcodeDetector API in the browser.
+ * QR scan button. Uses an in-app <video> + getUserMedia dialog on every
+ * platform (browser and native WKWebView), decoding frames with either the
+ * built-in BarcodeDetector or jsQR as a fallback.
+ *
+ * We used to route native builds through @capacitor-community/barcode-scanner,
+ * which draws the camera behind a transparent webview. That approach breaks
+ * when the app loads from a remote URL (our current setup — server.url =
+ * https://mobile.honest.money) because the community plugin can't reliably
+ * make a remotely-hosted webview transparent. Result: tapping the QR icon
+ * did nothing / showed a black screen. The getUserMedia path works
+ * identically inside WKWebView as long as NSCameraUsageDescription is set
+ * (it is) and the page is HTTPS (it is).
  */
 import { useEffect, useRef, useState } from "react";
 import { Camera, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { isNative } from "@/lib/native/platform";
 
 type BarcodeDetectorLike = {
   detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>>;
@@ -20,60 +29,13 @@ declare global {
 
 export function QrScanButton({ onScan }: { onScan: (text: string) => void }) {
   const [open, setOpen] = useState(false);
-
-  async function handleClick() {
-    if (isNative()) {
-      let BarcodeScanner: typeof import("@capacitor-community/barcode-scanner").BarcodeScanner | null = null;
-      try {
-        ({ BarcodeScanner } = await import("@capacitor-community/barcode-scanner"));
-        // Pre-check without prompting so we can show an in-app rationale
-        // before the OS dialog (Apple HIG requirement).
-        const status = await BarcodeScanner.checkPermission({ force: false });
-        if (!status.granted) {
-          if (status.denied) {
-            // User previously said no — bounce them to Settings.
-            const { toast } = await import("sonner");
-            toast.error("Camera access is off. Enable it in Settings → HME Wallet.");
-            await BarcodeScanner.openAppSettings().catch(() => {});
-            return;
-          }
-          const { toast } = await import("sonner");
-          toast.info("HME Wallet needs camera access to scan wallet QR codes.");
-          const perm = await BarcodeScanner.checkPermission({ force: true });
-          if (!perm.granted) return;
-        }
-        // Make the webview transparent so the native camera view shows through.
-        document.documentElement.classList.add("qr-scanning");
-        document.body.classList.add("qr-scanning");
-        await BarcodeScanner.hideBackground();
-        const result = await BarcodeScanner.startScan();
-        if (result.hasContent && result.content) {
-          onScan(result.content);
-        }
-      } catch {
-        // ignore cancel / permission denial
-      } finally {
-        try {
-          await BarcodeScanner?.showBackground();
-          await BarcodeScanner?.stopScan();
-        } catch {
-          // no-op
-        }
-        document.documentElement.classList.remove("qr-scanning");
-        document.body.classList.remove("qr-scanning");
-      }
-      return;
-    }
-    setOpen(true);
-  }
-
   return (
     <>
       <Button
         type="button"
         variant="outline"
         size="icon"
-        onClick={handleClick}
+        onClick={() => setOpen(true)}
         title="Scan QR"
         aria-label="Scan QR"
       >
@@ -94,53 +56,102 @@ export function QrScanButton({ onScan }: { onScan: (text: string) => void }) {
 
 function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [supported, setSupported] = useState<boolean | null>(null);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let stream: MediaStream | null = null;
     let raf = 0;
     let cancelled = false;
     let detector: BarcodeDetectorLike | null = null;
+    let jsQR: typeof import("jsqr").default | null = null;
 
     async function start() {
-      const hasDetector = typeof window !== "undefined" && !!window.BarcodeDetector;
-      setSupported(hasDetector);
-      if (!hasDetector) {
-        setError("This browser doesn't support QR scanning. Paste the address instead.");
+      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+        setError("Camera not supported on this device.");
         return;
       }
+      if (typeof window !== "undefined" && window.BarcodeDetector) {
+        try {
+          detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        } catch {
+          detector = null;
+        }
+      }
+      if (!detector) {
+        try {
+          const mod = await import("jsqr");
+          jsQR = mod.default;
+        } catch {
+          setError("QR decoder failed to load.");
+          return;
+        }
+      }
       try {
-        detector = new window.BarcodeDetector!({ formats: ["qr_code"] });
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: "environment" } },
           audio: false,
         });
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        const video = videoRef.current;
-        if (!video) return;
-        video.srcObject = stream;
+      } catch (e) {
+        setError(
+          e instanceof Error && e.name === "NotAllowedError"
+            ? "Camera access denied. Enable it in Settings → HME Wallet."
+            : e instanceof Error
+              ? e.message
+              : "Camera unavailable",
+        );
+        return;
+      }
+      if (cancelled) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      const video = videoRef.current;
+      if (!video) return;
+      video.srcObject = stream;
+      video.setAttribute("playsinline", "true");
+      try {
         await video.play();
-        const tick = async () => {
-          if (cancelled || !video || !detector) return;
+      } catch {
+        /* autoplay retries below on tick */
+      }
+      setReady(true);
+
+      const canvas = canvasRef.current ?? document.createElement("canvas");
+      canvasRef.current = canvas;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+      const tick = async () => {
+        if (cancelled || !video) return;
+        if (video.readyState >= 2 && video.videoWidth > 0) {
           try {
-            const codes = await detector.detect(video);
-            if (codes.length > 0 && codes[0].rawValue) {
-              onScan(codes[0].rawValue);
-              return;
+            if (detector) {
+              const codes = await detector.detect(video);
+              if (codes.length > 0 && codes[0].rawValue) {
+                onScan(codes[0].rawValue);
+                return;
+              }
+            } else if (jsQR && ctx) {
+              const w = video.videoWidth;
+              const h = video.videoHeight;
+              canvas.width = w;
+              canvas.height = h;
+              ctx.drawImage(video, 0, 0, w, h);
+              const img = ctx.getImageData(0, 0, w, h);
+              const code = jsQR(img.data, w, h, { inversionAttempts: "attemptBoth" });
+              if (code && code.data) {
+                onScan(code.data);
+                return;
+              }
             }
           } catch {
             // ignore per-frame errors
           }
-          raf = requestAnimationFrame(tick);
-        };
+        }
         raf = requestAnimationFrame(tick);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Camera unavailable");
-      }
+      };
+      raf = requestAnimationFrame(tick);
     }
 
     start();
@@ -168,15 +179,16 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
             className="absolute inset-0 w-full h-full object-cover"
             playsInline
             muted
+            autoPlay
           />
           <div className="pointer-events-none absolute inset-8 border-2 border-white/70 rounded-lg" />
         </div>
         <div className="p-4 text-xs text-muted-foreground min-h-[3rem]">
           {error
             ? error
-            : supported === false
-              ? "QR scanning not supported"
-              : "Point the camera at a wallet address QR code."}
+            : ready
+              ? "Point the camera at a wallet address QR code."
+              : "Starting camera…"}
         </div>
       </DialogContent>
     </Dialog>
