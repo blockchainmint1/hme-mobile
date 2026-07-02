@@ -29,6 +29,7 @@ import { Route as WalletIskSendRouteImport } from './routes/wallet.isk.send'
 import { Route as WalletIskReceiveRouteImport } from './routes/wallet.isk.receive'
 import { Route as WalletEvmChainRouteImport } from './routes/wallet.evm.$chain'
 import { Route as ApiEvmChainRouteImport } from './routes/api/evm.$chain'
+import { Route as WalletWifIdSendRouteImport } from './routes/wallet.wif.$id.send'
 import { Route as WalletWifIdReceiveRouteImport } from './routes/wallet.wif.$id.receive'
 import { Route as WalletEvmChainSwapRouteImport } from './routes/wallet.evm.$chain.swap'
 import { Route as WalletEvmChainSendRouteImport } from './routes/wallet.evm.$chain.send'
@@ -135,6 +136,11 @@ const ApiEvmChainRoute = ApiEvmChainRouteImport.update({
   path: '/api/evm/$chain',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WalletWifIdSendRoute = WalletWifIdSendRouteImport.update({
+  id: '/wif/$id/send',
+  path: '/wif/$id/send',
+  getParentRoute: () => WalletRoute,
+} as any)
 const WalletWifIdReceiveRoute = WalletWifIdReceiveRouteImport.update({
   id: '/wif/$id/receive',
   path: '/wif/$id/receive',
@@ -187,6 +193,7 @@ export interface FileRoutesByFullPath {
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
   '/wallet/evm/$chain/swap': typeof WalletEvmChainSwapRoute
   '/wallet/wif/$id/receive': typeof WalletWifIdReceiveRoute
+  '/wallet/wif/$id/send': typeof WalletWifIdSendRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -213,6 +220,7 @@ export interface FileRoutesByTo {
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
   '/wallet/evm/$chain/swap': typeof WalletEvmChainSwapRoute
   '/wallet/wif/$id/receive': typeof WalletWifIdReceiveRoute
+  '/wallet/wif/$id/send': typeof WalletWifIdSendRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -241,6 +249,7 @@ export interface FileRoutesById {
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
   '/wallet/evm/$chain/swap': typeof WalletEvmChainSwapRoute
   '/wallet/wif/$id/receive': typeof WalletWifIdReceiveRoute
+  '/wallet/wif/$id/send': typeof WalletWifIdSendRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -270,6 +279,7 @@ export interface FileRouteTypes {
     | '/wallet/evm/$chain/send'
     | '/wallet/evm/$chain/swap'
     | '/wallet/wif/$id/receive'
+    | '/wallet/wif/$id/send'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -296,6 +306,7 @@ export interface FileRouteTypes {
     | '/wallet/evm/$chain/send'
     | '/wallet/evm/$chain/swap'
     | '/wallet/wif/$id/receive'
+    | '/wallet/wif/$id/send'
   id:
     | '__root__'
     | '/'
@@ -323,6 +334,7 @@ export interface FileRouteTypes {
     | '/wallet/evm/$chain/send'
     | '/wallet/evm/$chain/swap'
     | '/wallet/wif/$id/receive'
+    | '/wallet/wif/$id/send'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -480,6 +492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiEvmChainRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wallet/wif/$id/send': {
+      id: '/wallet/wif/$id/send'
+      path: '/wif/$id/send'
+      fullPath: '/wallet/wif/$id/send'
+      preLoaderRoute: typeof WalletWifIdSendRouteImport
+      parentRoute: typeof WalletRoute
+    }
     '/wallet/wif/$id/receive': {
       id: '/wallet/wif/$id/receive'
       path: '/wif/$id/receive'
@@ -547,6 +566,7 @@ interface WalletRouteChildren {
   WalletIskReceiveRoute: typeof WalletIskReceiveRoute
   WalletIskSendRoute: typeof WalletIskSendRoute
   WalletWifIdReceiveRoute: typeof WalletWifIdReceiveRoute
+  WalletWifIdSendRoute: typeof WalletWifIdSendRoute
 }
 
 const WalletRouteChildren: WalletRouteChildren = {
@@ -562,6 +582,7 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletIskReceiveRoute: WalletIskReceiveRoute,
   WalletIskSendRoute: WalletIskSendRoute,
   WalletWifIdReceiveRoute: WalletWifIdReceiveRoute,
+  WalletWifIdSendRoute: WalletWifIdSendRoute,
 }
 
 const WalletRouteWithChildren =
