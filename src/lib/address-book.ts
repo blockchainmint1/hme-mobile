@@ -5,6 +5,7 @@
 import { isAddress } from "viem";
 import { address as addrLib } from "bitcoinjs-lib";
 import { TXC_NETWORK } from "./txc/network";
+import { ISK_NETWORK } from "./isk/network";
 
 export type ContactChain = "txc" | "isk" | "eth" | "base" | "bsc";
 
