@@ -268,7 +268,21 @@ function WalletHome() {
                       }}
                     />
                   )}
-                  {slot.kind === "chain" && slot.chain !== "txc" && (
+                  {slot.kind === "chain" && slot.chain === "isk" && (
+                    <IskTile
+                      balanceSats={iskAccount.data?.balanceSats ?? 0}
+                      loading={iskAccount.isLoading}
+                      priceUsd={iskPrice.data?.usd ?? null}
+                      onRefresh={() => iskAccount.refetch()}
+                      refreshing={iskAccount.isFetching}
+                      label={unlocked?.label ?? "ISK Wallet"}
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setTileOpen("isk");
+                      }}
+                    />
+                  )}
+                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && (
                     <EvmTile
                       chainId={slot.chain as EvmChainId}
                       address={evmAddress}
