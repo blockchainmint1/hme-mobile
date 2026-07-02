@@ -568,7 +568,7 @@ function WalletHome() {
         <WalletDetailSheet
           open
           onClose={() => setTileOpen(null)}
-          kind="txc"
+          kind="isk"
           balanceText={`${formatIsk(iskAccount.data?.balanceSats ?? 0)}`}
           fiatText={
             iskPrice.data?.usd != null
