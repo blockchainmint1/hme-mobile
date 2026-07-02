@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
 import { scanIskAccount } from "@/lib/isk/scan";
+import { ISK_DEFAULT_KIND } from "@/lib/isk/network";
 import { formatIsk, formatIskCompact, satsToIsk } from "@/lib/isk/units";
 import { getIskPriceUsd } from "@/lib/isk/price.functions";
 import { getAddressTxs as getIskAddressTxs, type MempoolTx as IskMempoolTx } from "@/lib/isk/mempool";
@@ -179,9 +180,9 @@ function WalletHome() {
   const iskEnabled = enabled.includes("isk");
   const fetchIskPrice = useServerFn(getIskPriceUsd);
   const iskAccount = useQuery({
-    queryKey: ["isk-account", unlocked?.kind, root?.neutered().toBase58().slice(0, 24)],
+    queryKey: ["isk-account", ISK_DEFAULT_KIND, root?.neutered().toBase58().slice(0, 24)],
     enabled: !!root && !!unlocked && iskEnabled,
-    queryFn: () => scanIskAccount(root!, unlocked!.kind),
+    queryFn: () => scanIskAccount(root!, ISK_DEFAULT_KIND),
   });
   const iskPrice = useQuery({
     queryKey: ["isk-price"],
