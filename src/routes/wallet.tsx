@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Settings as Cog, Download, Sparkles, Eye } from "lucide-react";
+import { Plus, Settings as Cog, Download, Sparkles, Eye, Key } from "lucide-react";
 import { scanAccount } from "@/lib/txc/scan";
 import { satsToTxc, formatFiat } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
