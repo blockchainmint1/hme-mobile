@@ -660,6 +660,170 @@ function TxcTile({
   );
 }
 
+function IskTile({
+  balanceSats,
+  loading,
+  priceUsd,
+  onRefresh,
+  refreshing,
+  label,
+  onOpenDetails,
+}: {
+  balanceSats: number;
+  loading: boolean;
+  priceUsd: number | null;
+  onRefresh: () => void;
+  refreshing: boolean;
+  label: string;
+  onOpenDetails: () => void;
+}) {
+  const [hidden] = useHideBalances();
+  const balanceUsd = priceUsd ? satsToIsk(balanceSats) * priceUsd : null;
+  const balText = loading ? "..." : formatIskCompact(balanceSats);
+  const fiatText = balanceUsd != null ? formatFiat(balanceUsd) : "Price unavailable";
+  return (
+    <button
+      type="button"
+      onClick={onOpenDetails}
+      className="w-full text-left rounded-2xl bg-gradient-to-br from-emerald-500 via-green-700 to-emerald-900 p-6 text-white shadow-xl shadow-emerald-950/30 active:scale-[0.99] transition-transform"
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-emerald-50/80">{label}</p>
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRefresh();
+          }}
+          className="text-emerald-50/80 hover:text-white"
+          aria-label="Refresh"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+        </span>
+      </div>
+      <p className="mt-3 text-[10px] uppercase tracking-widest text-emerald-50/70">Native</p>
+      <p className="mt-0.5 text-4xl font-bold tracking-tight">
+        {hidden ? maskAmount(balText) : balText}
+        <span className="ml-2 text-2xl font-semibold opacity-90">ISK</span>
+      </p>
+      <p className="text-emerald-50/80 text-sm">
+        {hidden ? maskAmount(fiatText) : fiatText}
+      </p>
+      <div className="mt-3 pt-3 border-t border-white/15">
+        <p className="text-[10px] uppercase tracking-widest text-emerald-50/70">Chain total</p>
+        <p className="text-lg font-semibold">
+          {hidden ? maskAmount(fiatText) : fiatText}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+function IskActivity({
+  loading,
+  error,
+  txs,
+  ownAddresses,
+  onRefresh,
+}: {
+  loading: boolean;
+  error: boolean;
+  txs: IskMempoolTx[] | null;
+  ownAddresses: Set<string>;
+  onRefresh: () => void;
+}) {
+  return (
+    <section className="mt-8 px-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold">Recent activity</h2>
+        <button
+          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          onClick={onRefresh}
+        >
+          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Refresh
+        </button>
+      </div>
+      {loading && !txs ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-16 rounded-lg bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">
+            Couldn't reach mempool.iskandercoin.com.
+          </CardContent>
+        </Card>
+      ) : (txs?.length ?? 0) === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">
+            No IskanderCoin transactions yet.
+          </CardContent>
+        </Card>
+      ) : (
+        <ul className="space-y-2">
+          {txs!.slice(0, 50).map((tx) => {
+            const inSum = tx.vin
+              .filter(
+                (v) =>
+                  v.prevout.scriptpubkey_address &&
+                  ownAddresses.has(v.prevout.scriptpubkey_address),
+              )
+              .reduce((s, v) => s + v.prevout.value, 0);
+            const outToOwn = tx.vout
+              .filter(
+                (v) =>
+                  v.scriptpubkey_address && ownAddresses.has(v.scriptpubkey_address),
+              )
+              .reduce((s, v) => s + v.value, 0);
+            const net = outToOwn - inSum;
+            const incoming = net > 0;
+            return (
+              <li key={tx.txid}>
+                <div className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                      incoming
+                        ? "bg-emerald-500/15 text-emerald-400"
+                        : "bg-rose-500/15 text-rose-400"
+                    }`}
+                  >
+                    {incoming ? (
+                      <ArrowDown className="h-4 w-4" />
+                    ) : (
+                      <ArrowUp className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{incoming ? "Received" : "Sent"}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {tx.status.confirmed
+                        ? new Date((tx.status.block_time ?? 0) * 1000).toLocaleString()
+                        : "Pending"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-sm font-semibold ${incoming ? "text-emerald-400" : ""}`}
+                    >
+                      {incoming ? "+" : "−"}
+                      {formatIsk(Math.abs(net))}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+
+
 function EvmTile({
   chainId,
   address,
