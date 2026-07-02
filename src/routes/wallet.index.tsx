@@ -538,6 +538,8 @@ function WalletHome() {
         <div className="mx-auto max-w-3xl px-4 py-3 flex gap-2">
           {activeWatch ? (
             <WatchOnlyBottomActions wallet={activeWatch} />
+          ) : activeWif ? (
+            <WifBottomActions entry={activeWif} />
           ) : (
             <BottomActions chain={activeChain} />
           )}
