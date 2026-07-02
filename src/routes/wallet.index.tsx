@@ -33,6 +33,13 @@ import {
   type WatchWallet,
 } from "@/lib/watch-only";
 import {
+  listWifWallets,
+  removeWifWallet,
+  WIF_CHANGED_EVENT,
+  type WifWalletEntry,
+} from "@/lib/wif/store";
+import { api as wifApi } from "@/lib/wif/chain-io";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
