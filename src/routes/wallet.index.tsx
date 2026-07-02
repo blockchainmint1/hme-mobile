@@ -487,7 +487,7 @@ function WalletHome() {
               )}
             </section>
           )}
-          {activeChain === "isk" && !activeWatch && (
+          {activeChain === "isk" && !activeWatch && !activeWif && (
             <IskActivity
               loading={iskAccount.isLoading || iskTxs.isLoading}
               error={iskAccount.isError}
@@ -496,14 +496,14 @@ function WalletHome() {
               onRefresh={() => iskAccount.refetch()}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain in EVM_CHAINS && !activeWatch && (
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
             <EvmActivity
               chainId={activeChain as EvmChainId}
               address={evmAddress}
               onOpen={(t) => setDetail({ kind: "evm", chain: activeChain as EvmChainId, transfer: t })}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && !(activeChain in EVM_CHAINS) && !activeWatch && (
+          {activeChain !== "txc" && activeChain !== "isk" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
