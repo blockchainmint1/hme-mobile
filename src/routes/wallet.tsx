@@ -254,6 +254,11 @@ function WalletLayout() {
                   <Eye className="h-4 w-4 mr-2" /> Add watch-only
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/wallet/wif-add">
+                  <Key className="h-4 w-4 mr-2" /> Import private key
+                </Link>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
