@@ -15,8 +15,10 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { useHideBalances, maskAmount } from "@/lib/hide-balances";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { CHAIN_META, type ChainId } from "@/lib/chain-prefs";
+import { useChainLabel } from "@/lib/chain-labels";
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import { DERIVATION_PATHS } from "@/lib/txc/network";
+import { ISK_DERIVATION_BASE, ISK_DEFAULT_KIND } from "@/lib/isk/network";
 
 type Common = {
   open: boolean;
@@ -26,6 +28,13 @@ type Common = {
 export type WalletDetailProps =
   | (Common & {
       kind: "txc";
+      balanceText: string;
+      fiatText: string | null;
+      receiveAddress: string | null;
+      txCount: number | null;
+    })
+  | (Common & {
+      kind: "isk";
       balanceText: string;
       fiatText: string | null;
       receiveAddress: string | null;
@@ -47,7 +56,13 @@ export function WalletDetailSheet(props: WalletDetailProps) {
           <DrawerTitle>Wallet details</DrawerTitle>
         </DrawerHeader>
         <div className="px-4 pb-6 overflow-y-auto space-y-4">
-          {props.kind === "txc" ? <TxcDetails {...props} /> : <EvmDetails {...props} />}
+          {props.kind === "txc" ? (
+            <TxcDetails {...props} />
+          ) : props.kind === "isk" ? (
+            <IskDetails {...props} />
+          ) : (
+            <EvmDetails {...props} />
+          )}
         </div>
       </DrawerContent>
     </Drawer>
