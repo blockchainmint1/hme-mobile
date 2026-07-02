@@ -340,6 +340,7 @@ function WalletHome() {
                     <EvmTile
                       chainId={slot.chain as EvmChainId}
                       address={evmAddress}
+                      label={getChainLabel(slot.chain)}
                       balanceWei={evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.data ?? null}
                       loading={evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.isLoading ?? true}
                       priceUsd={
