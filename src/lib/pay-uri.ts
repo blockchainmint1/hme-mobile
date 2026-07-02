@@ -45,6 +45,11 @@ function isTxcAddress(s: string): boolean {
   return /^(txc1|T|M)[0-9a-zA-Z]{20,}$/.test(s);
 }
 
+function isIskAddress(s: string): boolean {
+  // bech32 isk1..., legacy K...
+  return /^(isk1|K)[0-9a-zA-Z]{20,}$/.test(s);
+}
+
 function safeAmountFromWei(raw: string, decimals: number): string | undefined {
   try {
     const big = /^[0-9]+$/.test(raw) ? BigInt(raw) : BigInt(Math.trunc(Number(raw)));
