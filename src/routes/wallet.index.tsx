@@ -329,7 +329,7 @@ function WalletHome() {
                       priceUsd={iskPrice.data?.usd ?? null}
                       onRefresh={() => iskAccount.refetch()}
                       refreshing={iskAccount.isFetching}
-                      label={unlocked?.label ?? "ISK Wallet"}
+                      label={getChainLabel("isk")}
                       onOpenDetails={() => {
                         if (longPressFired.current) return;
                         setTileOpen("isk");
