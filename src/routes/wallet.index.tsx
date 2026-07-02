@@ -248,6 +248,21 @@ function WalletHome() {
 
   // Long-press to remove a watch-only entry (chain tiles use reorder sheet).
   const [watchRemove, setWatchRemove] = useState<WatchWallet | null>(null);
+  const [wifRemove, setWifRemove] = useState<WifWalletEntry | null>(null);
+
+  // Balances for imported WIF wallets — chain-aware.
+  const wifStats = useQueries({
+    queries: wifList.map((w) => ({
+      queryKey: ["wif-stats", w.chain, w.address],
+      queryFn: () => wifApi(w.chain).getAddressStats(w.address),
+      staleTime: 30_000,
+    })),
+  });
+  const activeWifTxs = useQuery({
+    queryKey: ["wif-txs", activeWif?.chain, activeWif?.address],
+    enabled: !!activeWif,
+    queryFn: () => wifApi(activeWif!.chain).getAddressTxs(activeWif!.address),
+  });
 
   return (
     <main className="flex-1 flex flex-col min-h-0">
