@@ -617,8 +617,6 @@ function WalletHome() {
 }
 
 function BottomActions({ chain }: { chain: ChainId }) {
-  const [swapEnabled] = useFeature("evmSwap");
-
   if (chain === "txc") {
     return (
       <>
@@ -665,16 +663,10 @@ function BottomActions({ chain }: { chain: ChainId }) {
             <Send className="h-4 w-4 mr-2" /> Send
           </Link>
         </Button>
-        {swapEnabled && (
-          <Button asChild size="lg" variant="secondary" className="flex-1">
-            <Link to="/wallet/evm/$chain/swap" params={{ chain: c }}>
-              <ArrowLeftRight className="h-4 w-4 mr-2" /> Swap
-            </Link>
-          </Button>
-        )}
       </>
     );
   }
+
 
   return (
     <>
