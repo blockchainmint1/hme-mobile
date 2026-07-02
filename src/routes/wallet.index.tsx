@@ -371,6 +371,27 @@ function WalletHome() {
                       }}
                     />
                   )}
+                  {slot.kind === "wif" && (
+                    <WifTile
+                      entry={slot.wif}
+                      stats={wifStats[wifList.findIndex((w) => w.id === slot.wif.id)]?.data ?? null}
+                      loading={
+                        wifStats[wifList.findIndex((w) => w.id === slot.wif.id)]?.isLoading ?? true
+                      }
+                      priceUsd={
+                        slot.wif.chain === "txc"
+                          ? price.data?.usd ?? null
+                          : iskPrice.data?.usd ?? null
+                      }
+                      onRefresh={() =>
+                        wifStats[wifList.findIndex((w) => w.id === slot.wif.id)]?.refetch()
+                      }
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setActiveIdx(slotIdx);
+                      }}
+                    />
+                  )}
                 </div>
               );
             })}
