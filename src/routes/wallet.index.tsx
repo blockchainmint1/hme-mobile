@@ -21,6 +21,7 @@ import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCo
 import { useFeature } from "@/lib/feature-prefs";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
+import { getChainLabel, CHAIN_LABEL_EVENT } from "@/lib/chain-labels";
 import { EVM_CHAINS, deriveEvmAccount, evmClient, formatEth, type EvmChainId } from "@/lib/chains/evm";
 import { TxDetailSheet, type TxDetail } from "@/components/wallet/TxDetailSheet";
 import { WalletDetailSheet } from "@/components/wallet/WalletDetailSheet";
@@ -82,6 +83,14 @@ function WalletHome() {
     window.addEventListener(WIF_CHANGED_EVENT, h);
     return () => window.removeEventListener(WIF_CHANGED_EVENT, h);
   }, []);
+  // Force-refresh chain labels when renamed elsewhere.
+  const [, bumpLabels] = useState(0);
+  useEffect(() => {
+    const h = () => bumpLabels((n) => n + 1);
+    window.addEventListener(CHAIN_LABEL_EVENT, h);
+    return () => window.removeEventListener(CHAIN_LABEL_EVENT, h);
+  }, []);
+
 
   // Unified carousel item list — chains first, then watch-only, then WIF.
   type Slot =
@@ -320,7 +329,7 @@ function WalletHome() {
                       priceUsd={iskPrice.data?.usd ?? null}
                       onRefresh={() => iskAccount.refetch()}
                       refreshing={iskAccount.isFetching}
-                      label={unlocked?.label ?? "ISK Wallet"}
+                      label={getChainLabel("isk")}
                       onOpenDetails={() => {
                         if (longPressFired.current) return;
                         setTileOpen("isk");
@@ -331,6 +340,7 @@ function WalletHome() {
                     <EvmTile
                       chainId={slot.chain as EvmChainId}
                       address={evmAddress}
+                      label={getChainLabel(slot.chain)}
                       balanceWei={evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.data ?? null}
                       loading={evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.isLoading ?? true}
                       priceUsd={
@@ -414,7 +424,7 @@ function WalletHome() {
           )}
 
           {/* Recent activity (TXC only for now) */}
-          {activeChain === "txc" && !activeWatch && (
+          {activeChain === "txc" && !activeWatch && !activeWif && (
             <section className="mt-8 px-4">
               <h2 className="text-lg font-semibold mb-3">Recent activity</h2>
               {account.isLoading || txs.isLoading ? (
@@ -487,7 +497,7 @@ function WalletHome() {
               )}
             </section>
           )}
-          {activeChain === "isk" && !activeWatch && (
+          {activeChain === "isk" && !activeWatch && !activeWif && (
             <IskActivity
               loading={iskAccount.isLoading || iskTxs.isLoading}
               error={iskAccount.isError}
@@ -496,14 +506,14 @@ function WalletHome() {
               onRefresh={() => iskAccount.refetch()}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain in EVM_CHAINS && !activeWatch && (
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
             <EvmActivity
               chainId={activeChain as EvmChainId}
               address={evmAddress}
               onOpen={(t) => setDetail({ kind: "evm", chain: activeChain as EvmChainId, transfer: t })}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && !(activeChain in EVM_CHAINS) && !activeWatch && (
+          {activeChain !== "txc" && activeChain !== "isk" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
@@ -568,7 +578,7 @@ function WalletHome() {
         <WalletDetailSheet
           open
           onClose={() => setTileOpen(null)}
-          kind="txc"
+          kind="isk"
           balanceText={`${formatIsk(iskAccount.data?.balanceSats ?? 0)}`}
           fiatText={
             iskPrice.data?.usd != null
@@ -607,8 +617,6 @@ function WalletHome() {
 }
 
 function BottomActions({ chain }: { chain: ChainId }) {
-  const [swapEnabled] = useFeature("evmSwap");
-
   if (chain === "txc") {
     return (
       <>
@@ -655,16 +663,10 @@ function BottomActions({ chain }: { chain: ChainId }) {
             <Send className="h-4 w-4 mr-2" /> Send
           </Link>
         </Button>
-        {swapEnabled && (
-          <Button asChild size="lg" variant="secondary" className="flex-1">
-            <Link to="/wallet/evm/$chain/swap" params={{ chain: c }}>
-              <ArrowLeftRight className="h-4 w-4 mr-2" /> Swap
-            </Link>
-          </Button>
-        )}
       </>
     );
   }
+
 
   return (
     <>
@@ -905,6 +907,7 @@ function IskActivity({
 function EvmTile({
   chainId,
   address,
+  label,
   balanceWei,
   loading,
   priceUsd,
@@ -913,6 +916,7 @@ function EvmTile({
 }: {
   chainId: EvmChainId;
   address: string | null;
+  label: string;
   balanceWei: bigint | null;
   loading: boolean;
   priceUsd: number | null;
@@ -921,6 +925,8 @@ function EvmTile({
 }) {
   const [hidden] = useHideBalances();
   const [refreshing, setRefreshing] = useState(false);
+  const [swapEnabled] = useFeature("evmSwap");
+
 
   const meta = EVM_CHAINS[chainId];
   const balanceEth = balanceWei != null ? Number(balanceWei) / 1e18 : null;
@@ -960,8 +966,19 @@ function EvmTile({
       style={{ background: `linear-gradient(135deg, ${meta.accent} 0%, ${meta.accent}CC 60%, #111 140%)` }}
     >
       <div className="flex items-center justify-between">
-        <p className="text-sm opacity-80">{meta.name}</p>
-        <div className="flex items-center gap-3">
+        <p className="text-sm opacity-80 truncate">{label}</p>
+        <div className="flex items-center gap-2">
+          {swapEnabled && (
+            <Link
+              to="/wallet/evm/$chain/swap"
+              params={{ chain: chainId }}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 px-2.5 py-1 text-[11px] font-medium"
+              aria-label="Swap"
+            >
+              <ArrowLeftRight className="h-3 w-3" /> Swap
+            </Link>
+          )}
           <span
             role="button"
             tabIndex={0}
@@ -984,6 +1001,7 @@ function EvmTile({
           </span>
         </div>
       </div>
+
 
       <p className="mt-3 text-[10px] uppercase tracking-widest opacity-70">Native</p>
       <p className="mt-0.5 text-4xl font-bold tracking-tight">
