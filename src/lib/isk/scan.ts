@@ -20,7 +20,7 @@ import {
 
 const GAP_LIMIT = 20;
 const FAST_FRONTIER = 5;
-const HINT_VERSION = 1;
+const HINT_VERSION = 2;
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
