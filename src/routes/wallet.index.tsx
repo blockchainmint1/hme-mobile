@@ -382,7 +382,7 @@ function WalletHome() {
             <div className="flex justify-center gap-1.5 mt-3">
               {slots.map((s, i) => (
                 <span
-                  key={s.kind === "chain" ? `c:${s.chain}` : `w:${s.watch.id}`}
+                  key={s.kind === "chain" ? `c:${s.chain}` : s.kind === "watch" ? `w:${s.watch.id}` : `k:${s.wif.id}`}
                   className={`h-1.5 rounded-full transition-all ${
                     i === activeIdx ? "w-6 bg-foreground" : "w-1.5 bg-muted-foreground/40"
                   }`}
