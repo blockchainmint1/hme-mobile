@@ -43,8 +43,6 @@ export function validateAddress(chain: ContactChain, addr: string): string | nul
   }
   if (chain === "isk") {
     try {
-      // Lazy import to avoid loading ISK network on all pages.
-      const { ISK_NETWORK } = require("./isk/network") as typeof import("./isk/network");
       addrLib.toOutputScript(a, ISK_NETWORK);
       return null;
     } catch {
