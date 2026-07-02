@@ -19,6 +19,7 @@ import type { EvmChainId } from "@/lib/chains/evm";
 
 export type PaymentIntent =
   | { kind: "txc"; address: string; amount?: string }
+  | { kind: "isk"; address: string; amount?: string }
   | {
       kind: "evm";
       chain?: EvmChainId; // undefined => user must pick
