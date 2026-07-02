@@ -19,6 +19,7 @@ import type { EvmChainId } from "@/lib/chains/evm";
 
 export type PaymentIntent =
   | { kind: "txc"; address: string; amount?: string }
+  | { kind: "isk"; address: string; amount?: string }
   | {
       kind: "evm";
       chain?: EvmChainId; // undefined => user must pick
@@ -42,6 +43,11 @@ function isEvmAddress(s: string): boolean {
 function isTxcAddress(s: string): boolean {
   // bech32 txc1..., legacy T..., or wrapped M...
   return /^(txc1|T|M)[0-9a-zA-Z]{20,}$/.test(s);
+}
+
+function isIskAddress(s: string): boolean {
+  // bech32 isk1..., legacy K...
+  return /^(isk1|K)[0-9a-zA-Z]{20,}$/.test(s);
 }
 
 function safeAmountFromWei(raw: string, decimals: number): string | undefined {
@@ -74,6 +80,7 @@ export function parsePaymentUri(input: string): PaymentIntent {
   // Bare addresses
   if (isEvmAddress(raw)) return { kind: "evm", address: raw };
   if (isTxcAddress(raw)) return { kind: "txc", address: raw };
+  if (isIskAddress(raw)) return { kind: "isk", address: raw };
 
   // Scheme URIs
   const scheme = raw.match(/^([a-z]+):(.+)$/i);
@@ -88,6 +95,15 @@ export function parsePaymentUri(input: string): PaymentIntent {
     const params = new URLSearchParams(m[2] ?? "");
     const amount = params.get("amount") ?? undefined;
     return { kind: "txc", address, amount };
+  }
+
+  if (proto === "iskandercoin" || proto === "isk") {
+    const m = rest.match(/^([^?]+)(?:\?(.*))?$/);
+    if (!m) return { kind: "unknown", raw };
+    const address = m[1];
+    const params = new URLSearchParams(m[2] ?? "");
+    const amount = params.get("amount") ?? undefined;
+    return { kind: "isk", address, amount };
   }
 
   if (proto === "ethereum") {

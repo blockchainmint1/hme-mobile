@@ -21,7 +21,7 @@ export const Route = createFileRoute("/wallet/contacts")({
   component: ContactsPage,
 });
 
-const CHAIN_OPTIONS: ContactChain[] = ["txc", "eth", "base", "bsc"];
+const CHAIN_OPTIONS: ContactChain[] = ["txc", "isk", "eth", "base", "bsc"];
 
 function ContactsPage() {
   const [items, setItems] = useState<Contact[]>([]);

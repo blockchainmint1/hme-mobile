@@ -5,8 +5,9 @@
 import { isAddress } from "viem";
 import { address as addrLib } from "bitcoinjs-lib";
 import { TXC_NETWORK } from "./txc/network";
+import { ISK_NETWORK } from "./isk/network";
 
-export type ContactChain = "txc" | "eth" | "base" | "bsc";
+export type ContactChain = "txc" | "isk" | "eth" | "base" | "bsc";
 
 export interface Contact {
   id: string;
@@ -18,6 +19,7 @@ export interface Contact {
 
 export const CHAIN_LABELS: Record<ContactChain, string> = {
   txc: "TEXITcoin (TXC)",
+  isk: "IskanderCoin (ISK)",
   eth: "Ethereum (ETH)",
   base: "Base",
   bsc: "BNB Smart Chain",
@@ -37,6 +39,14 @@ export function validateAddress(chain: ContactChain, addr: string): string | nul
       return null;
     } catch {
       return "Not a valid TEXITcoin address.";
+    }
+  }
+  if (chain === "isk") {
+    try {
+      addrLib.toOutputScript(a, ISK_NETWORK);
+      return null;
+    } catch {
+      return "Not a valid IskanderCoin address.";
     }
   }
   return isAddress(a) ? null : "Not a valid EVM address.";

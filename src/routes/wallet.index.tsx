@@ -4,6 +4,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
+import { scanIskAccount } from "@/lib/isk/scan";
+import { formatIsk, formatIskCompact, satsToIsk } from "@/lib/isk/units";
+import { getIskPriceUsd } from "@/lib/isk/price.functions";
+import { getAddressTxs as getIskAddressTxs, type MempoolTx as IskMempoolTx } from "@/lib/isk/mempool";
 import { formatTxc, formatTxcCompact, formatFiat, satsToTxc, compactNumberString } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
@@ -151,6 +155,41 @@ function WalletHome() {
     ...(account.data?.internal.map((a) => a.address) ?? []),
   ]);
 
+  // ISK data — runs when ISK is enabled so the tile has a balance immediately.
+  const iskEnabled = enabled.includes("isk");
+  const fetchIskPrice = useServerFn(getIskPriceUsd);
+  const iskAccount = useQuery({
+    queryKey: ["isk-account", unlocked?.kind, root?.neutered().toBase58().slice(0, 24)],
+    enabled: !!root && !!unlocked && iskEnabled,
+    queryFn: () => scanIskAccount(root!, unlocked!.kind),
+  });
+  const iskPrice = useQuery({
+    queryKey: ["isk-price"],
+    queryFn: () => fetchIskPrice(),
+    staleTime: 10 * 60_000,
+    enabled: iskEnabled,
+  });
+  const iskTxs = useQuery({
+    queryKey: ["isk-txs", iskAccount.data?.external.map((a) => a.address).join(",")],
+    enabled: !!iskAccount.data && activeChain === "isk",
+    queryFn: async () => {
+      const all = await Promise.all(
+        [...(iskAccount.data?.external ?? []), ...(iskAccount.data?.internal ?? [])].map((a) =>
+          getIskAddressTxs(a.address).catch(() => [] as IskMempoolTx[]),
+        ),
+      );
+      const map = new Map<string, IskMempoolTx>();
+      for (const list of all) for (const tx of list) map.set(tx.txid, tx);
+      return [...map.values()].sort(
+        (a, b) => (b.status.block_time ?? 0) - (a.status.block_time ?? 0),
+      );
+    },
+  });
+  const iskOwnAddresses = new Set([
+    ...(iskAccount.data?.external.map((a) => a.address) ?? []),
+    ...(iskAccount.data?.internal.map((a) => a.address) ?? []),
+  ]);
+
   // EVM data (only for enabled EVM chains)
   const evmEnabled = enabled.filter((c) => c in EVM_CHAINS) as EvmChainId[];
   const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
@@ -229,7 +268,21 @@ function WalletHome() {
                       }}
                     />
                   )}
-                  {slot.kind === "chain" && slot.chain !== "txc" && (
+                  {slot.kind === "chain" && slot.chain === "isk" && (
+                    <IskTile
+                      balanceSats={iskAccount.data?.balanceSats ?? 0}
+                      loading={iskAccount.isLoading}
+                      priceUsd={iskPrice.data?.usd ?? null}
+                      onRefresh={() => iskAccount.refetch()}
+                      refreshing={iskAccount.isFetching}
+                      label={unlocked?.label ?? "ISK Wallet"}
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setTileOpen("isk");
+                      }}
+                    />
+                  )}
+                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && (
                     <EvmTile
                       chainId={slot.chain as EvmChainId}
                       address={evmAddress}
@@ -368,14 +421,23 @@ function WalletHome() {
               )}
             </section>
           )}
-          {activeChain !== "txc" && activeChain in EVM_CHAINS && !activeWatch && (
+          {activeChain === "isk" && !activeWatch && (
+            <IskActivity
+              loading={iskAccount.isLoading || iskTxs.isLoading}
+              error={iskAccount.isError}
+              txs={iskTxs.data ?? null}
+              ownAddresses={iskOwnAddresses}
+              onRefresh={() => iskAccount.refetch()}
+            />
+          )}
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain in EVM_CHAINS && !activeWatch && (
             <EvmActivity
               chainId={activeChain as EvmChainId}
               address={evmAddress}
               onOpen={(t) => setDetail({ kind: "evm", chain: activeChain as EvmChainId, transfer: t })}
             />
           )}
-          {activeChain !== "txc" && !(activeChain in EVM_CHAINS) && !activeWatch && (
+          {activeChain !== "txc" && activeChain !== "isk" && !(activeChain in EVM_CHAINS) && !activeWatch && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
@@ -424,7 +486,22 @@ function WalletHome() {
           txCount={txs.data?.length ?? null}
         />
       )}
-      {tileOpen && tileOpen !== "txc" && tileOpen in EVM_CHAINS && (
+      {tileOpen === "isk" && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="txc"
+          balanceText={`${formatIsk(iskAccount.data?.balanceSats ?? 0)}`}
+          fiatText={
+            iskPrice.data?.usd != null
+              ? formatFiat(satsToIsk(iskAccount.data?.balanceSats ?? 0) * iskPrice.data.usd)
+              : null
+          }
+          receiveAddress={iskAccount.data?.nextReceiveAddress ?? null}
+          txCount={iskTxs.data?.length ?? null}
+        />
+      )}
+      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen in EVM_CHAINS && (
         <WalletDetailSheet
           open
           onClose={() => setTileOpen(null)}
@@ -464,6 +541,22 @@ function BottomActions({ chain }: { chain: ChainId }) {
         </Button>
         <Button asChild size="lg" className="flex-1">
           <Link to="/wallet/send">
+            <Send className="h-4 w-4 mr-2" /> Send
+          </Link>
+        </Button>
+      </>
+    );
+  }
+  if (chain === "isk") {
+    return (
+      <>
+        <Button asChild size="lg" variant="outline" className="flex-1">
+          <Link to="/wallet/isk/receive">
+            <QrCode className="h-4 w-4 mr-2" /> Receive
+          </Link>
+        </Button>
+        <Button asChild size="lg" className="flex-1">
+          <Link to="/wallet/isk/send">
             <Send className="h-4 w-4 mr-2" /> Send
           </Link>
         </Button>
@@ -566,6 +659,170 @@ function TxcTile({
     </button>
   );
 }
+
+function IskTile({
+  balanceSats,
+  loading,
+  priceUsd,
+  onRefresh,
+  refreshing,
+  label,
+  onOpenDetails,
+}: {
+  balanceSats: number;
+  loading: boolean;
+  priceUsd: number | null;
+  onRefresh: () => void;
+  refreshing: boolean;
+  label: string;
+  onOpenDetails: () => void;
+}) {
+  const [hidden] = useHideBalances();
+  const balanceUsd = priceUsd ? satsToIsk(balanceSats) * priceUsd : null;
+  const balText = loading ? "..." : formatIskCompact(balanceSats);
+  const fiatText = balanceUsd != null ? formatFiat(balanceUsd) : "Price unavailable";
+  return (
+    <button
+      type="button"
+      onClick={onOpenDetails}
+      className="w-full text-left rounded-2xl bg-gradient-to-br from-emerald-500 via-green-700 to-emerald-900 p-6 text-white shadow-xl shadow-emerald-950/30 active:scale-[0.99] transition-transform"
+    >
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-emerald-50/80">{label}</p>
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRefresh();
+          }}
+          className="text-emerald-50/80 hover:text-white"
+          aria-label="Refresh"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+        </span>
+      </div>
+      <p className="mt-3 text-[10px] uppercase tracking-widest text-emerald-50/70">Native</p>
+      <p className="mt-0.5 text-4xl font-bold tracking-tight">
+        {hidden ? maskAmount(balText) : balText}
+        <span className="ml-2 text-2xl font-semibold opacity-90">ISK</span>
+      </p>
+      <p className="text-emerald-50/80 text-sm">
+        {hidden ? maskAmount(fiatText) : fiatText}
+      </p>
+      <div className="mt-3 pt-3 border-t border-white/15">
+        <p className="text-[10px] uppercase tracking-widest text-emerald-50/70">Chain total</p>
+        <p className="text-lg font-semibold">
+          {hidden ? maskAmount(fiatText) : fiatText}
+        </p>
+      </div>
+    </button>
+  );
+}
+
+function IskActivity({
+  loading,
+  error,
+  txs,
+  ownAddresses,
+  onRefresh,
+}: {
+  loading: boolean;
+  error: boolean;
+  txs: IskMempoolTx[] | null;
+  ownAddresses: Set<string>;
+  onRefresh: () => void;
+}) {
+  return (
+    <section className="mt-8 px-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold">Recent activity</h2>
+        <button
+          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          onClick={onRefresh}
+        >
+          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Refresh
+        </button>
+      </div>
+      {loading && !txs ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-16 rounded-lg bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">
+            Couldn't reach mempool.iskandercoin.com.
+          </CardContent>
+        </Card>
+      ) : (txs?.length ?? 0) === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">
+            No IskanderCoin transactions yet.
+          </CardContent>
+        </Card>
+      ) : (
+        <ul className="space-y-2">
+          {txs!.slice(0, 50).map((tx) => {
+            const inSum = tx.vin
+              .filter(
+                (v) =>
+                  v.prevout.scriptpubkey_address &&
+                  ownAddresses.has(v.prevout.scriptpubkey_address),
+              )
+              .reduce((s, v) => s + v.prevout.value, 0);
+            const outToOwn = tx.vout
+              .filter(
+                (v) =>
+                  v.scriptpubkey_address && ownAddresses.has(v.scriptpubkey_address),
+              )
+              .reduce((s, v) => s + v.value, 0);
+            const net = outToOwn - inSum;
+            const incoming = net > 0;
+            return (
+              <li key={tx.txid}>
+                <div className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                      incoming
+                        ? "bg-emerald-500/15 text-emerald-400"
+                        : "bg-rose-500/15 text-rose-400"
+                    }`}
+                  >
+                    {incoming ? (
+                      <ArrowDown className="h-4 w-4" />
+                    ) : (
+                      <ArrowUp className="h-4 w-4" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{incoming ? "Received" : "Sent"}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {tx.status.confirmed
+                        ? new Date((tx.status.block_time ?? 0) * 1000).toLocaleString()
+                        : "Pending"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p
+                      className={`text-sm font-semibold ${incoming ? "text-emerald-400" : ""}`}
+                    >
+                      {incoming ? "+" : "−"}
+                      {formatIsk(Math.abs(net))}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+
 
 function EvmTile({
   chainId,

@@ -36,7 +36,7 @@ export const CHAIN_META: Record<ChainId, ChainMeta> = {
     shortName: EVM_CHAINS.bsc.shortName,
     accent: EVM_CHAINS.bsc.accent,
   },
-  isk: { id: "isk", name: "IskanderCoin", shortName: "ISK", soon: true, accent: "#22C55E" },
+  isk: { id: "isk", name: "IskanderCoin", shortName: "ISK", accent: "#22C55E" },
   zcu: { id: "zcu", name: "Zero Chill Units", shortName: "ZCU", soon: true, accent: "#0EA5E9" },
 };
 

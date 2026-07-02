@@ -140,6 +140,13 @@ function WalletLayout() {
       });
       return;
     }
+    if (intent.kind === "isk") {
+      navigate({
+        to: "/wallet/isk/send",
+        search: { to: intent.address, amount: intent.amount },
+      });
+      return;
+    }
     if (intent.kind === "evm") {
       if (!intent.address) {
         toast.error("QR is missing a recipient address");
