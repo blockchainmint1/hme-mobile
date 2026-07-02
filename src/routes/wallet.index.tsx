@@ -155,6 +155,41 @@ function WalletHome() {
     ...(account.data?.internal.map((a) => a.address) ?? []),
   ]);
 
+  // ISK data — runs when ISK is enabled so the tile has a balance immediately.
+  const iskEnabled = enabled.includes("isk");
+  const fetchIskPrice = useServerFn(getIskPriceUsd);
+  const iskAccount = useQuery({
+    queryKey: ["isk-account", unlocked?.kind, root?.neutered().toBase58().slice(0, 24)],
+    enabled: !!root && !!unlocked && iskEnabled,
+    queryFn: () => scanIskAccount(root!, unlocked!.kind),
+  });
+  const iskPrice = useQuery({
+    queryKey: ["isk-price"],
+    queryFn: () => fetchIskPrice(),
+    staleTime: 10 * 60_000,
+    enabled: iskEnabled,
+  });
+  const iskTxs = useQuery({
+    queryKey: ["isk-txs", iskAccount.data?.external.map((a) => a.address).join(",")],
+    enabled: !!iskAccount.data && activeChain === "isk",
+    queryFn: async () => {
+      const all = await Promise.all(
+        [...(iskAccount.data?.external ?? []), ...(iskAccount.data?.internal ?? [])].map((a) =>
+          getIskAddressTxs(a.address).catch(() => [] as IskMempoolTx[]),
+        ),
+      );
+      const map = new Map<string, IskMempoolTx>();
+      for (const list of all) for (const tx of list) map.set(tx.txid, tx);
+      return [...map.values()].sort(
+        (a, b) => (b.status.block_time ?? 0) - (a.status.block_time ?? 0),
+      );
+    },
+  });
+  const iskOwnAddresses = new Set([
+    ...(iskAccount.data?.external.map((a) => a.address) ?? []),
+    ...(iskAccount.data?.internal.map((a) => a.address) ?? []),
+  ]);
+
   // EVM data (only for enabled EVM chains)
   const evmEnabled = enabled.filter((c) => c in EVM_CHAINS) as EvmChainId[];
   const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
