@@ -521,6 +521,15 @@ function WalletHome() {
               onOpen={(tx, net, incoming) => setDetail({ kind: "txc", tx, net, incoming })}
             />
           )}
+          {activeWif && (
+            <WifActivity
+              entry={activeWif}
+              txs={activeWifTxs.data ?? null}
+              loading={activeWifTxs.isLoading}
+              error={activeWifTxs.isError}
+              onRefresh={() => activeWifTxs.refetch()}
+            />
+          )}
         </div>
       </div>
 
