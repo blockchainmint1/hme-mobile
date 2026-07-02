@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Settings as Cog, Download, Sparkles, Eye } from "lucide-react";
+import { Plus, Settings as Cog, Download, Sparkles, Eye, Key } from "lucide-react";
 import { scanAccount } from "@/lib/txc/scan";
 import { satsToTxc, formatFiat } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
@@ -252,6 +252,11 @@ function WalletLayout() {
               <DropdownMenuItem asChild>
                 <Link to="/wallet/watch-add">
                   <Eye className="h-4 w-4 mr-2" /> Add watch-only
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/wallet/wif-add">
+                  <Key className="h-4 w-4 mr-2" /> Import private key
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>

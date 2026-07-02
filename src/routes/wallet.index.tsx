@@ -16,7 +16,7 @@ import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chain
 import { useTokensForChain } from "@/lib/token-prefs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
@@ -32,6 +32,13 @@ import {
   watchChangedEvent,
   type WatchWallet,
 } from "@/lib/watch-only";
+import {
+  listWifWallets,
+  removeWifWallet,
+  WIF_CHANGED_EVENT,
+  type WifWalletEntry,
+} from "@/lib/wif/store";
+import { api as wifApi } from "@/lib/wif/chain-io";
 import {
   Dialog,
   DialogContent,
@@ -67,14 +74,26 @@ function WalletHome() {
     return () => window.removeEventListener(watchChangedEvent(), h);
   }, []);
 
-  // Unified carousel item list — chains first, then watch-only.
-  type Slot = { kind: "chain"; chain: ChainId } | { kind: "watch"; watch: WatchWallet };
+  // WIF (imported single-key) wallets. Each becomes its own tile.
+  const [wifList, setWifList] = useState<WifWalletEntry[]>(() => listWifWallets());
+  useEffect(() => {
+    const h = () => setWifList(listWifWallets());
+    window.addEventListener(WIF_CHANGED_EVENT, h);
+    return () => window.removeEventListener(WIF_CHANGED_EVENT, h);
+  }, []);
+
+  // Unified carousel item list — chains first, then watch-only, then WIF.
+  type Slot =
+    | { kind: "chain"; chain: ChainId }
+    | { kind: "watch"; watch: WatchWallet }
+    | { kind: "wif"; wif: WifWalletEntry };
   const slots: Slot[] = useMemo(
     () => [
       ...enabled.map((c) => ({ kind: "chain" as const, chain: c })),
       ...watchList.map((w) => ({ kind: "watch" as const, watch: w })),
+      ...wifList.map((w) => ({ kind: "wif" as const, wif: w })),
     ],
-    [enabled, watchList],
+    [enabled, watchList, wifList],
   );
 
   // Active tile tracked via scroll position
@@ -95,6 +114,7 @@ function WalletHome() {
   const activeSlot: Slot = slots[activeIdx] ?? { kind: "chain", chain: "txc" };
   const activeChain: ChainId = activeSlot.kind === "chain" ? activeSlot.chain : "txc";
   const activeWatch: WatchWallet | null = activeSlot.kind === "watch" ? activeSlot.watch : null;
+  const activeWif: WifWalletEntry | null = activeSlot.kind === "wif" ? activeSlot.wif : null;
 
   // Selected transaction (opens in-page detail sheet)
   const [detail, setDetail] = useState<TxDetail | null>(null);
@@ -228,6 +248,21 @@ function WalletHome() {
 
   // Long-press to remove a watch-only entry (chain tiles use reorder sheet).
   const [watchRemove, setWatchRemove] = useState<WatchWallet | null>(null);
+  const [wifRemove, setWifRemove] = useState<WifWalletEntry | null>(null);
+
+  // Balances for imported WIF wallets — chain-aware.
+  const wifStats = useQueries({
+    queries: wifList.map((w) => ({
+      queryKey: ["wif-stats", w.chain, w.address],
+      queryFn: () => wifApi(w.chain).getAddressStats(w.address),
+      staleTime: 30_000,
+    })),
+  });
+  const activeWifTxs = useQuery({
+    queryKey: ["wif-txs", activeWif?.chain, activeWif?.address],
+    enabled: !!activeWif,
+    queryFn: () => wifApi(activeWif!.chain).getAddressTxs(activeWif!.address),
+  });
 
   return (
     <main className="flex-1 flex flex-col min-h-0">
@@ -240,9 +275,18 @@ function WalletHome() {
             style={{ scrollbarWidth: "none" }}
           >
             {slots.map((slot, slotIdx) => {
-              const key = slot.kind === "chain" ? `c:${slot.chain}` : `w:${slot.watch.id}`;
+              const key =
+                slot.kind === "chain"
+                  ? `c:${slot.chain}`
+                  : slot.kind === "watch"
+                    ? `w:${slot.watch.id}`
+                    : `k:${slot.wif.id}`;
               const onLongPress =
-                slot.kind === "watch" ? () => setWatchRemove(slot.watch) : undefined;
+                slot.kind === "watch"
+                  ? () => setWatchRemove(slot.watch)
+                  : slot.kind === "wif"
+                    ? () => setWifRemove(slot.wif)
+                    : undefined;
               return (
                 <div
                   key={key}
@@ -327,6 +371,27 @@ function WalletHome() {
                       }}
                     />
                   )}
+                  {slot.kind === "wif" && (
+                    <WifTile
+                      entry={slot.wif}
+                      stats={wifStats[wifList.findIndex((w) => w.id === slot.wif.id)]?.data ?? null}
+                      loading={
+                        wifStats[wifList.findIndex((w) => w.id === slot.wif.id)]?.isLoading ?? true
+                      }
+                      priceUsd={
+                        slot.wif.chain === "txc"
+                          ? price.data?.usd ?? null
+                          : iskPrice.data?.usd ?? null
+                      }
+                      onRefresh={() =>
+                        wifStats[wifList.findIndex((w) => w.id === slot.wif.id)]?.refetch()
+                      }
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setActiveIdx(slotIdx);
+                      }}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -338,7 +403,7 @@ function WalletHome() {
             <div className="flex justify-center gap-1.5 mt-3">
               {slots.map((s, i) => (
                 <span
-                  key={s.kind === "chain" ? `c:${s.chain}` : `w:${s.watch.id}`}
+                  key={s.kind === "chain" ? `c:${s.chain}` : s.kind === "watch" ? `w:${s.watch.id}` : `k:${s.wif.id}`}
                   className={`h-1.5 rounded-full transition-all ${
                     i === activeIdx ? "w-6 bg-foreground" : "w-1.5 bg-muted-foreground/40"
                   }`}
@@ -456,6 +521,15 @@ function WalletHome() {
               onOpen={(tx, net, incoming) => setDetail({ kind: "txc", tx, net, incoming })}
             />
           )}
+          {activeWif && (
+            <WifActivity
+              entry={activeWif}
+              txs={activeWifTxs.data ?? null}
+              loading={activeWifTxs.isLoading}
+              error={activeWifTxs.isError}
+              onRefresh={() => activeWifTxs.refetch()}
+            />
+          )}
         </div>
       </div>
 
@@ -464,6 +538,8 @@ function WalletHome() {
         <div className="mx-auto max-w-3xl px-4 py-3 flex gap-2">
           {activeWatch ? (
             <WatchOnlyBottomActions wallet={activeWatch} />
+          ) : activeWif ? (
+            <WifBottomActions entry={activeWif} />
           ) : (
             <BottomActions chain={activeChain} />
           )}
@@ -471,6 +547,7 @@ function WalletHome() {
       </div>
       <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
       <ReorderTilesSheet open={reorderOpen} onClose={() => setReorderOpen(false)} />
+      <WifRemoveDialog entry={wifRemove} onClose={() => setWifRemove(null)} />
       {tileOpen === "txc" && (
         <WalletDetailSheet
           open
@@ -1398,3 +1475,255 @@ function WatchRemoveDialog({
   );
 }
 
+
+/**
+ * Tile for an imported single-key (WIF) wallet. Colored per chain, with a
+ * "Key" chip so it reads visually distinct from HD-derived tiles.
+ */
+function WifTile({
+  entry,
+  stats,
+  loading,
+  priceUsd,
+  onRefresh,
+  onOpenDetails,
+}: {
+  entry: WifWalletEntry;
+  stats: import("@/lib/txc/mempool").MempoolAddressStats | null;
+  loading: boolean;
+  priceUsd: number | null;
+  onRefresh: () => void;
+  onOpenDetails: () => void;
+}) {
+  const [hidden] = useHideBalances();
+  const balSats = stats
+    ? stats.chain_stats.funded_txo_sum -
+      stats.chain_stats.spent_txo_sum +
+      stats.mempool_stats.funded_txo_sum -
+      stats.mempool_stats.spent_txo_sum
+    : 0;
+  const isIsk = entry.chain === "isk";
+  const balCoins = isIsk ? satsToIsk(balSats) : satsToTxc(balSats);
+  const balUsd = priceUsd != null ? balCoins * priceUsd : null;
+  const balText = loading && !stats
+    ? "..."
+    : isIsk
+      ? formatIskCompact(balSats)
+      : formatTxcCompact(balSats);
+  const fiatText = balUsd != null ? formatFiat(balUsd) : "Price unavailable";
+  const symbol = isIsk ? "ISK" : "TXC";
+  const bg = isIsk
+    ? "linear-gradient(135deg, #065f46 0%, #064e3b 55%, #022c22 140%)"
+    : "linear-gradient(135deg, #4c1d95 0%, #312e81 55%, #1e1b4b 140%)";
+  return (
+    <button
+      type="button"
+      onClick={onOpenDetails}
+      className="w-full text-left rounded-2xl p-6 text-white shadow-xl shadow-black/40 active:scale-[0.99] transition-transform relative overflow-hidden"
+      style={{ background: bg }}
+    >
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+              <Key className="h-3 w-3" /> Imported key
+            </span>
+            <p className="text-sm text-white/80 truncate">{entry.label}</p>
+          </div>
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRefresh();
+            }}
+            className="text-white/70 hover:text-white"
+            aria-label="Refresh"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </span>
+        </div>
+        <p className="mt-2 text-4xl font-bold tracking-tight">
+          {hidden ? maskAmount(balText) : balText}
+          <span className="ml-2 text-2xl font-semibold opacity-90">{symbol}</span>
+        </p>
+        <p className="text-white/70 text-sm">{hidden ? maskAmount(fiatText) : fiatText}</p>
+        <p className="mt-3 text-[11px] font-mono text-white/50 truncate">{entry.address}</p>
+      </div>
+    </button>
+  );
+}
+
+/**
+ * Activity feed for a WIF wallet — same shape as the watch-only view since
+ * we're inspecting a single address on a single chain.
+ */
+function WifActivity({
+  entry,
+  txs,
+  loading,
+  error,
+  onRefresh,
+}: {
+  entry: WifWalletEntry;
+  txs: MempoolTx[] | null;
+  loading: boolean;
+  error: boolean;
+  onRefresh: () => void;
+}) {
+  const own = entry.address;
+  const isIsk = entry.chain === "isk";
+  const fmt = (n: number) => (isIsk ? formatIsk(n) : formatTxc(n));
+  return (
+    <section className="mt-8 px-4">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold">Recent activity</h2>
+        <button
+          className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+          onClick={onRefresh}
+        >
+          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Refresh
+        </button>
+      </div>
+      {loading && !txs ? (
+        <div className="space-y-2">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-16 rounded-lg bg-muted/40 animate-pulse" />
+          ))}
+        </div>
+      ) : error ? (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">
+            Couldn't reach the {isIsk ? "ISK" : "TXC"} mempool.
+          </CardContent>
+        </Card>
+      ) : (txs?.length ?? 0) === 0 ? (
+        <Card>
+          <CardContent className="pt-6 text-sm text-muted-foreground">
+            No transactions on this address yet.
+          </CardContent>
+        </Card>
+      ) : (
+        <ul className="space-y-2">
+          {txs!.slice(0, 50).map((tx) => {
+            const inSum = tx.vin
+              .filter((v) => v.prevout.scriptpubkey_address === own)
+              .reduce((s, v) => s + v.prevout.value, 0);
+            const outToOwn = tx.vout
+              .filter((v) => v.scriptpubkey_address === own)
+              .reduce((s, v) => s + v.value, 0);
+            const net = outToOwn - inSum;
+            const incoming = net > 0;
+            return (
+              <li key={tx.txid}>
+                <div className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                      incoming
+                        ? "bg-emerald-500/15 text-emerald-400"
+                        : "bg-rose-500/15 text-rose-400"
+                    }`}
+                  >
+                    {incoming ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{incoming ? "Received" : "Sent"}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {tx.status.confirmed
+                        ? new Date((tx.status.block_time ?? 0) * 1000).toLocaleString()
+                        : "Pending"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-semibold ${incoming ? "text-emerald-400" : ""}`}>
+                      {incoming ? "+" : "−"}
+                      {fmt(Math.abs(net))}
+                    </p>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Bottom actions when a WIF tile is active — routes to the dedicated
+ * per-entry send/receive screens.
+ */
+function WifBottomActions({ entry }: { entry: WifWalletEntry }) {
+  return (
+    <>
+      <Button asChild size="lg" variant="outline">
+        <Link to="/wallet/wif/$id/receive" params={{ id: entry.id }}>
+          <QrCode className="h-4 w-4 mr-2" /> Receive
+        </Link>
+      </Button>
+      <Button asChild size="lg">
+        <Link to="/wallet/wif/$id/send" params={{ id: entry.id }}>
+          <Send className="h-4 w-4 mr-2" /> Send
+        </Link>
+      </Button>
+    </>
+  );
+}
+
+/**
+ * Confirm removing an imported key. This deletes the encrypted WIF and the
+ * tile — funds remain on-chain, but you'll need the original private key to
+ * spend them again. We spell that out loudly.
+ */
+function WifRemoveDialog({
+  entry,
+  onClose,
+}: {
+  entry: WifWalletEntry | null;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={!!entry} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{entry?.label ?? "Imported key"}</DialogTitle>
+          <DialogDescription>
+            Imported private key · {entry?.chain.toUpperCase()}
+          </DialogDescription>
+        </DialogHeader>
+        {entry && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                Address
+              </p>
+              <p className="font-mono text-xs break-all rounded-md border border-border/60 bg-card/40 px-3 py-2">
+                {entry.address}
+              </p>
+            </div>
+            <p className="text-xs text-rose-400">
+              Removing deletes the encrypted key stored in this app. If you don't
+              have the original WIF written down elsewhere, you will lose access
+              to any funds at this address.
+            </p>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              if (entry) removeWifWallet(entry.id);
+              onClose();
+            }}
+          >
+            <Trash2 className="h-4 w-4 mr-1" /> Remove
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
