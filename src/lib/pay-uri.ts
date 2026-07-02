@@ -80,6 +80,7 @@ export function parsePaymentUri(input: string): PaymentIntent {
   // Bare addresses
   if (isEvmAddress(raw)) return { kind: "evm", address: raw };
   if (isTxcAddress(raw)) return { kind: "txc", address: raw };
+  if (isIskAddress(raw)) return { kind: "isk", address: raw };
 
   // Scheme URIs
   const scheme = raw.match(/^([a-z]+):(.+)$/i);
@@ -94,6 +95,15 @@ export function parsePaymentUri(input: string): PaymentIntent {
     const params = new URLSearchParams(m[2] ?? "");
     const amount = params.get("amount") ?? undefined;
     return { kind: "txc", address, amount };
+  }
+
+  if (proto === "iskandercoin" || proto === "isk") {
+    const m = rest.match(/^([^?]+)(?:\?(.*))?$/);
+    if (!m) return { kind: "unknown", raw };
+    const address = m[1];
+    const params = new URLSearchParams(m[2] ?? "");
+    const amount = params.get("amount") ?? undefined;
+    return { kind: "isk", address, amount };
   }
 
   if (proto === "ethereum") {
