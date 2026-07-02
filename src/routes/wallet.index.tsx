@@ -547,6 +547,7 @@ function WalletHome() {
       </div>
       <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
       <ReorderTilesSheet open={reorderOpen} onClose={() => setReorderOpen(false)} />
+      <WifRemoveDialog entry={wifRemove} onClose={() => setWifRemove(null)} />
       {tileOpen === "txc" && (
         <WalletDetailSheet
           open
