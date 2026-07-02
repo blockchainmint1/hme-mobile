@@ -83,6 +83,14 @@ function WalletHome() {
     window.addEventListener(WIF_CHANGED_EVENT, h);
     return () => window.removeEventListener(WIF_CHANGED_EVENT, h);
   }, []);
+  // Force-refresh chain labels when renamed elsewhere.
+  const [, bumpLabels] = useState(0);
+  useEffect(() => {
+    const h = () => bumpLabels((n) => n + 1);
+    window.addEventListener(CHAIN_LABEL_EVENT, h);
+    return () => window.removeEventListener(CHAIN_LABEL_EVENT, h);
+  }, []);
+
 
   // Unified carousel item list — chains first, then watch-only, then WIF.
   type Slot =
