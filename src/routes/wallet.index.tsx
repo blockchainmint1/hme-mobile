@@ -746,6 +746,87 @@ function TxcTile({
   );
 }
 
+function TxcTokens({ addresses }: { addresses: string[] }) {
+  const tokens = useEnabledTxcTokens();
+  const fetchBalances = useServerFn(getTxcTokenBalancesForAddresses);
+  const [hideSpam] = useFeature("hideSpamTokens");
+  const [hidden] = useHideBalances();
+  const enabled = addresses.length > 0 && tokens.length > 0;
+  const balances = useQuery({
+    queryKey: [
+      "txc-token-balances",
+      addresses.slice().sort().join(","),
+      tokens.map((t) => t.id).join(","),
+    ],
+    enabled,
+    queryFn: () =>
+      fetchBalances({
+        data: { addresses, propertyIds: tokens.map((t) => t.id) },
+      }),
+    staleTime: 30_000,
+  });
+
+  if (!enabled) return null;
+
+  const rows = tokens.map((t) => {
+    const raw = balances.data?.[t.id] ?? "0";
+    const units = BigInt(raw);
+    return { token: t, units };
+  });
+  const visible = hideSpam
+    ? rows.filter((r) => balances.isLoading || r.units > 0n)
+    : rows;
+  const hiddenCount = rows.length - visible.length;
+
+  return (
+    <section className="mt-8 px-4">
+      <h2 className="text-lg font-semibold mb-3">TXC tokens</h2>
+      <ul className="space-y-2">
+        {visible.map(({ token: t, units }) => {
+          const amtStr = formatTokenAmount(units, t.divisible);
+          return (
+            <li key={t.id}>
+              <Link
+                to="/wallet/send"
+                search={{ token: String(t.id) }}
+                className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors"
+              >
+                <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-amber-500/15 text-amber-300">
+                  {t.symbol.slice(0, 2)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{t.symbol}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {t.name ?? "Omni #" + t.id} · #{t.id}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold">
+                    {balances.isLoading && !balances.data
+                      ? "…"
+                      : hidden
+                        ? maskAmount(amtStr)
+                        : amtStr}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {balances.isError && !balances.data ? "unavailable" : "—"}
+                  </p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            </li>
+          );
+        })}
+        {hideSpam && hiddenCount > 0 && (
+          <li className="text-xs text-muted-foreground text-center pt-1">
+            {hiddenCount} zero-balance {hiddenCount === 1 ? "token" : "tokens"} hidden
+          </li>
+        )}
+      </ul>
+    </section>
+  );
+}
+
 function IskTile({
   balanceSats,
   loading,
