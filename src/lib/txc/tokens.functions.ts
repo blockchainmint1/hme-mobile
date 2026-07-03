@@ -104,7 +104,44 @@ export const getTxcTokenBalancesForAddresses = createServerFn({ method: "POST" }
     return out;
   });
 
-function toUnits(raw: string, divisible: boolean): bigint {
+/**
+ * Per-address token balances. Needed for Omni sends because the "sending
+ * address" is the address that owns the first input — so we must pick UTXOs
+ * from whichever HD address actually holds the token.
+ *
+ * Shape: { [address]: { [propertyId]: unitsAsString } }
+ */
+export const getTxcTokenBalancesPerAddress = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        addresses: z.array(z.string().min(1)).min(1).max(200),
+        propertyIds: z.array(z.number().int().positive()).min(1).max(50),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data }) => {
+    const out: Record<string, Record<number, string>> = {};
+    await Promise.all(
+      data.addresses.map(async (addr) => {
+        const perProp: Record<number, bigint> = {};
+        try {
+          const rows = await rpc<OmniAddressBalance[]>("omni_getallbalancesforaddress", [addr]);
+          for (const row of rows) {
+            if (!data.propertyIds.includes(row.propertyid)) continue;
+            perProp[row.propertyid] = toUnits(row.balance, row.divisible !== false);
+          }
+        } catch {
+          // address unknown to node → zero
+        }
+        const asStr: Record<number, string> = {};
+        for (const id of data.propertyIds) asStr[id] = (perProp[id] ?? 0n).toString();
+        out[addr] = asStr;
+      }),
+    );
+    return out;
+  });
+
   if (!divisible) return BigInt(raw);
   const [whole, frac = ""] = raw.split(".");
   const padded = (frac + "00000000").slice(0, 8);
