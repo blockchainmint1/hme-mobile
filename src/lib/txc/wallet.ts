@@ -220,7 +220,8 @@ export function buildAndSignTx(args: {
   }
 
   if (opReturnData) {
-    const embed = payments.embed({ data: [Buffer.from(opReturnData)] });
+    // bitcoinjs-lib accepts Uint8Array here; avoid Buffer to stay browser-safe (mobile WebViews).
+    const embed = payments.embed({ data: [opReturnData as unknown as Buffer] });
     if (!embed.output) throw new Error("Failed to build OP_RETURN output");
     psbt.addOutput({ script: embed.output, value: 0n });
   }
