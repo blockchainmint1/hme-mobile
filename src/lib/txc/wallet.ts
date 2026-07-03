@@ -178,8 +178,15 @@ export function buildAndSignTx(args: {
   changeAddress: string;
   changeIndex: number; // m/.../1/<index>
   feeSats: number;
+  /**
+   * Optional raw data bytes for an OP_RETURN output (payload only, without
+   * the OP_RETURN opcode). Used for Omni Layer transfers. Placed FIRST so
+   * Omni's reference-address rule ("first non-OP_RETURN output" = recipient)
+   * still resolves to the user output. Value on the OP_RETURN is 0.
+   */
+  opReturnData?: Uint8Array;
 }): { hex: string; txid: string; feeSats: number; changeSats: number } {
-  const { root, kind, inputs, outputs, changeAddress, feeSats } = args;
+  const { root, kind, inputs, outputs, changeAddress, feeSats, opReturnData } = args;
 
   const totalIn = inputs.reduce((s, u) => s + u.value, 0);
   const totalOut = outputs.reduce((s, o) => s + o.valueSats, 0);
@@ -212,6 +219,11 @@ export function buildAndSignTx(args: {
     psbt.addInput(base);
   }
 
+  if (opReturnData) {
+    const embed = payments.embed({ data: [Buffer.from(opReturnData)] });
+    if (!embed.output) throw new Error("Failed to build OP_RETURN output");
+    psbt.addOutput({ script: embed.output, value: 0n });
+  }
   for (const o of outputs) psbt.addOutput({ address: o.address, value: BigInt(o.valueSats) });
   if (changeSats > 0) psbt.addOutput({ address: changeAddress, value: BigInt(changeSats) });
 
@@ -235,3 +247,4 @@ export function buildAndSignTx(args: {
     changeSats: Math.max(0, changeSats),
   };
 }
+
