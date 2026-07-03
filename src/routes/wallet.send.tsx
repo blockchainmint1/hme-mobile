@@ -612,6 +612,11 @@ function SendPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Row label="To"><code className="font-mono break-all">{to.trim()}</code></Row>
+            {isTokenSend && stage.senderAddress && (
+              <Row label="From">
+                <code className="font-mono break-all text-xs">{stage.senderAddress}</code>
+              </Row>
+            )}
             <Row label="Amount">
               {reviewedAmountLabel}
               {sendAll && !isTokenSend && (
