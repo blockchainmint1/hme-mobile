@@ -45,7 +45,10 @@ import {
   formatTokenAmount,
   type TxcTokenMeta,
 } from "@/lib/txc/tokens";
-import { getTxcTokenBalancesForAddresses } from "@/lib/txc/tokens.functions";
+import {
+  getTxcTokenBalancesForAddresses,
+  getTxcTokenBalancesPerAddress,
+} from "@/lib/txc/tokens.functions";
 
 const searchSchema = z.object({
   to: z.string().optional(),
