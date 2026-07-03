@@ -15,6 +15,8 @@ import { getAllPricesUsd } from "@/lib/chains/prices.functions";
 import { getEvmHistory } from "@/lib/chains/history.functions";
 import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { useTokensForChain } from "@/lib/token-prefs";
+import { useEnabledTxcTokens, formatTokenAmount } from "@/lib/txc/tokens";
+import { getTxcTokenBalancesForAddresses } from "@/lib/txc/tokens.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key } from "lucide-react";
