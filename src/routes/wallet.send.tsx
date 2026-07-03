@@ -244,22 +244,48 @@ function SendPage() {
         return;
       }
 
-      // Coin-select TXC UTXOs to cover dust + fee (+ change).
-      // Omni layout: [OP_RETURN, dust→recipient, change].
+      // Omni sender = address that owns the FIRST input. So we must select a
+      // holder address whose token balance covers the amount, and put one of
+      // its TXC UTXOs at the front of the input list.
+      const perAddr = perAddrTokenBalances.data;
+      if (!perAddr) {
+        setError("Still loading token balances — try again in a moment.");
+        return;
+      }
+      const holders = ownAddresses
+        .map((a) => ({ addr: a, bal: BigInt(perAddr[a]?.[activeToken.id] ?? "0") }))
+        .filter((h) => h.bal >= amountUnits)
+        .sort((a, b) => (b.bal > a.bal ? 1 : b.bal < a.bal ? -1 : 0));
+      if (holders.length === 0) {
+        setError(
+          `No single address holds ${amount} ${activeToken.symbol}. Omni sends the whole amount from one address — try a smaller amount, or consolidate first.`,
+        );
+        return;
+      }
+      const senderAddress = holders[0].addr;
+      const senderUtxos = sorted.filter((u) => u.address === senderAddress);
+      const otherUtxos = sorted.filter((u) => u.address !== senderAddress);
+      if (senderUtxos.length === 0) {
+        setError(
+          `Your ${activeToken.symbol} is at ${senderAddress}, but that address has no TXC to pay the network fee. Send a small amount of TXC (≈ ${formatTxc(OMNI_DUST_SATS * 2)}) to that address first, then retry.`,
+        );
+        return;
+      }
+
+      // Sender-owned UTXOs first (largest first), then top up from other own
+      // addresses if needed for fee. Change goes back to the sender address so
+      // future token sends have TXC to work with.
+      const ordered = [...senderUtxos, ...otherUtxos];
       const picked: typeof sorted = [];
       let acc = 0;
       let vsize = 0;
       let feeSats = 0;
-      for (const u of sorted) {
+      for (const u of ordered) {
         picked.push(u);
         acc += u.value;
         vsize = estimateVsize(unlocked.kind, picked.length, 2, true);
         feeSats = Math.ceil(vsize * feeRate);
         if (acc >= OMNI_DUST_SATS + feeSats + OMNI_DUST_SATS) break;
-      }
-      if (picked.length === 0) {
-        setError("No TXC available to pay the network fee.");
-        return;
       }
       if (acc < OMNI_DUST_SATS + feeSats) {
         setError(
@@ -267,7 +293,13 @@ function SendPage() {
         );
         return;
       }
-      setStage({ kind: "review", vsize, feeSats, selected: picked.length });
+      setStage({
+        kind: "review",
+        vsize,
+        feeSats,
+        selected: picked.length,
+        senderAddress,
+      });
       return;
     }
 
