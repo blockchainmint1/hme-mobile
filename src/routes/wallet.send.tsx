@@ -45,7 +45,10 @@ import {
   formatTokenAmount,
   type TxcTokenMeta,
 } from "@/lib/txc/tokens";
-import { getTxcTokenBalancesForAddresses } from "@/lib/txc/tokens.functions";
+import {
+  getTxcTokenBalancesForAddresses,
+  getTxcTokenBalancesPerAddress,
+} from "@/lib/txc/tokens.functions";
 
 const searchSchema = z.object({
   to: z.string().optional(),
@@ -93,7 +96,14 @@ function estimateVsize(
 
 type Stage =
   | { kind: "form" }
-  | { kind: "review"; vsize: number; feeSats: number; selected: number }
+  | {
+      kind: "review";
+      vsize: number;
+      feeSats: number;
+      selected: number;
+      /** Omni sender address (first input's address). Only set for token sends. */
+      senderAddress?: string;
+    }
   | { kind: "sent"; txid: string };
 
 // "txc" or an Omni property id encoded as string.
@@ -176,6 +186,27 @@ function SendPage() {
     staleTime: 30_000,
   });
 
+  // Per-address balances — needed so Omni sends can pick UTXOs from the
+  // specific HD address that actually holds the token (Omni "sending address"
+  // is derived from the first input's script).
+  const fetchTokenBalancesPerAddr = useServerFn(getTxcTokenBalancesPerAddress);
+  const perAddrTokenBalances = useQuery({
+    queryKey: [
+      "txc-token-balances-per-addr",
+      ownAddresses.join(","),
+      tokens.map((t) => t.id).join(","),
+    ],
+    enabled: ownAddresses.length > 0 && tokens.length > 0,
+    queryFn: () =>
+      fetchTokenBalancesPerAddr({
+        data: {
+          addresses: ownAddresses,
+          propertyIds: tokens.map((t) => t.id),
+        },
+      }),
+    staleTime: 30_000,
+  });
+
   const activeTokenBalanceUnits: bigint | null = activeToken
     ? BigInt(tokenBalances.data?.[activeToken.id] ?? "0")
     : null;
@@ -213,22 +244,48 @@ function SendPage() {
         return;
       }
 
-      // Coin-select TXC UTXOs to cover dust + fee (+ change).
-      // Omni layout: [OP_RETURN, dust→recipient, change].
+      // Omni sender = address that owns the FIRST input. So we must select a
+      // holder address whose token balance covers the amount, and put one of
+      // its TXC UTXOs at the front of the input list.
+      const perAddr = perAddrTokenBalances.data;
+      if (!perAddr) {
+        setError("Still loading token balances — try again in a moment.");
+        return;
+      }
+      const holders = ownAddresses
+        .map((a) => ({ addr: a, bal: BigInt(perAddr[a]?.[activeToken.id] ?? "0") }))
+        .filter((h) => h.bal >= amountUnits)
+        .sort((a, b) => (b.bal > a.bal ? 1 : b.bal < a.bal ? -1 : 0));
+      if (holders.length === 0) {
+        setError(
+          `No single address holds ${amount} ${activeToken.symbol}. Omni sends the whole amount from one address — try a smaller amount, or consolidate first.`,
+        );
+        return;
+      }
+      const senderAddress = holders[0].addr;
+      const senderUtxos = sorted.filter((u) => u.address === senderAddress);
+      const otherUtxos = sorted.filter((u) => u.address !== senderAddress);
+      if (senderUtxos.length === 0) {
+        setError(
+          `Your ${activeToken.symbol} is at ${senderAddress}, but that address has no TXC to pay the network fee. Send a small amount of TXC (≈ ${formatTxc(OMNI_DUST_SATS * 2)}) to that address first, then retry.`,
+        );
+        return;
+      }
+
+      // Sender-owned UTXOs first (largest first), then top up from other own
+      // addresses if needed for fee. Change goes back to the sender address so
+      // future token sends have TXC to work with.
+      const ordered = [...senderUtxos, ...otherUtxos];
       const picked: typeof sorted = [];
       let acc = 0;
       let vsize = 0;
       let feeSats = 0;
-      for (const u of sorted) {
+      for (const u of ordered) {
         picked.push(u);
         acc += u.value;
         vsize = estimateVsize(unlocked.kind, picked.length, 2, true);
         feeSats = Math.ceil(vsize * feeRate);
         if (acc >= OMNI_DUST_SATS + feeSats + OMNI_DUST_SATS) break;
-      }
-      if (picked.length === 0) {
-        setError("No TXC available to pay the network fee.");
-        return;
       }
       if (acc < OMNI_DUST_SATS + feeSats) {
         setError(
@@ -236,7 +293,13 @@ function SendPage() {
         );
         return;
       }
-      setStage({ kind: "review", vsize, feeSats, selected: picked.length });
+      setStage({
+        kind: "review",
+        vsize,
+        feeSats,
+        selected: picked.length,
+        senderAddress,
+      });
       return;
     }
 
@@ -296,7 +359,16 @@ function SendPage() {
     setError(null);
     try {
       const sorted = [...utxos].sort((a, b) => b.value - a.value);
-      const picked = sorted.slice(0, stage.selected);
+      // For token sends, reproduce the exact ordering used at review time so
+      // the first input's address is the Omni sender.
+      const ordered =
+        isTokenSend && stage.senderAddress
+          ? [
+              ...sorted.filter((u) => u.address === stage.senderAddress),
+              ...sorted.filter((u) => u.address !== stage.senderAddress),
+            ]
+          : sorted;
+      const picked = ordered.slice(0, stage.selected);
 
       let built;
       if (isTokenSend && activeToken) {
@@ -307,7 +379,9 @@ function SendPage() {
           kind: unlocked.kind,
           inputs: picked,
           outputs: [{ address: to.trim(), valueSats: OMNI_DUST_SATS }],
-          changeAddress: account.data.nextChangeAddress,
+          // Return TXC change to the sending address so the holder always has
+          // TXC on hand for the next token transfer.
+          changeAddress: stage.senderAddress ?? account.data.nextChangeAddress,
           changeIndex: account.data.nextChangeIndex,
           feeSats: stage.feeSats,
           opReturnData: payload,
@@ -324,6 +398,7 @@ function SendPage() {
           feeSats: stage.feeSats,
         });
       }
+
 
       const txid = await broadcastTx(built.hex);
       hapticSuccess();
@@ -537,6 +612,11 @@ function SendPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <Row label="To"><code className="font-mono break-all">{to.trim()}</code></Row>
+            {isTokenSend && stage.senderAddress && (
+              <Row label="From">
+                <code className="font-mono break-all text-xs">{stage.senderAddress}</code>
+              </Row>
+            )}
             <Row label="Amount">
               {reviewedAmountLabel}
               {sendAll && !isTokenSend && (
