@@ -96,7 +96,14 @@ function estimateVsize(
 
 type Stage =
   | { kind: "form" }
-  | { kind: "review"; vsize: number; feeSats: number; selected: number }
+  | {
+      kind: "review";
+      vsize: number;
+      feeSats: number;
+      selected: number;
+      /** Omni sender address (first input's address). Only set for token sends. */
+      senderAddress?: string;
+    }
   | { kind: "sent"; txid: string };
 
 // "txc" or an Omni property id encoded as string.
