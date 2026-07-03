@@ -4,6 +4,7 @@ import { BookUser, ChevronRight, Fingerprint, Palette } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChainsCard } from "@/components/wallet/ChainsCard";
 import { TokensCard } from "@/components/wallet/TokensCard";
+import { TxcTokensCard } from "@/components/wallet/TxcTokensCard";
 import { RotationPolicyCard } from "@/components/wallet/RotationPolicyCard";
 import { DeepRescanCard } from "@/components/wallet/DeepRescanCard";
 import { FeaturesCard } from "@/components/wallet/FeaturesCard";
