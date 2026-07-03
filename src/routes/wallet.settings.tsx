@@ -114,6 +114,10 @@ function SettingsPage() {
       </div>
 
       <div className="mt-5">
+        <TxcTokensCard />
+      </div>
+
+      <div className="mt-5">
         <HideBalancesToggle />
       </div>
 
