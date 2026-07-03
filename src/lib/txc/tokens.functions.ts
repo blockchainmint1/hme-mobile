@@ -142,11 +142,13 @@ export const getTxcTokenBalancesPerAddress = createServerFn({ method: "POST" })
     return out;
   });
 
+function toUnits(raw: string, divisible: boolean): bigint {
   if (!divisible) return BigInt(raw);
   const [whole, frac = ""] = raw.split(".");
   const padded = (frac + "00000000").slice(0, 8);
   return BigInt(whole) * 100000000n + BigInt(padded);
 }
+
 
 interface OmniTx {
   txid: string;
