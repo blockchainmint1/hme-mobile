@@ -186,6 +186,27 @@ function SendPage() {
     staleTime: 30_000,
   });
 
+  // Per-address balances — needed so Omni sends can pick UTXOs from the
+  // specific HD address that actually holds the token (Omni "sending address"
+  // is derived from the first input's script).
+  const fetchTokenBalancesPerAddr = useServerFn(getTxcTokenBalancesPerAddress);
+  const perAddrTokenBalances = useQuery({
+    queryKey: [
+      "txc-token-balances-per-addr",
+      ownAddresses.join(","),
+      tokens.map((t) => t.id).join(","),
+    ],
+    enabled: ownAddresses.length > 0 && tokens.length > 0,
+    queryFn: () =>
+      fetchTokenBalancesPerAddr({
+        data: {
+          addresses: ownAddresses,
+          propertyIds: tokens.map((t) => t.id),
+        },
+      }),
+    staleTime: 30_000,
+  });
+
   const activeTokenBalanceUnits: bigint | null = activeToken
     ? BigInt(tokenBalances.data?.[activeToken.id] ?? "0")
     : null;
