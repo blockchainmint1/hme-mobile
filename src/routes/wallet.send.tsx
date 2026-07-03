@@ -359,7 +359,16 @@ function SendPage() {
     setError(null);
     try {
       const sorted = [...utxos].sort((a, b) => b.value - a.value);
-      const picked = sorted.slice(0, stage.selected);
+      // For token sends, reproduce the exact ordering used at review time so
+      // the first input's address is the Omni sender.
+      const ordered =
+        isTokenSend && stage.senderAddress
+          ? [
+              ...sorted.filter((u) => u.address === stage.senderAddress),
+              ...sorted.filter((u) => u.address !== stage.senderAddress),
+            ]
+          : sorted;
+      const picked = ordered.slice(0, stage.selected);
 
       let built;
       if (isTokenSend && activeToken) {
@@ -370,7 +379,9 @@ function SendPage() {
           kind: unlocked.kind,
           inputs: picked,
           outputs: [{ address: to.trim(), valueSats: OMNI_DUST_SATS }],
-          changeAddress: account.data.nextChangeAddress,
+          // Return TXC change to the sending address so the holder always has
+          // TXC on hand for the next token transfer.
+          changeAddress: stage.senderAddress ?? account.data.nextChangeAddress,
           changeIndex: account.data.nextChangeIndex,
           feeSats: stage.feeSats,
           opReturnData: payload,
@@ -387,6 +398,7 @@ function SendPage() {
           feeSats: stage.feeSats,
         });
       }
+
 
       const txid = await broadcastTx(built.hex);
       hapticSuccess();
