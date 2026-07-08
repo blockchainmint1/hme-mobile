@@ -65,6 +65,9 @@ jobs:
       - name: Patch AndroidManifest (perms + deep links)
         run: bun scripts/patch-android-manifest.mjs
 
+      - name: Patch launcher icons (dollar-sign brand mark, dark/light adaptive)
+        run: bun scripts/patch-android-icons.mjs
+
       - name: Derive version
         id: ver
         run: |
