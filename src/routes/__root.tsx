@@ -200,6 +200,9 @@ function RootComponent() {
 
   // Configure iOS/Android status bar + keyboard once on mount. No-op on web.
   useEffect(() => {
+    import("../lib/native/server-fn-bridge").then(({ installNativeServerFnBridge }) => {
+      installNativeServerFnBridge();
+    });
     import("../lib/native/ui").then(({ initNativeChrome }) => {
       initNativeChrome();
     });

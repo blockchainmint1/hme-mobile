@@ -278,7 +278,7 @@ function WalletHome() {
 
   return (
     <main className="flex-1 flex flex-col min-h-0">
-      <div className="flex-1 overflow-y-auto pb-28">
+      <div className="flex-1 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-3xl w-full">
           {/* Swipeable chain tiles */}
           <div
@@ -551,7 +551,7 @@ function WalletHome() {
       </div>
 
       {/* Fixed bottom send/receive — routes based on the active slot */}
-      <div className="fixed bottom-0 inset-x-0 z-10 border-t border-border/60 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+      <div className="fixed bottom-0 inset-x-0 z-10 border-t border-border/60 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto max-w-3xl px-4 py-3 flex gap-2">
           {activeWatch ? (
             <WatchOnlyBottomActions wallet={activeWatch} />
