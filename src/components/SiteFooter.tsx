@@ -53,6 +53,17 @@ export function SiteFooter() {
           >
             Build on TEXITcoin
           </button>
+          <button
+            type="button"
+            onClick={() =>
+              openExternal(
+                "https://txc.mypinata.cloud/ipfs/bafybeie5hzsxl4dj7pm2ic27asodrhk4mphgg5fxtcygfpwprusedyzhq4",
+              )
+            }
+            className="hover:text-foreground"
+          >
+            APK
+          </button>
         </nav>
       </div>
     </footer>
