@@ -57,7 +57,7 @@ export function SiteFooter() {
             type="button"
             onClick={() =>
               openExternal(
-                "https://txc.mypinata.cloud/ipfs/bafybeie5hzsxl4dj7pm2ic27asodrhk4mphgg5fxtcygfpwprusedyzhq4",
+                "https://txc.mypinata.cloud/ipfs/bafybeiehwfy5sb4vx5uxogwl5wlbd2quirlz6r2bvkihvpx6c3imcvofiy",
               )
             }
             className="hover:text-foreground"
