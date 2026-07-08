@@ -404,10 +404,12 @@ function SendPage() {
 
       const txid = await broadcastTx(built.hex);
       hapticSuccess();
+      void qc.invalidateQueries({ queryKey: ["account"] });
+      void qc.invalidateQueries({ queryKey: ["txs"] });
       setStage({ kind: "sent", txid });
     } catch (err) {
       hapticError();
-      setError(err instanceof Error ? err.message : "Send failed");
+      setError(friendlyBroadcastError(err));
     } finally {
       setBusy(false);
     }
