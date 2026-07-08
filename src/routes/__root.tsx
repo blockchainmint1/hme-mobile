@@ -51,15 +51,30 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
+  const message = error?.message || String(error);
+  const stack = error?.stack || "";
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
+      <div className="max-w-md w-full text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           This page didn't load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong. You can retry or head home. Your wallet data is unaffected.
+          Something went wrong. Your wallet data is unaffected. Try again, or
+          send this error to support so we can fix it.
         </p>
+        <details className="mt-4 text-left rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground open:pb-3">
+          <summary className="cursor-pointer font-medium text-foreground">
+            Error details
+          </summary>
+          <p className="mt-2 break-words text-destructive font-mono">{message}</p>
+          {stack && (
+            <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words text-[10px] leading-tight">
+              {stack}
+            </pre>
+          )}
+        </details>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
