@@ -17,7 +17,8 @@
     "ios:harden": "bun scripts/harden-ios-native.mjs",
     "ios:setup": "bun install && bun run build && (test -d ios || bunx cap add ios) && bun run cap:assets && bunx cap sync ios && bun run ios:harden && bunx cap open ios",
     "ios:reset": "rm -rf ios && bun run build && bunx cap add ios && bun run cap:assets && bunx cap sync ios && bun run ios:harden && bunx cap open ios",
-    "android:patch": "bun scripts/patch-android-manifest.mjs",
+    "android:patch": "bun scripts/patch-android-manifest.mjs && bun scripts/patch-android-icons.mjs",
+    "android:icons": "bun scripts/patch-android-icons.mjs",
     "android:setup": "bun install && bun run build && (test -d android || bunx cap add android) && bun run cap:assets && bunx cap sync android && bun run android:patch && bunx cap open android",
     "android:reset": "rm -rf android && bun run build && bunx cap add android && bun run cap:assets && bunx cap sync android && bun run android:patch && bunx cap open android",
     "android:apk": "bun run build && (test -d android || bunx cap add android) && bunx cap sync android && bun run android:patch && cd android && ./gradlew assembleDebug"
@@ -122,6 +123,7 @@
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
     "prettier": "^3.7.3",
+    "sharp": "^0.35.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.16"
