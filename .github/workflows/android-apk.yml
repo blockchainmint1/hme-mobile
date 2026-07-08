@@ -27,8 +27,8 @@ on:
       build_type:
         description: "Build type"
         type: choice
-        options: [debug, release]
-        default: debug
+        options: [release, debug]
+        default: release
 
 jobs:
   build:
@@ -84,16 +84,33 @@ jobs:
         run: |
           MODE="${{ github.event.inputs.build_type }}"
           if [[ -z "$MODE" ]]; then
-            if [[ "$GITHUB_REF" == refs/tags/android-v* ]]; then
-              MODE="release"
-            else
-              MODE="debug"
-            fi
+            # Default every push to `android` and every tag build to release,
+            # so every APK is signed with the same stable keystore.
+            MODE="release"
           fi
           echo "mode=$MODE" >> $GITHUB_OUTPUT
 
+      - name: Require release keystore secrets
+        if: steps.mode.outputs.mode == 'release'
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=()
+          [ -z "$ANDROID_KEYSTORE_BASE64" ] && missing+=(ANDROID_KEYSTORE_BASE64)
+          [ -z "$ANDROID_STORE_PASSWORD" ]  && missing+=(ANDROID_STORE_PASSWORD)
+          [ -z "$ANDROID_KEY_ALIAS" ]       && missing+=(ANDROID_KEY_ALIAS)
+          [ -z "$ANDROID_KEY_PASSWORD" ]    && missing+=(ANDROID_KEY_PASSWORD)
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::Release build requires signing secrets, missing: ${missing[*]}"
+            echo "::error::Add them in Settings → Secrets → Actions, or re-run with build_type=debug."
+            exit 1
+          fi
+
       - name: Decode keystore (release only)
-        if: steps.mode.outputs.mode == 'release' && env.ANDROID_KEYSTORE_BASE64 != ''
+        if: steps.mode.outputs.mode == 'release'
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
