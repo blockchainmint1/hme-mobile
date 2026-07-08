@@ -63,10 +63,8 @@ export const Route = createFileRoute("/pay/$invoiceId")({
   }),
 });
 
-function shortAddr(addr: string): string {
-  if (addr.length <= 14) return addr;
-  return `${addr.slice(0, 8)}…${addr.slice(-6)}`;
-}
+
+
 
 function evmChainIdFromString(s: string): EvmChainId | null {
   return s === "eth" || s === "base" || s === "bsc" ? s : null;
