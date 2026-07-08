@@ -54,6 +54,7 @@ function WifSendPage() {
   const navigate = useNavigate();
   const { root } = useWallet();
   const search = Route.useSearch();
+  const qc = useQueryClient();
   const entry = useMemo(() => getWifWallet(id), [id]);
 
   const chainApi = entry ? api(entry.chain) : null;
