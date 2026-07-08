@@ -83,6 +83,7 @@ type Stage =
 function SendIskPage() {
   const navigate = useNavigate();
   const { root, unlocked } = useWallet();
+  const qc = useQueryClient();
   const account = useQuery({
     queryKey: ["isk-account", ISK_DEFAULT_KIND, root ? rootFingerprintHex(root) : null],
     enabled: !!root && !!unlocked,
