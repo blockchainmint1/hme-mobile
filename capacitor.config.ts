@@ -9,23 +9,46 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * When developing against a live Lovable preview, set `server.url` to the
  * preview URL instead of bundling.
  */
+/**
+ * SECURITY: a release build MUST bundle the web assets inside the binary and
+ * NOT load them from a remote URL. Loading `server.url` at runtime means the
+ * store binary is a thin shell that executes whatever JavaScript the server
+ * serves at launch, so a server/CDN compromise or one bad deploy can push code
+ * that steals seed phrases from every user. It also has no Subresource
+ * Integrity and is a poor fit for App Store 2.5.2 / Play policy. See
+ * SECURITY-AUDIT.md (H1).
+ *
+ * Default here is BUNDLED (no `server.url`). To live-reload against a remote
+ * preview during development only, set `HME_REMOTE_URL`, e.g.
+ *   HME_REMOTE_URL=https://id-preview--xxxx.lovable.app bunx cap sync ios
+ * Never ship a release with `HME_REMOTE_URL` set.
+ *
+ * MIGRATION-CRITICAL: `hostname` is kept at "mobile.honest.money" with the
+ * https scheme so the bundled build serves its assets under the SAME origin
+ * the remote build used. localStorage (the encrypted wallet) is keyed by
+ * origin — if the origin changed (e.g. to capacitor://localhost), existing
+ * users' wallets would become unreadable and they'd have to re-import from
+ * seed. Do NOT change `hostname` without a data-migration plan. See
+ * SECURITY-AUDIT.md (H1 migration note).
+ */
+const REMOTE_URL = process.env.HME_REMOTE_URL;
+const WEBVIEW_HOSTNAME = "mobile.honest.money";
+
 const config: CapacitorConfig = {
   appId: "money.honest.txcwallet",
   appName: "HME Wallet",
   webDir: "dist/client",
   backgroundColor: "#0b0f14",
   server: {
-    // Load the published web app directly in the WKWebView. The web build works
-    // reliably and Capacitor native plugins (biometrics, camera, clipboard,
-    // secure storage, deep links) all continue to function against a remote URL.
-    // Keeping this pointed at the live domain sidesteps the bundled-asset issues
-    // seen in native builds 2-4 while we debug the offline shell separately.
-    url: "https://mobile.honest.money",
+    ...(REMOTE_URL ? { url: REMOTE_URL } : {}),
+    // Stable origin across the remote -> bundled switch (see note above).
+    hostname: REMOTE_URL ? new URL(REMOTE_URL).hostname : WEBVIEW_HOSTNAME,
     cleartext: false,
     androidScheme: "https",
     iosScheme: "https",
-    hostname: "mobile.honest.money",
-    allowNavigation: ["mobile.honest.money", "nectar-pay.com"],
+    // Only the payment processor needs to be navigable; the app itself is
+    // served from the local bundle under the hostname above.
+    allowNavigation: ["nectar-pay.com"],
   },
   ios: {
     contentInset: "always",

@@ -8,6 +8,7 @@ import { TxcTokensCard } from "@/components/wallet/TxcTokensCard";
 import { RotationPolicyCard } from "@/components/wallet/RotationPolicyCard";
 import { DeepRescanCard } from "@/components/wallet/DeepRescanCard";
 import { FeaturesCard } from "@/components/wallet/FeaturesCard";
+import { SecurityCheckupCard } from "@/components/wallet/SecurityCheckupCard";
 import { HideBalancesToggle } from "@/components/wallet/WalletDetailSheet";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
@@ -28,11 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { MEMPOOL_BASE, DERIVATION_PATHS } from "@/lib/txc/network";
 import { unlockWallet } from "@/lib/txc/storage";
-import {
-  disableBiometric,
-  enableBiometric,
-  getBiometricStatus,
-} from "@/lib/native/biometric";
+import { disableBiometric, enableBiometric, getBiometricStatus } from "@/lib/native/biometric";
 
 export const Route = createFileRoute("/wallet/settings")({
   head: () => ({ meta: [{ title: "Settings — HME Wallet" }] }),
@@ -50,7 +47,9 @@ function SettingsPage() {
   const [showBioPassword, setShowBioPassword] = useState(false);
 
   useEffect(() => {
-    getBiometricStatus().then(setBio).catch(() => undefined);
+    getBiometricStatus()
+      .then(setBio)
+      .catch(() => undefined);
   }, []);
 
   async function onToggleBiometric(next: boolean) {
@@ -93,6 +92,10 @@ function SettingsPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-bold">Settings</h1>
 
+      <div className="mt-5">
+        <SecurityCheckupCard />
+      </div>
+
       <Card className="mt-5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -133,12 +136,6 @@ function SettingsPage() {
         <FeaturesCard />
       </div>
 
-
-
-
-
-
-
       <Card className="mt-5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -163,7 +160,10 @@ function SettingsPage() {
             />
           </div>
           {showBioPassword && (
-            <form onSubmit={confirmEnableBiometric} className="space-y-2 pt-2 border-t border-border/40">
+            <form
+              onSubmit={confirmEnableBiometric}
+              className="space-y-2 pt-2 border-t border-border/40"
+            >
               <Label htmlFor="bio-pw" className="text-sm">
                 Confirm your wallet password
               </Label>
@@ -235,7 +235,9 @@ function SettingsPage() {
       <Card className="mt-5">
         <CardHeader>
           <CardTitle>Backend</CardTitle>
-          <CardDescription>Public TEXITcoin nodes used to read balances and broadcast.</CardDescription>
+          <CardDescription>
+            Public TEXITcoin nodes used to read balances and broadcast.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <Row k="Explorer / REST" v={<code>{MEMPOOL_BASE}</code>} />
@@ -246,8 +248,8 @@ function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-destructive">Danger zone</CardTitle>
           <CardDescription>
-            Removes the encrypted seed from this device. Make sure you have your seed phrase
-            written down first — without it you cannot recover the wallet.
+            Removes the encrypted seed from this device. Make sure you have your seed phrase written
+            down first — without it you cannot recover the wallet.
           </CardDescription>
         </CardHeader>
         <CardContent>

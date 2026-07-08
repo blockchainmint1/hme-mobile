@@ -75,16 +75,55 @@ function isAllowedCaller(request: Request): boolean {
   if (source === "https://localhost") return true;
 
   // Allowlist our published web origins.
-  const ALLOWED_HOSTS = new Set([
-    "hme-mobile.lovable.app",
-    "mobile.honest.money",
-  ]);
+  const ALLOWED_HOSTS = new Set(["hme-mobile.lovable.app", "mobile.honest.money"]);
   if (ALLOWED_HOSTS.has(sourceHost)) return true;
 
-  // Lovable preview subdomains (used during development).
-  if (sourceHost.endsWith(".lovable.app")) return true;
+  // Lovable preview subdomains are DEV-only. In production this wildcard is a
+  // broad hole (anyone can host a *.lovable.app page), so gate it out.
+  if (process.env.NODE_ENV !== "production" && sourceHost.endsWith(".lovable.app")) {
+    return true;
+  }
 
   return false;
+}
+
+// -------------------- Coarse per-IP rate limiting --------------------
+// This proxy fronts a metered Alchemy key. The origin check above is only
+// quota protection (Origin/Referer are spoofable), so add a simple fixed-
+// window limiter to cap abuse. It is per-server-instance and best-effort;
+// for hard guarantees move this to a shared store (Redis/Durable Object).
+// It ALWAYS fails open so a limiter bug can never lock out real users.
+const RATE_WINDOW_MS = 60_000;
+// Set high on purpose: mobile carriers NAT many real users behind one IP, and
+// viem batches calls. This only catches an egregious flood, not normal use.
+// Tune down (and move to a shared, per-session store) once you have metrics.
+const RATE_MAX = 1200;
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function clientIp(request: Request): string {
+  const xff = request.headers.get("x-forwarded-for");
+  if (xff) return xff.split(",")[0]!.trim();
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
+
+function rateLimited(request: Request): boolean {
+  try {
+    const ip = clientIp(request);
+    const now = Date.now();
+    const b = rateBuckets.get(ip);
+    if (!b || now > b.resetAt) {
+      rateBuckets.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
+      if (rateBuckets.size > 10_000) {
+        // Bound memory: drop expired entries.
+        for (const [k, v] of rateBuckets) if (now > v.resetAt) rateBuckets.delete(k);
+      }
+      return false;
+    }
+    b.count++;
+    return b.count > RATE_MAX;
+  } catch {
+    return false; // fail open
+  }
 }
 
 export const Route = createFileRoute("/api/evm/$chain")({
@@ -93,6 +132,12 @@ export const Route = createFileRoute("/api/evm/$chain")({
       POST: async ({ request, params }) => {
         if (!isAllowedCaller(request)) {
           return new Response("Forbidden", { status: 403 });
+        }
+        if (rateLimited(request)) {
+          return new Response("Too Many Requests", {
+            status: 429,
+            headers: { "retry-after": "60" },
+          });
         }
 
         const chain = params.chain;
