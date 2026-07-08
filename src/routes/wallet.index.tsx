@@ -346,7 +346,7 @@ function WalletHome() {
                       balanceWei={evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.data ?? null}
                       loading={evmBalances[evmEnabled.indexOf(slot.chain as EvmChainId)]?.isLoading ?? true}
                       priceUsd={
-                        allPrices.data?.prices[EVM_CHAINS[slot.chain as EvmChainId].priceSymbol] ?? null
+                        allPrices.data?.prices?.[EVM_CHAINS[slot.chain as EvmChainId].priceSymbol] ?? null
                       }
                       onRefresh={async () => {
                         const chain = slot.chain as EvmChainId;
@@ -611,7 +611,7 @@ function WalletHome() {
           fiatText={(() => {
             const idx = evmEnabled.indexOf(tileOpen as EvmChainId);
             const wei = evmBalances[idx]?.data ?? null;
-            const p = allPrices.data?.prices[EVM_CHAINS[tileOpen as EvmChainId].priceSymbol];
+            const p = allPrices.data?.prices?.[EVM_CHAINS[tileOpen as EvmChainId].priceSymbol];
             if (wei == null || p == null) return null;
             return formatFiat((Number(wei) / 1e18) * p);
           })()}
