@@ -13,7 +13,7 @@
  *   - Adaptive icons: mipmap-anydpi-v26/ic_launcher.xml + _round.xml
  *     referencing a foreground drawable (silver $ silhouette) and a themed
  *     background color.
- *   - Themed (monochrome) icon for Android 13+: mipmap-*/ic_launcher_monochrome.png.
+ *   - Themed (monochrome) icon for Android 13+: mipmap-DENSITY/ic_launcher_monochrome.png.
  *   - Background color: values/ic_launcher_background.xml (light bg for day
  *     theme) and values-night/ic_launcher_background.xml (dark bg).
  *
