@@ -72,3 +72,24 @@ export function installQueryPersistence(queryClient: QueryClient) {
     // localStorage disabled (private mode, quota) — silently fall back to memory-only.
   }
 }
+
+/**
+ * Wipe every browser-storage trace of the previous wallet: the persisted
+ * TanStack Query cache (balances / tx history) and any per-xpub scan hints.
+ * Called on wallet delete so a new wallet on the same device starts clean.
+ */
+export function clearWalletTraces(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem("hme-query-cache-v1");
+    const doomed: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith("hme.scan-hint.")) doomed.push(k);
+    }
+    for (const k of doomed) window.localStorage.removeItem(k);
+  } catch {
+    /* storage unavailable */
+  }
+}
+

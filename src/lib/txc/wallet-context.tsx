@@ -10,6 +10,8 @@ import type { BIP32Interface } from "bip32";
 import { rootFromSeed, seedFromMnemonic } from "./wallet";
 import { deleteWallet, renameStoredWallet, unlockWallet, type UnlockedWallet } from "./storage";
 import { AUTO_LOCK_MS, clearSession, loadSession, saveSession, touchSession } from "./session-cache";
+import { clearWalletTraces } from "@/lib/query-persist";
+
 
 interface WalletContextValue {
   unlocked: UnlockedWallet | null;
@@ -57,9 +59,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const forget = useCallback(() => {
     deleteWallet();
     clearSession();
+    clearWalletTraces();
     setUnlocked(null);
     setRoot(null);
   }, []);
+
 
   const rename = useCallback((label: string) => {
     renameStoredWallet(label);
