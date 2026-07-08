@@ -1,20 +1,44 @@
-# Android setup (Play Store)
+# Android setup (Play Store + APK testing)
 
 The sandbox can't run `cap add android` (no Android SDK), so run this on your
 Mac / Linux box after pulling the latest `main`:
 
 ```bash
-bun install
-bun run build
-bunx cap add android          # one-time; creates ./android
-bunx cap sync android
-bunx cap open android         # opens Android Studio
+bun run android:setup     # installs deps, builds web, adds android/, syncs, patches manifest, opens Android Studio
 ```
+
+Or the one-shot APK build (no Android Studio needed, just a JDK + Android SDK):
+
+```bash
+bun run android:apk       # debug-signed APK at android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+## Automated APK builds (GitHub Actions)
+
+Two workflows ship in `.github/workflows/`:
+
+- **`android-apk.yml`** — builds an installable APK
+  - push to the `android` branch → debug APK artifact
+  - `git tag android-vX.Y.Z && git push --tags` → release APK + GitHub Release
+  - manual "Run workflow" → choose `debug` or `release`
+  - No secrets? Falls back to debug signing (still sideloadable for testing).
+
+- **`generate-keystore.yml`** — one-time helper. Run manually to generate a
+  release keystore + the four `ANDROID_*` secrets you paste into repo settings.
+  Download the `.jks` artifact and store it safely (1Password + offline). If
+  you lose it you can never update existing installs on the Play Store.
+
+Recommended flow for the first APK on your device:
+
+1. Push a branch called `android` (any commit works).
+2. Open the Actions tab → **Android APK** run → download the artifact.
+3. Transfer the `.apk` to your phone (Drive / AirDrop / adb) and sideload it.
+   You'll need to allow "Install unknown apps" for the source.
 
 ## Required `android/app/src/main/AndroidManifest.xml` additions
 
-Capacitor generates a working manifest, but the plugins we use need these
-edits inside `<manifest>` / the main `<activity>`:
+`bun run android:patch` (and the CI workflow) inject these automatically after
+`cap add android`. If you edit the manifest by hand instead, add:
 
 ```xml
 <!-- Camera (barcode scanner) -->
@@ -46,19 +70,24 @@ edits inside `<manifest>` / the main `<activity>`:
 
 ## Signing / release
 
-- App ID: `money.honest.txcwallet` (must match iOS bundle to share the same
-  Nectar universal link config on the backend).
-- Generate an upload keystore: `keytool -genkey -v -keystore hme.jks -alias hme -keyalg RSA -keysize 2048 -validity 10000`.
-- Store `HME_KEYSTORE_PASSWORD` / `HME_KEY_ALIAS` in `~/.gradle/gradle.properties` (never commit).
-- Build the AAB: `./gradlew bundleRelease`. Output at
-  `android/app/build/outputs/bundle/release/app-release.aab`.
+- App ID: `money.honest.txcwallet` (matches iOS bundle so the same Nectar
+  universal-link config on the backend covers both platforms).
+- Generate a keystore via the `Generate Android Keystore` workflow (or locally:
+  `keytool -genkey -v -keystore hme.jks -alias hme -keyalg RSA -keysize 4096 -validity 10950`).
+- Add these repo secrets so `android-apk.yml` produces a signed APK/AAB:
+  - `ANDROID_KEYSTORE_BASE64`
+  - `ANDROID_STORE_PASSWORD`
+  - `ANDROID_KEY_ALIAS`
+  - `ANDROID_KEY_PASSWORD`
+- For Play Store bundle: locally run `cd android && ./gradlew bundleRelease`
+  (output: `android/app/build/outputs/bundle/release/app-release.aab`).
 
 ## Splash / icon
 
 `bun run cap:assets` regenerates both iOS and Android assets from
-`resources/icon.png` + `resources/splash.png`. Re-run whenever those change.
+`assets/icon.png` + `assets/splash.png`. Re-run whenever those change.
 
 ## Play Console listing
 
 Reuse the App Store screenshots under `/mnt/documents/app-store-screenshots/`
-resized to Play's phone requirement (1080 x 1920 or larger, 16:9).
+resized to Play's phone requirement (1080 × 1920 or larger, 16:9).

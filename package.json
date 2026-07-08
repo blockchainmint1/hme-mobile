@@ -16,7 +16,11 @@
     "cap:sync": "bun run build && bunx cap sync",
     "ios:harden": "bun scripts/harden-ios-native.mjs",
     "ios:setup": "bun install && bun run build && (test -d ios || bunx cap add ios) && bun run cap:assets && bunx cap sync ios && bun run ios:harden && bunx cap open ios",
-    "ios:reset": "rm -rf ios && bun run build && bunx cap add ios && bun run cap:assets && bunx cap sync ios && bun run ios:harden && bunx cap open ios"
+    "ios:reset": "rm -rf ios && bun run build && bunx cap add ios && bun run cap:assets && bunx cap sync ios && bun run ios:harden && bunx cap open ios",
+    "android:patch": "bun scripts/patch-android-manifest.mjs",
+    "android:setup": "bun install && bun run build && (test -d android || bunx cap add android) && bun run cap:assets && bunx cap sync android && bun run android:patch && bunx cap open android",
+    "android:reset": "rm -rf android && bun run build && bunx cap add android && bun run cap:assets && bunx cap sync android && bun run android:patch && bunx cap open android",
+    "android:apk": "bun run build && (test -d android || bunx cap add android) && bunx cap sync android && bun run android:patch && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@aparajita/capacitor-biometric-auth": "^10.0.0",
@@ -104,7 +108,7 @@
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "2.7.0",
+    "@lovable.dev/vite-tanstack-config": "2.7.1",
     "@types/node": "^22.16.5",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.0",
