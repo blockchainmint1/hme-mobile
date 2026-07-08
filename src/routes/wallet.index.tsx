@@ -1147,11 +1147,11 @@ function EvmActivity({
       });
   }, [tokens, tokenBalances, hideSpam]);
   const hiddenTokenCount = tokens.length - visibleTokens.length;
+  const transfersList = history.data?.transfers ?? [];
   const visibleTransfers = useMemo(() => {
-    const list = history.data?.transfers ?? [];
-    return hideSpam ? list.filter((t) => !t.spam) : list;
-  }, [history.data, hideSpam]);
-  const spamCount = (history.data?.transfers.length ?? 0) - visibleTransfers.length;
+    return hideSpam ? transfersList.filter((t) => !t.spam) : transfersList;
+  }, [transfersList, hideSpam]);
+  const spamCount = transfersList.length - visibleTransfers.length;
 
   return (
     <>

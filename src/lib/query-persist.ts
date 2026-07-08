@@ -58,7 +58,7 @@ export function installQueryPersistence(queryClient: QueryClient) {
       queryClient: queryClient as unknown as Parameters<typeof persistQueryClient>[0]["queryClient"],
       persister,
       maxAge: 24 * 60 * 60 * 1000, // 24h
-      buster: "v2",
+      buster: "v3",
       dehydrateOptions: {
         shouldDehydrateQuery: (query) => {
           const head = query.queryKey?.[0];
