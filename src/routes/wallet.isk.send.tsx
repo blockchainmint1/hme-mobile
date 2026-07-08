@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { friendlyBroadcastError } from "@/lib/broadcast-error";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import { useWallet } from "@/lib/txc/wallet-context";
@@ -82,6 +83,7 @@ type Stage =
 function SendIskPage() {
   const navigate = useNavigate();
   const { root, unlocked } = useWallet();
+  const qc = useQueryClient();
   const account = useQuery({
     queryKey: ["isk-account", ISK_DEFAULT_KIND, root ? rootFingerprintHex(root) : null],
     enabled: !!root && !!unlocked,
@@ -195,10 +197,12 @@ function SendIskPage() {
       });
       const txid = await broadcastTx(built.hex);
       hapticSuccess();
+      void qc.invalidateQueries({ queryKey: ["isk-account"] });
+      void qc.invalidateQueries({ queryKey: ["isk-txs"] });
       setStage({ kind: "sent", txid });
     } catch (err) {
       hapticError();
-      setError(err instanceof Error ? err.message : "Send failed");
+      setError(friendlyBroadcastError(err));
     } finally {
       setBusy(false);
     }

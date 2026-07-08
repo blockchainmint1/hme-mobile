@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { friendlyBroadcastError } from "@/lib/broadcast-error";
 import { useMemo, useState } from "react";
 import { z } from "zod";
 import { useWallet } from "@/lib/txc/wallet-context";
@@ -53,6 +54,7 @@ function WifSendPage() {
   const navigate = useNavigate();
   const { root } = useWallet();
   const search = Route.useSearch();
+  const qc = useQueryClient();
   const entry = useMemo(() => getWifWallet(id), [id]);
 
   const chainApi = entry ? api(entry.chain) : null;
@@ -205,10 +207,12 @@ function WifSendPage() {
       });
       const txid = await chainApi.broadcastTx(built.hex);
       hapticSuccess();
+      void qc.invalidateQueries({ queryKey: ["wif-utxos", id] });
+      void qc.invalidateQueries({ queryKey: ["wif-txs", id] });
       setStage({ kind: "sent", txid });
     } catch (err) {
       hapticError();
-      setError(err instanceof Error ? err.message : "Send failed");
+      setError(friendlyBroadcastError(err));
     } finally {
       setBusy(false);
     }
