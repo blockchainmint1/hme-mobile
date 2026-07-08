@@ -8,6 +8,7 @@ import {
   deriveAddress,
 } from "@/lib/txc/wallet";
 import { saveWallet } from "@/lib/txc/storage";
+import { assessPassword } from "@/lib/security/password-strength";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { getAddressStats } from "@/lib/txc/mempool";
 import { formatTxc } from "@/lib/txc/units";
@@ -146,10 +147,7 @@ async function scanChainForImport(
       const mempool = item.stats.mempool_stats;
       const itemTxCount = chain.tx_count + mempool.tx_count;
       const itemBalance =
-        chain.funded_txo_sum -
-        chain.spent_txo_sum +
-        mempool.funded_txo_sum -
-        mempool.spent_txo_sum;
+        chain.funded_txo_sum - chain.spent_txo_sum + mempool.funded_txo_sum - mempool.spent_txo_sum;
       if (itemTxCount > 0 || itemBalance > 0) {
         batchHadActivity = true;
         usedAddresses += 1;
@@ -234,8 +232,9 @@ function ImportPage() {
       setError("That doesn't look like a valid 12 or 24-word seed phrase.");
       return;
     }
-    if (password.length < 8) {
-      setError("Wallet password needs at least 8 characters.");
+    const strength = assessPassword(password);
+    if (!strength.ok) {
+      setError(strength.message);
       return;
     }
     if (password !== password2) {
@@ -265,15 +264,31 @@ function ImportPage() {
               s.chain_stats.spent_txo_sum +
               s.mempool_stats.funded_txo_sum -
               s.mempool_stats.spent_txo_sum;
-            return { kind, address: first.address, txCount: txc, balanceSats: bal, usedAddresses: txc > 0 ? 1 : 0, failed: false };
+            return {
+              kind,
+              address: first.address,
+              txCount: txc,
+              balanceSats: bal,
+              usedAddresses: txc > 0 ? 1 : 0,
+              failed: false,
+            };
           } catch {
-            return { kind, address: first.address, txCount: 0, balanceSats: 0, usedAddresses: 0, failed: true };
+            return {
+              kind,
+              address: first.address,
+              txCount: 0,
+              balanceSats: 0,
+              usedAddresses: 0,
+              failed: true,
+            };
           }
         }),
       );
       const quickProbes = await Promise.race([
         probePromise,
-        new Promise<null>((resolve) => window.setTimeout(() => resolve(null), IMPORT_PROBE_TIMEOUT_MS)),
+        new Promise<null>((resolve) =>
+          window.setTimeout(() => resolve(null), IMPORT_PROBE_TIMEOUT_MS),
+        ),
       ]);
 
       if (!quickProbes) {
@@ -287,16 +302,18 @@ function ImportPage() {
       const allFailed = quickProbes.every((p) => p.failed);
       if (allFailed) {
         // Network unreachable — let the user pick manually instead of getting stuck.
-        setCandidates(
-          fallbackCandidates(root),
+        setCandidates(fallbackCandidates(root));
+        setError(
+          "Couldn't reach the TEXITcoin network — pick a wallet type below or check your connection and try again.",
         );
-        setError("Couldn't reach the TEXITcoin network — pick a wallet type below or check your connection and try again.");
         setBusy(false);
         setStatus("");
         return;
       }
 
-      const activeQuick = quickProbes.filter((p) => !p.failed && (p.txCount > 0 || p.balanceSats > 0));
+      const activeQuick = quickProbes.filter(
+        (p) => !p.failed && (p.txCount > 0 || p.balanceSats > 0),
+      );
 
       // If quick probe found exactly one kind with activity, deep-scan only it.
       if (activeQuick.length === 1) {
@@ -311,7 +328,9 @@ function ImportPage() {
         setStatus("Found multiple wallet types — checking each…");
         const deep = await Promise.all(activeQuick.map((p) => scanKindForImport(root, p.kind)));
         // Auto-pick the one with the most activity (tx count, then balance).
-        const best = deep.slice().sort((a, b) => b.txCount - a.txCount || b.balanceSats - a.balanceSats)[0];
+        const best = deep
+          .slice()
+          .sort((a, b) => b.txCount - a.txCount || b.balanceSats - a.balanceSats)[0];
         await finish(best.kind);
         return;
       }
@@ -324,8 +343,6 @@ function ImportPage() {
       setStatus("");
     }
   }
-
-
 
   if (candidates) {
     return (
@@ -354,7 +371,9 @@ function ImportPage() {
               </div>
               <div className="mt-1 text-xs text-muted-foreground">
                 {c.txCount} transaction{c.txCount === 1 ? "" : "s"}
-                {c.usedAddresses > 0 ? ` · ${c.usedAddresses} used address${c.usedAddresses === 1 ? "" : "es"}` : ""}
+                {c.usedAddresses > 0
+                  ? ` · ${c.usedAddresses} used address${c.usedAddresses === 1 ? "" : "es"}`
+                  : ""}
                 {c.balanceSats > 0 ? ` · ${formatTxc(c.balanceSats)}` : ""}
               </div>
             </button>
@@ -376,8 +395,8 @@ function ImportPage() {
       </Link>
       <h1 className="mt-4 text-3xl font-bold">Import your wallet</h1>
       <p className="mt-2 text-muted-foreground">
-        Paste your seed phrase from the old TXC Wallet app and choose a new password. We'll
-        figure out the rest. Nothing leaves your device.
+        Paste your seed phrase from the old TXC Wallet app and choose a new password. We'll figure
+        out the rest. Nothing leaves your device.
       </p>
 
       <Card className="mt-6">
@@ -416,7 +435,6 @@ function ImportPage() {
               autoFocus
             />
 
-
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label htmlFor="pw1">New password</Label>
@@ -444,8 +462,7 @@ function ImportPage() {
               </div>
             </div>
             <p className="-mt-2 text-xs text-muted-foreground">
-              This password unlocks the wallet on this device. It's separate from your seed
-              phrase.
+              This password unlocks the wallet on this device. It's separate from your seed phrase.
             </p>
 
             <details className="rounded-md border border-border bg-muted/30 p-3 text-sm">
@@ -467,12 +484,11 @@ function ImportPage() {
                   className="mt-1"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Only fill this in if you explicitly set a passphrase when you first created
-                  your wallet. Almost nobody does.
+                  Only fill this in if you explicitly set a passphrase when you first created your
+                  wallet. Almost nobody does.
                 </p>
               </div>
             </details>
-
 
             {error && (
               <div
@@ -484,7 +500,6 @@ function ImportPage() {
                 <div>{error}</div>
               </div>
             )}
-
 
             <Button type="button" onClick={submit} disabled={busy} className="w-full">
               {busy ? (

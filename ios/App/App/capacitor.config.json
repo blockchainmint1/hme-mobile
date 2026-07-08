@@ -4,13 +4,11 @@
 	"webDir": "dist/client",
 	"backgroundColor": "#0b0f14",
 	"server": {
-		"url": "https://mobile.honest.money",
+		"hostname": "mobile.honest.money",
 		"cleartext": false,
 		"androidScheme": "https",
 		"iosScheme": "https",
-		"hostname": "mobile.honest.money",
 		"allowNavigation": [
-			"mobile.honest.money",
 			"nectar-pay.com"
 		]
 	},

@@ -11,6 +11,7 @@ import { AlertTriangle, Check, Copy, Lock, RotateCcw, Sparkles } from "lucide-re
 import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/clipboard";
 import { ScribblePad } from "@/components/wallet/ScribblePad";
+import { assessPassword } from "@/lib/security/password-strength";
 
 // Hold the draft mnemonic in an in-memory module variable instead of
 // sessionStorage. sessionStorage is readable by any script on the origin
@@ -86,8 +87,9 @@ function CreatePage() {
   async function finalize(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (password.length < 8) {
-      setError("Use at least 8 characters.");
+    const strength = assessPassword(password);
+    if (!strength.ok) {
+      setError(strength.message);
       return;
     }
     if (password !== password2) {
@@ -127,9 +129,8 @@ function CreatePage() {
       </Link>
       <h1 className="mt-4 text-3xl font-bold">Back up your seed phrase</h1>
       <p className="mt-2 text-muted-foreground">
-        These 24 words are the only way to recover your wallet. Write them down on paper and
-        store them somewhere safe. Never share them. Never type them into a website you don't
-        trust.
+        These 24 words are the only way to recover your wallet. Write them down on paper and store
+        them somewhere safe. Never share them. Never type them into a website you don't trust.
       </p>
 
       {!locked ? (
@@ -139,10 +140,9 @@ function CreatePage() {
               <Sparkles className="h-4 w-4 text-primary" /> Add your own randomness
             </CardTitle>
             <CardDescription>
-              Scribble in the pad to mix your own entropy into the seed. Your
-              words stay hidden until you lock it in — that way you can't
-              accidentally write down a phrase that's about to change. You can
-              also skip this and use secure device randomness only.
+              Scribble in the pad to mix your own entropy into the seed. Your words stay hidden
+              until you lock it in — that way you can't accidentally write down a phrase that's
+              about to change. You can also skip this and use secure device randomness only.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -169,7 +169,9 @@ function CreatePage() {
               className="mt-4 w-full gap-2"
             >
               <Lock className="h-4 w-4" />
-              {scribbleProgress <= 0 ? "Scribble first, or skip below" : "Lock in & reveal seed phrase"}
+              {scribbleProgress <= 0
+                ? "Scribble first, or skip below"
+                : "Lock in & reveal seed phrase"}
             </Button>
             <Button
               type="button"
@@ -181,8 +183,8 @@ function CreatePage() {
               Skip scribble and reveal seed phrase
             </Button>
             <p className="mt-2 text-xs text-muted-foreground text-center">
-              Your randomness is always combined with secure device randomness —
-              scribbling can only make the seed stronger, never weaker.
+              Your randomness is always combined with secure device randomness — scribbling can only
+              make the seed stronger, never weaker.
             </p>
           </CardContent>
         </Card>
@@ -252,9 +254,13 @@ function CreatePage() {
               onClick={async () => {
                 const ok = await copyToClipboard(mnemonic);
                 if (ok) {
-                  toast.success("Seed copied. Paste into a paper-only backup, then clear clipboard.");
+                  toast.success(
+                    "Seed copied. Paste into a paper-only backup, then clear clipboard.",
+                  );
                 } else {
-                  toast.error("Could not copy. Long-press a word to select, or write it down by hand.");
+                  toast.error(
+                    "Could not copy. Long-press a word to select, or write it down by hand.",
+                  );
                 }
               }}
               className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
@@ -264,8 +270,6 @@ function CreatePage() {
           )}
         </CardContent>
       </Card>
-
-
 
       <Card className="mt-6">
         <CardHeader>
@@ -286,6 +290,35 @@ function CreatePage() {
                 autoComplete="new-password"
                 className="mt-1"
               />
+              {password.length > 0 &&
+                (() => {
+                  const s = assessPassword(password);
+                  const colors = [
+                    "bg-destructive",
+                    "bg-destructive",
+                    "bg-amber-500",
+                    "bg-emerald-500",
+                    "bg-emerald-500",
+                  ];
+                  return (
+                    <div className="mt-2">
+                      <div className="flex gap-1" aria-hidden>
+                        {[0, 1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className={`h-1.5 flex-1 rounded-full ${
+                              i < s.score ? colors[s.score] : "bg-border/60"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Strength: <span className="font-medium">{s.label}</span>
+                        {!s.ok && s.message ? `. ${s.message}` : ""}
+                      </p>
+                    </div>
+                  );
+                })()}
             </div>
             <div>
               <Label htmlFor="pw2">Confirm password</Label>
