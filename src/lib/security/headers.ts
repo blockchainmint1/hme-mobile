@@ -29,6 +29,10 @@ const CONNECT_SRC = [
   "'self'",
   "https://mempool.texitcoin.org",
   "https://mempool.iskandercoin.com",
+  // Native Capacitor build (origin https://mobile.honest.money) forwards
+  // server-fn / API calls to the deployed worker so they reach a real backend
+  // instead of being intercepted by the local webview server.
+  "https://hme-mobile.lovable.app",
 ].join(" ");
 
 const CSP_DIRECTIVES: Record<string, string> = {
