@@ -116,31 +116,40 @@ function BackupPage() {
           </CardHeader>
           <CardContent>
             <div className="relative">
-              <div
-                className={`grid grid-cols-2 sm:grid-cols-3 gap-2 ${
-                  reveal ? "" : "blur-md select-none pointer-events-none"
-                }`}
-              >
-                {shown.split(" ").map((w, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2 rounded-md border border-border/60 bg-background/60 px-3 py-2 font-mono text-sm"
-                  >
-                    <span className="text-xs text-muted-foreground w-5 text-right">{i + 1}.</span>
-                    <span>{w}</span>
-                  </div>
-                ))}
-              </div>
+              {reveal ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {shown.split(" ").map((w, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-2 rounded-md border border-border/60 bg-background/60 px-3 py-2 font-mono text-sm"
+                    >
+                      <span className="text-xs text-muted-foreground w-5 text-right">
+                        {i + 1}.
+                      </span>
+                      <span>{w}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-md border border-dashed border-border/60 bg-background/40 px-4 py-8 text-center text-sm text-muted-foreground">
+                  Seed phrase hidden. Tap Reveal when no one is looking.
+                </div>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => setReveal((r) => !r)}
                 className="mt-3"
               >
-                {reveal ? <EyeOff className="h-4 w-4 mr-1.5" /> : <Eye className="h-4 w-4 mr-1.5" />}
+                {reveal ? (
+                  <EyeOff className="h-4 w-4 mr-1.5" />
+                ) : (
+                  <Eye className="h-4 w-4 mr-1.5" />
+                )}
                 {reveal ? "Hide" : "Tap to reveal"}
               </Button>
             </div>
+
           </CardContent>
         </Card>
       )}
