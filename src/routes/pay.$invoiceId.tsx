@@ -112,7 +112,7 @@ function PayRoute() {
       chainIds.forEach((c, i) => {
         const wei = native[i];
         const meta = EVM_CHAINS[c];
-        const price = prices.data?.prices[meta.priceSymbol] ?? 0;
+        const price = prices.data?.prices?.[meta.priceSymbol] ?? 0;
         const eth = Number(formatEther(wei));
         out.push({
           asset: { kind: "evm-native", chain: c, symbol: meta.nativeSymbol },

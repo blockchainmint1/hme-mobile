@@ -104,7 +104,7 @@ function WalletLayout() {
     }
     EVM_CHAIN_LIST.forEach((c, i) => {
       const bal = evmBalances[i]?.data;
-      const usd = allPrices.data?.prices[c.priceSymbol];
+      const usd = allPrices.data?.prices?.[c.priceSymbol];
       if (bal != null && usd != null) {
         total += (Number(bal) / 1e18) * usd;
       }
