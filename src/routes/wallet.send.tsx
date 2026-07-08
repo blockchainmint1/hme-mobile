@@ -113,6 +113,7 @@ type Asset = "txc" | number;
 function SendPage() {
   const navigate = useNavigate();
   const { root, unlocked } = useWallet();
+  const qc = useQueryClient();
   const account = useQuery({
     queryKey: ["account", unlocked?.kind, root ? rootFingerprintHex(root) : null],
     enabled: !!root && !!unlocked,
