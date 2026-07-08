@@ -278,7 +278,7 @@ function WalletHome() {
 
   return (
     <main className="flex-1 flex flex-col min-h-0">
-      <div className="flex-1 overflow-y-auto pb-28">
+      <div className="flex-1 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-3xl w-full">
           {/* Swipeable chain tiles */}
           <div
