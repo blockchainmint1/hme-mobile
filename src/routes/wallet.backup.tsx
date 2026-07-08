@@ -20,6 +20,17 @@ function BackupPage() {
   const [error, setError] = useState<string | null>(null);
   const [reveal, setReveal] = useState(false);
 
+  // Wipe the plaintext seed from React state on unmount so it doesn't linger
+  // in the fiber tree / devtools after leaving the page.
+  useEffect(() => {
+    return () => {
+      setShown(null);
+      setReveal(false);
+      setPassword("");
+    };
+  }, []);
+
+
   // Block screenshots + app-switcher thumbnails whenever the seed is on screen.
   // Android: FLAG_SECURE. iOS: blur overlay in the app switcher (there is no
   // system API to block on-device screenshots on iOS). Best-effort — the
