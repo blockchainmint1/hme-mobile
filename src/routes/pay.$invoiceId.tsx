@@ -336,7 +336,19 @@ function PayRoute() {
                 label="Exact amount"
                 value={`${locked.crypto_amount} ${locked.token_symbol ?? EVM_CHAINS[locked.chain as EvmChainId]?.nativeSymbol ?? ""}`.trim()}
               />
-              <Row label="To" value={shortAddr(locked.address)} />
+              <div className="flex flex-col gap-1 text-sm">
+                <span className="text-muted-foreground">To</span>
+                <span
+                  className="font-mono text-xs break-all leading-snug rounded-md bg-muted/40 px-2 py-1.5 select-all"
+                  aria-label="Recipient address"
+                >
+                  {locked.address}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  Verify the full address matches the merchant before confirming.
+                </span>
+              </div>
+
             </>
           )}
         </CardContent>
