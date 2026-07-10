@@ -255,14 +255,15 @@ function SettingsPage() {
         <CardContent>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive">Delete wallet from this device</Button>
+              <Button variant="destructive">Delete wallet and all data</Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogTitle>Delete wallet and all data?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This deletes the encrypted wallet file from this browser. Your TXC stays on the
-                  blockchain and can be restored on any device with the seed phrase. Type{" "}
+                  This permanently deletes the encrypted wallet, biometric unlock, address book,
+                  and all cached data from this device. Your funds stay on the blockchain and can
+                  only be restored on any device using your seed phrase. Type{" "}
                   <strong>DELETE</strong> to confirm.
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -286,7 +287,7 @@ function SettingsPage() {
                     navigate({ to: "/" });
                   }}
                 >
-                  Delete wallet
+                  Delete wallet and all data
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
