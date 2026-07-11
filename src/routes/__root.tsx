@@ -22,6 +22,24 @@ import icon512 from "../assets/icons/icon-512.webp";
 
 if (typeof window !== "undefined") {
   installNativeServerFnBridge();
+  // Capacitor's console bridge JSON-stringifies each argument, and
+  // JSON.stringify(new Error(...)) is "{}" because Error props are
+  // non-enumerable. Expand Errors so message + stack survive the bridge
+  // and actually show up in Xcode / Android Studio logs.
+  const expand = (a: unknown): unknown => {
+    if (a instanceof Error) return `${a.name}: ${a.message}\n${a.stack ?? ""}`;
+    return a;
+  };
+  for (const level of ["error", "warn", "log"] as const) {
+    const orig = console[level].bind(console);
+    console[level] = (...args: unknown[]) => orig(...args.map(expand));
+  }
+  window.addEventListener("error", (e) => {
+    console.error("[window.error]", e.error ?? e.message ?? e);
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    console.error("[unhandledrejection]", (e as PromiseRejectionEvent).reason);
+  });
 }
 
 const THEME_INIT_SCRIPT = `(function(){try{var k='txc.theme';var t=localStorage.getItem(k)||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){document.documentElement.classList.add('dark');}})();`;
