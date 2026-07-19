@@ -232,6 +232,76 @@ function WalletHome() {
     ...(iskAccount.data?.internal.map((a) => a.address) ?? []),
   ]);
 
+  // LTC data
+  const ltcEnabled = enabled.includes("ltc");
+  const fetchLtcPrice = useServerFn(getLtcPriceUsd);
+  const ltcAccount = useQuery({
+    queryKey: ["ltc-account", LTC_DEFAULT_KIND, root?.neutered().toBase58().slice(0, 24)],
+    enabled: !!root && !!unlocked && ltcEnabled,
+    queryFn: () => scanLtcAccount(root!, LTC_DEFAULT_KIND),
+  });
+  const ltcPrice = useQuery({
+    queryKey: ["ltc-price"],
+    queryFn: () => fetchLtcPrice(),
+    staleTime: 10 * 60_000,
+    enabled: ltcEnabled,
+  });
+  const ltcTxs = useQuery({
+    queryKey: ["ltc-txs", ltcAccount.data?.external.map((a) => a.address).join(",")],
+    enabled: !!ltcAccount.data && activeChain === "ltc",
+    queryFn: async () => {
+      const all = await Promise.all(
+        [...(ltcAccount.data?.external ?? []), ...(ltcAccount.data?.internal ?? [])].map((a) =>
+          getLtcAddressTxs(a.address).catch(() => [] as LtcMempoolTx[]),
+        ),
+      );
+      const map = new Map<string, LtcMempoolTx>();
+      for (const list of all) for (const tx of list) map.set(tx.txid, tx);
+      return [...map.values()].sort(
+        (a, b) => (b.status.block_time ?? 0) - (a.status.block_time ?? 0),
+      );
+    },
+  });
+  const ltcOwnAddresses = new Set([
+    ...(ltcAccount.data?.external.map((a) => a.address) ?? []),
+    ...(ltcAccount.data?.internal.map((a) => a.address) ?? []),
+  ]);
+
+  // DOGE data
+  const dogeEnabled = enabled.includes("doge");
+  const fetchDogePrice = useServerFn(getDogePriceUsd);
+  const dogeAccount = useQuery({
+    queryKey: ["doge-account", DOGE_DEFAULT_KIND, root?.neutered().toBase58().slice(0, 24)],
+    enabled: !!root && !!unlocked && dogeEnabled,
+    queryFn: () => scanDogeAccount(root!, DOGE_DEFAULT_KIND),
+  });
+  const dogePrice = useQuery({
+    queryKey: ["doge-price"],
+    queryFn: () => fetchDogePrice(),
+    staleTime: 10 * 60_000,
+    enabled: dogeEnabled,
+  });
+  const dogeTxs = useQuery({
+    queryKey: ["doge-txs", dogeAccount.data?.external.map((a) => a.address).join(",")],
+    enabled: !!dogeAccount.data && activeChain === "doge",
+    queryFn: async () => {
+      const all = await Promise.all(
+        [...(dogeAccount.data?.external ?? []), ...(dogeAccount.data?.internal ?? [])].map((a) =>
+          getDogeAddressTxs(a.address).catch(() => [] as DogeMempoolTx[]),
+        ),
+      );
+      const map = new Map<string, DogeMempoolTx>();
+      for (const list of all) for (const tx of list) map.set(tx.txid, tx);
+      return [...map.values()].sort(
+        (a, b) => (b.status.block_time ?? 0) - (a.status.block_time ?? 0),
+      );
+    },
+  });
+  const dogeOwnAddresses = new Set([
+    ...(dogeAccount.data?.external.map((a) => a.address) ?? []),
+    ...(dogeAccount.data?.internal.map((a) => a.address) ?? []),
+  ]);
+
   // EVM data (only for enabled EVM chains)
   const evmEnabled = enabled.filter((c) => c in EVM_CHAINS) as EvmChainId[];
   const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
