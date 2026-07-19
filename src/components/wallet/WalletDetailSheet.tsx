@@ -18,7 +18,9 @@ import { CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { useChainLabel } from "@/lib/chain-labels";
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import { DERIVATION_PATHS } from "@/lib/txc/network";
-import { ISK_DERIVATION_BASE, ISK_DEFAULT_KIND } from "@/lib/isk/network";
+import { ISK_DERIVATION_PATHS, ISK_DEFAULT_KIND } from "@/lib/isk/network";
+import { LTC_DERIVATION_PATHS, LTC_DEFAULT_KIND } from "@/lib/ltc/network";
+import { DOGE_DERIVATION_PATHS, DOGE_DEFAULT_KIND } from "@/lib/doge/network";
 
 type Common = {
   open: boolean;
