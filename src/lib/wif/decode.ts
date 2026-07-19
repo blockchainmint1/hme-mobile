@@ -56,8 +56,8 @@ function deriveAddressesFor(
   } catch {
     /* noop */
   }
-  // Segwit only supported for compressed keys.
-  if (compressed) {
+  // Segwit only supported for compressed keys. DOGE mainnet has no segwit.
+  if (compressed && network !== DOGE_NETWORK) {
     try {
       const p = payments.p2wpkh({ pubkey, network });
       out.bip84 = p.address ?? null;
