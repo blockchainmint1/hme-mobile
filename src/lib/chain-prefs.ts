@@ -4,7 +4,7 @@
  */
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 
-export type ChainId = "txc" | EvmChainId | "isk" | "zcu";
+export type ChainId = "txc" | EvmChainId | "isk" | "ltc" | "doge" | "zcu";
 
 export interface ChainMeta {
   id: ChainId;
