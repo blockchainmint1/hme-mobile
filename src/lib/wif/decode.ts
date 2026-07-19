@@ -90,7 +90,7 @@ export function decodeWif(wif: string): DecodedWif {
   const chain = detectChain(version);
   if (!chain) {
     throw new Error(
-      "This WIF isn't a TEXITcoin or Iskander Coin private key. Check the network.",
+      "This WIF isn't a supported private key. Expected TEXITcoin, IskanderCoin, Litecoin, or Dogecoin.",
     );
   }
   const compressed = raw.length === 34 && raw[33] === 0x01;
