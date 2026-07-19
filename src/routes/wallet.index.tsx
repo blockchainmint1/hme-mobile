@@ -405,7 +405,8 @@ function WalletHome() {
                     />
                   )}
                   {slot.kind === "chain" && slot.chain === "isk" && (
-                    <IskTile
+                    <BtcForkTile
+                      variant="isk"
                       balanceSats={iskAccount.data?.balanceSats ?? 0}
                       loading={iskAccount.isLoading}
                       priceUsd={iskPrice.data?.usd ?? null}
@@ -418,7 +419,37 @@ function WalletHome() {
                       }}
                     />
                   )}
-                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && (
+                  {slot.kind === "chain" && slot.chain === "ltc" && (
+                    <BtcForkTile
+                      variant="ltc"
+                      balanceSats={ltcAccount.data?.balanceSats ?? 0}
+                      loading={ltcAccount.isLoading}
+                      priceUsd={ltcPrice.data?.usd ?? null}
+                      onRefresh={() => ltcAccount.refetch()}
+                      refreshing={ltcAccount.isFetching}
+                      label={getChainLabel("ltc")}
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setTileOpen("ltc");
+                      }}
+                    />
+                  )}
+                  {slot.kind === "chain" && slot.chain === "doge" && (
+                    <BtcForkTile
+                      variant="doge"
+                      balanceSats={dogeAccount.data?.balanceSats ?? 0}
+                      loading={dogeAccount.isLoading}
+                      priceUsd={dogePrice.data?.usd ?? null}
+                      onRefresh={() => dogeAccount.refetch()}
+                      refreshing={dogeAccount.isFetching}
+                      label={getChainLabel("doge")}
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setTileOpen("doge");
+                      }}
+                    />
+                  )}
+                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && slot.chain !== "ltc" && slot.chain !== "doge" && (
                     <EvmTile
                       chainId={slot.chain as EvmChainId}
                       address={evmAddress}
