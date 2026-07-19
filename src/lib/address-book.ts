@@ -53,6 +53,22 @@ export function validateAddress(chain: ContactChain, addr: string): string | nul
       return "Not a valid IskanderCoin address.";
     }
   }
+  if (chain === "ltc") {
+    try {
+      addrLib.toOutputScript(a, LTC_NETWORK);
+      return null;
+    } catch {
+      return "Not a valid Litecoin address.";
+    }
+  }
+  if (chain === "doge") {
+    try {
+      addrLib.toOutputScript(a, DOGE_NETWORK);
+      return null;
+    } catch {
+      return "Not a valid Dogecoin address.";
+    }
+  }
   return isAddress(a) ? null : "Not a valid EVM address.";
 }
 
