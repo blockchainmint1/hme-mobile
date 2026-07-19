@@ -816,6 +816,7 @@ function BottomActions({ chain }: { chain: ChainId }) {
         </Button>
       </>
     );
+  }
   if (chain === "ltc") {
     return (
       <>
