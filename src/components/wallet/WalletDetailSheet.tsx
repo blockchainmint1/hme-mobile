@@ -36,7 +36,7 @@ export type WalletDetailProps =
       txCount: number | null;
     })
   | (Common & {
-      kind: "isk";
+      kind: "isk" | "ltc" | "doge";
       balanceText: string;
       fiatText: string | null;
       receiveAddress: string | null;
