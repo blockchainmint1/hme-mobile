@@ -615,7 +615,8 @@ function WalletHome() {
             </section>
           )}
           {activeChain === "isk" && !activeWatch && !activeWif && (
-            <IskActivity
+            <BtcForkActivity
+              variant="isk"
               loading={iskAccount.isLoading || iskTxs.isLoading}
               error={iskAccount.isError}
               txs={iskTxs.data ?? null}
@@ -623,14 +624,34 @@ function WalletHome() {
               onRefresh={() => iskAccount.refetch()}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
+          {activeChain === "ltc" && !activeWatch && !activeWif && (
+            <BtcForkActivity
+              variant="ltc"
+              loading={ltcAccount.isLoading || ltcTxs.isLoading}
+              error={ltcAccount.isError}
+              txs={ltcTxs.data ?? null}
+              ownAddresses={ltcOwnAddresses}
+              onRefresh={() => ltcAccount.refetch()}
+            />
+          )}
+          {activeChain === "doge" && !activeWatch && !activeWif && (
+            <BtcForkActivity
+              variant="doge"
+              loading={dogeAccount.isLoading || dogeTxs.isLoading}
+              error={dogeAccount.isError}
+              txs={dogeTxs.data ?? null}
+              ownAddresses={dogeOwnAddresses}
+              onRefresh={() => dogeAccount.refetch()}
+            />
+          )}
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
             <EvmActivity
               chainId={activeChain as EvmChainId}
               address={evmAddress}
               onOpen={(t) => setDetail({ kind: "evm", chain: activeChain as EvmChainId, transfer: t })}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
