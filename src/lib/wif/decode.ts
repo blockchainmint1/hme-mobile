@@ -12,8 +12,10 @@ import * as ecc from "@bitcoinerlab/secp256k1";
 import { payments, type Network } from "bitcoinjs-lib";
 import { TXC_NETWORK } from "@/lib/txc/network";
 import { ISK_NETWORK } from "@/lib/isk/network";
+import { LTC_NETWORK } from "@/lib/ltc/network";
+import { DOGE_NETWORK } from "@/lib/doge/network";
 
-export type WifChain = "txc" | "isk";
+export type WifChain = "txc" | "isk" | "ltc" | "doge";
 export type WifAddressKind = "bip84" | "bip49" | "bip44";
 
 export interface DecodedWif {
@@ -26,12 +28,19 @@ export interface DecodedWif {
 }
 
 function networkFor(chain: WifChain): Network {
-  return chain === "txc" ? TXC_NETWORK : ISK_NETWORK;
+  switch (chain) {
+    case "txc": return TXC_NETWORK;
+    case "isk": return ISK_NETWORK;
+    case "ltc": return LTC_NETWORK;
+    case "doge": return DOGE_NETWORK;
+  }
 }
 
 function detectChain(versionByte: number): WifChain | null {
   if (versionByte === TXC_NETWORK.wif) return "txc";
   if (versionByte === ISK_NETWORK.wif) return "isk";
+  if (versionByte === LTC_NETWORK.wif) return "ltc";
+  if (versionByte === DOGE_NETWORK.wif) return "doge";
   return null;
 }
 
