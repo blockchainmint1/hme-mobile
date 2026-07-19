@@ -196,6 +196,7 @@ function SendLtcPage() {
                     placeholder="ltc1q… or L… / M…"
                     className="font-mono flex-1" autoComplete="off" spellCheck={false} />
                   <QrScanButton onScan={applyUri} />
+                  <AddressBookButton chain="ltc" onPick={(a) => setTo(a)} />
                 </div>
               </div>
               <div>
