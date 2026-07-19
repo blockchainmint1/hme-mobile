@@ -938,7 +938,50 @@ function TxcTokens({ addresses }: { addresses: string[] }) {
   );
 }
 
-function IskTile({
+const BTC_FORK_VARIANTS = {
+  isk: {
+    ticker: "ISK",
+    gradient: "from-emerald-500 via-green-700 to-emerald-900",
+    shadow: "shadow-emerald-950/30",
+    subText: "text-emerald-50/80",
+    subTextFaint: "text-emerald-50/70",
+    mempoolHost: "mempool.iskandercoin.com",
+    txLabel: "IskanderCoin",
+    toCoin: satsToIsk,
+    formatCompact: formatIskCompact,
+    format: formatIsk,
+  },
+  ltc: {
+    ticker: "LTC",
+    gradient: "from-slate-500 via-slate-700 to-slate-900",
+    shadow: "shadow-slate-950/30",
+    subText: "text-slate-50/80",
+    subTextFaint: "text-slate-50/70",
+    mempoolHost: "litecoinspace.org",
+    txLabel: "Litecoin",
+    toCoin: satsToLtc,
+    formatCompact: formatLtcCompact,
+    format: formatLtc,
+  },
+  doge: {
+    ticker: "DOGE",
+    gradient: "from-yellow-500 via-amber-600 to-yellow-800",
+    shadow: "shadow-amber-950/30",
+    subText: "text-amber-50/80",
+    subTextFaint: "text-amber-50/70",
+    mempoolHost: "doge1.trezor.io",
+    txLabel: "Dogecoin",
+    toCoin: satsToDoge,
+    formatCompact: formatDogeCompact,
+    format: formatDoge,
+  },
+} as const;
+
+type BtcForkVariant = keyof typeof BTC_FORK_VARIANTS;
+type AnyBtcForkTx = IskMempoolTx | LtcMempoolTx | DogeMempoolTx;
+
+function BtcForkTile({
+  variant,
   balanceSats,
   loading,
   priceUsd,
@@ -947,6 +990,7 @@ function IskTile({
   label,
   onOpenDetails,
 }: {
+  variant: BtcForkVariant;
   balanceSats: number;
   loading: boolean;
   priceUsd: number | null;
@@ -956,17 +1000,18 @@ function IskTile({
   onOpenDetails: () => void;
 }) {
   const [hidden] = useHideBalances();
-  const balanceUsd = priceUsd ? satsToIsk(balanceSats) * priceUsd : null;
-  const balText = loading ? "..." : formatIskCompact(balanceSats);
+  const v = BTC_FORK_VARIANTS[variant];
+  const balanceUsd = priceUsd ? v.toCoin(balanceSats) * priceUsd : null;
+  const balText = loading ? "..." : v.formatCompact(balanceSats);
   const fiatText = balanceUsd != null ? formatFiat(balanceUsd) : "Price unavailable";
   return (
     <button
       type="button"
       onClick={onOpenDetails}
-      className="w-full text-left rounded-2xl bg-gradient-to-br from-emerald-500 via-green-700 to-emerald-900 p-6 text-white shadow-xl shadow-emerald-950/30 active:scale-[0.99] transition-transform"
+      className={`w-full text-left rounded-2xl bg-gradient-to-br ${v.gradient} p-6 text-white shadow-xl ${v.shadow} active:scale-[0.99] transition-transform`}
     >
       <div className="flex items-center justify-between">
-        <p className="text-sm text-emerald-50/80">{label}</p>
+        <p className={`text-sm ${v.subText}`}>{label}</p>
         <span
           role="button"
           tabIndex={0}
@@ -974,22 +1019,22 @@ function IskTile({
             e.stopPropagation();
             onRefresh();
           }}
-          className="text-emerald-50/80 hover:text-white"
+          className={`${v.subText} hover:text-white`}
           aria-label="Refresh"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
         </span>
       </div>
-      <p className="mt-3 text-[10px] uppercase tracking-widest text-emerald-50/70">Native</p>
+      <p className={`mt-3 text-[10px] uppercase tracking-widest ${v.subTextFaint}`}>Native</p>
       <p className="mt-0.5 text-4xl font-bold tracking-tight">
         {hidden ? maskAmount(balText) : balText}
-        <span className="ml-2 text-2xl font-semibold opacity-90">ISK</span>
+        <span className="ml-2 text-2xl font-semibold opacity-90">{v.ticker}</span>
       </p>
-      <p className="text-emerald-50/80 text-sm">
+      <p className={`${v.subText} text-sm`}>
         {hidden ? maskAmount(fiatText) : fiatText}
       </p>
       <div className="mt-3 pt-3 border-t border-white/15">
-        <p className="text-[10px] uppercase tracking-widest text-emerald-50/70">Chain total</p>
+        <p className={`text-[10px] uppercase tracking-widest ${v.subTextFaint}`}>Chain total</p>
         <p className="text-lg font-semibold">
           {hidden ? maskAmount(fiatText) : fiatText}
         </p>
@@ -998,19 +1043,22 @@ function IskTile({
   );
 }
 
-function IskActivity({
+function BtcForkActivity({
+  variant,
   loading,
   error,
   txs,
   ownAddresses,
   onRefresh,
 }: {
+  variant: BtcForkVariant;
   loading: boolean;
   error: boolean;
-  txs: IskMempoolTx[] | null;
+  txs: AnyBtcForkTx[] | null;
   ownAddresses: Set<string>;
   onRefresh: () => void;
 }) {
+  const v = BTC_FORK_VARIANTS[variant];
   return (
     <section className="mt-8 px-4">
       <div className="flex items-center justify-between mb-3">
@@ -1031,13 +1079,13 @@ function IskActivity({
       ) : error ? (
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground">
-            Couldn't reach mempool.iskandercoin.com.
+            Couldn't reach {v.mempoolHost}.
           </CardContent>
         </Card>
       ) : (txs?.length ?? 0) === 0 ? (
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground">
-            No IskanderCoin transactions yet.
+            No {v.txLabel} transactions yet.
           </CardContent>
         </Card>
       ) : (
@@ -1045,17 +1093,17 @@ function IskActivity({
           {txs!.slice(0, 50).map((tx) => {
             const inSum = tx.vin
               .filter(
-                (v) =>
-                  v.prevout.scriptpubkey_address &&
-                  ownAddresses.has(v.prevout.scriptpubkey_address),
+                (vv) =>
+                  vv.prevout.scriptpubkey_address &&
+                  ownAddresses.has(vv.prevout.scriptpubkey_address),
               )
-              .reduce((s, v) => s + v.prevout.value, 0);
+              .reduce((s, vv) => s + vv.prevout.value, 0);
             const outToOwn = tx.vout
               .filter(
-                (v) =>
-                  v.scriptpubkey_address && ownAddresses.has(v.scriptpubkey_address),
+                (vv) =>
+                  vv.scriptpubkey_address && ownAddresses.has(vv.scriptpubkey_address),
               )
-              .reduce((s, v) => s + v.value, 0);
+              .reduce((s, vv) => s + vv.value, 0);
             const net = outToOwn - inSum;
             const incoming = net > 0;
             return (
@@ -1087,7 +1135,7 @@ function IskActivity({
                       className={`text-sm font-semibold ${incoming ? "text-emerald-400" : ""}`}
                     >
                       {incoming ? "+" : "−"}
-                      {formatIsk(Math.abs(net))}
+                      {v.format(Math.abs(net))}
                     </p>
                   </div>
                 </div>
