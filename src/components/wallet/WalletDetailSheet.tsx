@@ -60,8 +60,8 @@ export function WalletDetailSheet(props: WalletDetailProps) {
         <div className="px-4 pb-6 overflow-y-auto space-y-4">
           {props.kind === "txc" ? (
             <TxcDetails {...props} />
-          ) : props.kind === "isk" ? (
-            <IskDetails {...props} />
+          ) : props.kind === "isk" || props.kind === "ltc" || props.kind === "doge" ? (
+            <BtcForkDetails {...props} />
           ) : (
             <EvmDetails {...props} />
           )}
