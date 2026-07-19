@@ -816,6 +816,37 @@ function BottomActions({ chain }: { chain: ChainId }) {
         </Button>
       </>
     );
+  if (chain === "ltc") {
+    return (
+      <>
+        <Button asChild size="lg" variant="outline" className="flex-1">
+          <Link to="/wallet/ltc/receive">
+            <QrCode className="h-4 w-4 mr-2" /> Receive
+          </Link>
+        </Button>
+        <Button asChild size="lg" className="flex-1">
+          <Link to="/wallet/ltc/send">
+            <Send className="h-4 w-4 mr-2" /> Send
+          </Link>
+        </Button>
+      </>
+    );
+  }
+  if (chain === "doge") {
+    return (
+      <>
+        <Button asChild size="lg" variant="outline" className="flex-1">
+          <Link to="/wallet/doge/receive">
+            <QrCode className="h-4 w-4 mr-2" /> Receive
+          </Link>
+        </Button>
+        <Button asChild size="lg" className="flex-1">
+          <Link to="/wallet/doge/send">
+            <Send className="h-4 w-4 mr-2" /> Send
+          </Link>
+        </Button>
+      </>
+    );
   }
   if (chain in EVM_CHAINS) {
     const c = chain as EvmChainId;
