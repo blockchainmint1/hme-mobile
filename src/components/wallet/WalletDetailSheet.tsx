@@ -263,18 +263,26 @@ function RenamableName({
   );
 }
 
-function IskDetails(
-  props: Extract<WalletDetailProps, { kind: "isk" }>,
+const BTC_FORK_META: Record<
+  "isk" | "ltc" | "doge",
+  { chainName: string; path: string; kind: string }
+> = {
+  isk: { chainName: CHAIN_META.isk.name, path: `${ISK_DERIVATION_PATHS[ISK_DEFAULT_KIND]}/0/0`, kind: ISK_DEFAULT_KIND },
+  ltc: { chainName: CHAIN_META.ltc.name, path: `${LTC_DERIVATION_PATHS[LTC_DEFAULT_KIND]}/0/0`, kind: LTC_DEFAULT_KIND },
+  doge: { chainName: CHAIN_META.doge.name, path: `${DOGE_DERIVATION_PATHS[DOGE_DEFAULT_KIND]}/0/0`, kind: DOGE_DEFAULT_KIND },
+};
+
+function BtcForkDetails(
+  props: Extract<WalletDetailProps, { kind: "isk" | "ltc" | "doge" }>,
 ) {
-  const meta = CHAIN_META.isk;
-  const path = ISK_DERIVATION_BASE[ISK_DEFAULT_KIND];
+  const meta = BTC_FORK_META[props.kind];
   return (
     <>
-      <RenamableName chain="isk" />
+      <RenamableName chain={props.kind} />
       <BalanceRow balance={props.balanceText} fiat={props.fiatText} />
-      <Field label="Chain" value={meta.name} />
-      <Field label="Address type" value={KIND_LABEL[ISK_DEFAULT_KIND] ?? ISK_DEFAULT_KIND} />
-      <Field label="Derivation path" value={`${path}/0/0`} mono />
+      <Field label="Chain" value={meta.chainName} />
+      <Field label="Address type" value={KIND_LABEL[meta.kind] ?? meta.kind} />
+      <Field label="Derivation path" value={meta.path} mono />
       {props.receiveAddress && (
         <Field label="Current receive address" value={props.receiveAddress} mono copy />
       )}
