@@ -727,7 +727,37 @@ function WalletHome() {
           txCount={iskTxs.data?.length ?? null}
         />
       )}
-      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen in EVM_CHAINS && (
+      {tileOpen === "ltc" && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="ltc"
+          balanceText={`${formatLtc(ltcAccount.data?.balanceSats ?? 0)}`}
+          fiatText={
+            ltcPrice.data?.usd != null
+              ? formatFiat(satsToLtc(ltcAccount.data?.balanceSats ?? 0) * ltcPrice.data.usd)
+              : null
+          }
+          receiveAddress={ltcAccount.data?.nextReceiveAddress ?? null}
+          txCount={ltcTxs.data?.length ?? null}
+        />
+      )}
+      {tileOpen === "doge" && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="doge"
+          balanceText={`${formatDoge(dogeAccount.data?.balanceSats ?? 0)}`}
+          fiatText={
+            dogePrice.data?.usd != null
+              ? formatFiat(satsToDoge(dogeAccount.data?.balanceSats ?? 0) * dogePrice.data.usd)
+              : null
+          }
+          receiveAddress={dogeAccount.data?.nextReceiveAddress ?? null}
+          txCount={dogeTxs.data?.length ?? null}
+        />
+      )}
+      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen !== "ltc" && tileOpen !== "doge" && tileOpen in EVM_CHAINS && (
         <WalletDetailSheet
           open
           onClose={() => setTileOpen(null)}
