@@ -80,10 +80,28 @@ function BackupPage() {
 
       <div className="mt-4 flex items-start gap-2 rounded-lg border border-amber-700/40 bg-amber-950/10 p-3 text-sm">
         <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-500" />
-        <p>
-          Anyone with these words controls your TXC. Make sure no one is looking over your
-          shoulder, no screen recording is on, and you trust this device.
-        </p>
+        <div className="space-y-2">
+          <p>
+            <strong>If you lose this phrase, your funds are gone forever.</strong> No one — not
+            HME, not Honest Money, not Apple — can recover it for you.
+          </p>
+          <p>
+            Anyone with these words controls your wallet. Make sure no one is looking over your
+            shoulder, no screen recording is on, and you trust this device.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Crypto assets are volatile and you can lose value. Review the full risk disclosures at{" "}
+            <a
+              href="https://texitcoin.org/disclosures"
+              target="_blank"
+              rel="noreferrer noopener"
+              className="underline"
+            >
+              texitcoin.org/disclosures
+            </a>
+            .
+          </p>
+        </div>
       </div>
 
       {!shown ? (

@@ -4,7 +4,7 @@
  */
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 
-export type ChainId = "txc" | EvmChainId | "isk" | "zcu";
+export type ChainId = "txc" | EvmChainId | "isk" | "ltc" | "doge" | "zcu";
 
 export interface ChainMeta {
   id: ChainId;
@@ -37,10 +37,12 @@ export const CHAIN_META: Record<ChainId, ChainMeta> = {
     accent: EVM_CHAINS.bsc.accent,
   },
   isk: { id: "isk", name: "IskanderCoin", shortName: "ISK", accent: "#22C55E" },
+  ltc: { id: "ltc", name: "Litecoin", shortName: "LTC", accent: "#345D9D" },
+  doge: { id: "doge", name: "Dogecoin", shortName: "DOGE", accent: "#C2A633" },
   zcu: { id: "zcu", name: "Zero Chill Units", shortName: "ZCU", soon: true, accent: "#0EA5E9" },
 };
 
-export const CHAIN_ORDER: ChainId[] = ["txc", "eth", "base", "bsc", "isk", "zcu"];
+export const CHAIN_ORDER: ChainId[] = ["txc", "eth", "base", "bsc", "isk", "ltc", "doge", "zcu"];
 
 const ORDER_KEY = "hme.chains.order.v1";
 
@@ -96,6 +98,8 @@ const DEFAULT_ENABLED: Record<ChainId, boolean> = {
   base: false,
   bsc: false,
   isk: false,
+  ltc: false,
+  doge: false,
   zcu: false,
 };
 

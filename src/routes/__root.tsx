@@ -22,7 +22,53 @@ import icon512 from "../assets/icons/icon-512.webp";
 
 if (typeof window !== "undefined") {
   installNativeServerFnBridge();
+  // Capacitor's console bridge JSON-stringifies each argument, and
+  // JSON.stringify(new Error(...)) / JSON.stringify({}) is "{}" because
+  // Error props are non-enumerable and plain empty rejections stringify to
+  // nothing useful. Expand every arg so message + stack + own-props survive
+  // the bridge and show up in Xcode / Android Studio logs.
+  const expand = (a: unknown): unknown => {
+    try {
+      if (a == null) return String(a);
+      if (typeof a === "string" || typeof a === "number" || typeof a === "boolean") return a;
+      if (a instanceof Error) {
+        const extra: Record<string, unknown> = {};
+        for (const k of Object.getOwnPropertyNames(a)) {
+          if (k === "message" || k === "stack" || k === "name") continue;
+          try { extra[k] = (a as unknown as Record<string, unknown>)[k]; } catch { /* noop */ }
+        }
+        const extras = Object.keys(extra).length ? ` ${JSON.stringify(extra)}` : "";
+        return `${a.name}: ${a.message}\n${a.stack ?? ""}${extras}`;
+      }
+      // Serialize including non-enumerable own props (covers DOMException, etc.)
+      const obj = a as Record<string, unknown>;
+      const props = Object.getOwnPropertyNames(obj);
+      const out: Record<string, unknown> = {};
+      for (const k of props) {
+        try { out[k] = obj[k]; } catch { /* noop */ }
+      }
+      const s = JSON.stringify(out);
+      if (s && s !== "{}") return s;
+      // Last resort: toString / constructor name
+      const proto = Object.getPrototypeOf(a) as { constructor?: { name?: string } } | null;
+      const tag = proto?.constructor?.name ?? typeof a;
+      return `[${tag}] ${String(a)}`;
+    } catch {
+      return String(a);
+    }
+  };
+  for (const level of ["error", "warn", "log"] as const) {
+    const orig = console[level].bind(console);
+    console[level] = (...args: unknown[]) => orig(`[${level}]`, ...args.map(expand));
+  }
+  window.addEventListener("error", (e) => {
+    console.error("[window.error]", e.error ?? e.message ?? e, `@${e.filename}:${e.lineno}:${e.colno}`);
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    console.error("[unhandledrejection]", (e as PromiseRejectionEvent).reason);
+  });
 }
+
 
 const THEME_INIT_SCRIPT = `(function(){try{var k='txc.theme';var t=localStorage.getItem(k)||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){document.documentElement.classList.add('dark');}})();`;
 const NATIVE_NAV_FALLBACK_SCRIPT = `(function(){if(window.__HME_NATIVE_NAV_FALLBACK__)return;window.__HME_NATIVE_NAV_FALLBACK__=true;function routeFromEvent(e){var t=e.target;if(!t||!t.closest)return null;var a=t.closest('a[data-native-route],a[href="/import"],a[href="/create"]');if(!a)return null;var h=a.getAttribute('data-native-route')||a.getAttribute('href');return h==='/import'||h==='/create'?h:null}function go(e){if(document.documentElement&&document.documentElement.dataset&&document.documentElement.dataset.hmeHydrated==='true')return;var h=routeFromEvent(e);if(!h)return;e.preventDefault();e.stopPropagation();location.assign(h)}document.addEventListener('pointerup',go,true);document.addEventListener('touchend',go,true);document.addEventListener('click',go,true);})();`;

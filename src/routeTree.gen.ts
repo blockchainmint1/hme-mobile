@@ -25,9 +25,13 @@ import { Route as WalletBackupRouteImport } from './routes/wallet.backup'
 import { Route as PayInvoiceIdRouteImport } from './routes/pay.$invoiceId'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
+import { Route as WalletLtcSendRouteImport } from './routes/wallet.ltc.send'
+import { Route as WalletLtcReceiveRouteImport } from './routes/wallet.ltc.receive'
 import { Route as WalletIskSendRouteImport } from './routes/wallet.isk.send'
 import { Route as WalletIskReceiveRouteImport } from './routes/wallet.isk.receive'
 import { Route as WalletEvmChainRouteImport } from './routes/wallet.evm.$chain'
+import { Route as WalletDogeSendRouteImport } from './routes/wallet.doge.send'
+import { Route as WalletDogeReceiveRouteImport } from './routes/wallet.doge.receive'
 import { Route as ApiEvmChainRouteImport } from './routes/api/evm.$chain'
 import { Route as WalletWifIdSendRouteImport } from './routes/wallet.wif.$id.send'
 import { Route as WalletWifIdReceiveRouteImport } from './routes/wallet.wif.$id.receive'
@@ -116,6 +120,16 @@ const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
   path: '/legal/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WalletLtcSendRoute = WalletLtcSendRouteImport.update({
+  id: '/ltc/send',
+  path: '/ltc/send',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletLtcReceiveRoute = WalletLtcReceiveRouteImport.update({
+  id: '/ltc/receive',
+  path: '/ltc/receive',
+  getParentRoute: () => WalletRoute,
+} as any)
 const WalletIskSendRoute = WalletIskSendRouteImport.update({
   id: '/isk/send',
   path: '/isk/send',
@@ -129,6 +143,16 @@ const WalletIskReceiveRoute = WalletIskReceiveRouteImport.update({
 const WalletEvmChainRoute = WalletEvmChainRouteImport.update({
   id: '/evm/$chain',
   path: '/evm/$chain',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletDogeSendRoute = WalletDogeSendRouteImport.update({
+  id: '/doge/send',
+  path: '/doge/send',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletDogeReceiveRoute = WalletDogeReceiveRouteImport.update({
+  id: '/doge/receive',
+  path: '/doge/receive',
   getParentRoute: () => WalletRoute,
 } as any)
 const ApiEvmChainRoute = ApiEvmChainRouteImport.update({
@@ -185,9 +209,13 @@ export interface FileRoutesByFullPath {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/wallet/doge/receive': typeof WalletDogeReceiveRoute
+  '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/evm/$chain': typeof WalletEvmChainRouteWithChildren
   '/wallet/isk/receive': typeof WalletIskReceiveRoute
   '/wallet/isk/send': typeof WalletIskSendRoute
+  '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
+  '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
@@ -212,9 +240,13 @@ export interface FileRoutesByTo {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/wallet/doge/receive': typeof WalletDogeReceiveRoute
+  '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/evm/$chain': typeof WalletEvmChainRouteWithChildren
   '/wallet/isk/receive': typeof WalletIskReceiveRoute
   '/wallet/isk/send': typeof WalletIskSendRoute
+  '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
+  '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
@@ -241,9 +273,13 @@ export interface FileRoutesById {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/wallet/doge/receive': typeof WalletDogeReceiveRoute
+  '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/evm/$chain': typeof WalletEvmChainRouteWithChildren
   '/wallet/isk/receive': typeof WalletIskReceiveRoute
   '/wallet/isk/send': typeof WalletIskSendRoute
+  '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
+  '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/wallet/evm/$chain/receive': typeof WalletEvmChainReceiveRoute
   '/wallet/evm/$chain/send': typeof WalletEvmChainSendRoute
@@ -271,9 +307,13 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/wallet/doge/receive'
+    | '/wallet/doge/send'
     | '/wallet/evm/$chain'
     | '/wallet/isk/receive'
     | '/wallet/isk/send'
+    | '/wallet/ltc/receive'
+    | '/wallet/ltc/send'
     | '/api/nectar/pay/$invoiceId'
     | '/wallet/evm/$chain/receive'
     | '/wallet/evm/$chain/send'
@@ -298,9 +338,13 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet'
     | '/api/evm/$chain'
+    | '/wallet/doge/receive'
+    | '/wallet/doge/send'
     | '/wallet/evm/$chain'
     | '/wallet/isk/receive'
     | '/wallet/isk/send'
+    | '/wallet/ltc/receive'
+    | '/wallet/ltc/send'
     | '/api/nectar/pay/$invoiceId'
     | '/wallet/evm/$chain/receive'
     | '/wallet/evm/$chain/send'
@@ -326,9 +370,13 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/wallet/doge/receive'
+    | '/wallet/doge/send'
     | '/wallet/evm/$chain'
     | '/wallet/isk/receive'
     | '/wallet/isk/send'
+    | '/wallet/ltc/receive'
+    | '/wallet/ltc/send'
     | '/api/nectar/pay/$invoiceId'
     | '/wallet/evm/$chain/receive'
     | '/wallet/evm/$chain/send'
@@ -464,6 +512,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalPrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wallet/ltc/send': {
+      id: '/wallet/ltc/send'
+      path: '/ltc/send'
+      fullPath: '/wallet/ltc/send'
+      preLoaderRoute: typeof WalletLtcSendRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/ltc/receive': {
+      id: '/wallet/ltc/receive'
+      path: '/ltc/receive'
+      fullPath: '/wallet/ltc/receive'
+      preLoaderRoute: typeof WalletLtcReceiveRouteImport
+      parentRoute: typeof WalletRoute
+    }
     '/wallet/isk/send': {
       id: '/wallet/isk/send'
       path: '/isk/send'
@@ -483,6 +545,20 @@ declare module '@tanstack/react-router' {
       path: '/evm/$chain'
       fullPath: '/wallet/evm/$chain'
       preLoaderRoute: typeof WalletEvmChainRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/doge/send': {
+      id: '/wallet/doge/send'
+      path: '/doge/send'
+      fullPath: '/wallet/doge/send'
+      preLoaderRoute: typeof WalletDogeSendRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/doge/receive': {
+      id: '/wallet/doge/receive'
+      path: '/doge/receive'
+      fullPath: '/wallet/doge/receive'
+      preLoaderRoute: typeof WalletDogeReceiveRouteImport
       parentRoute: typeof WalletRoute
     }
     '/api/evm/$chain': {
@@ -562,9 +638,13 @@ interface WalletRouteChildren {
   WalletWatchAddRoute: typeof WalletWatchAddRoute
   WalletWifAddRoute: typeof WalletWifAddRoute
   WalletIndexRoute: typeof WalletIndexRoute
+  WalletDogeReceiveRoute: typeof WalletDogeReceiveRoute
+  WalletDogeSendRoute: typeof WalletDogeSendRoute
   WalletEvmChainRoute: typeof WalletEvmChainRouteWithChildren
   WalletIskReceiveRoute: typeof WalletIskReceiveRoute
   WalletIskSendRoute: typeof WalletIskSendRoute
+  WalletLtcReceiveRoute: typeof WalletLtcReceiveRoute
+  WalletLtcSendRoute: typeof WalletLtcSendRoute
   WalletWifIdReceiveRoute: typeof WalletWifIdReceiveRoute
   WalletWifIdSendRoute: typeof WalletWifIdSendRoute
 }
@@ -578,9 +658,13 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletWatchAddRoute: WalletWatchAddRoute,
   WalletWifAddRoute: WalletWifAddRoute,
   WalletIndexRoute: WalletIndexRoute,
+  WalletDogeReceiveRoute: WalletDogeReceiveRoute,
+  WalletDogeSendRoute: WalletDogeSendRoute,
   WalletEvmChainRoute: WalletEvmChainRouteWithChildren,
   WalletIskReceiveRoute: WalletIskReceiveRoute,
   WalletIskSendRoute: WalletIskSendRoute,
+  WalletLtcReceiveRoute: WalletLtcReceiveRoute,
+  WalletLtcSendRoute: WalletLtcSendRoute,
   WalletWifIdReceiveRoute: WalletWifIdReceiveRoute,
   WalletWifIdSendRoute: WalletWifIdSendRoute,
 }
@@ -603,3 +687,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

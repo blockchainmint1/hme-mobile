@@ -213,7 +213,12 @@ function SendPage() {
     ? BigInt(tokenBalances.data?.[activeToken.id] ?? "0")
     : null;
 
-  const feeRate = fees.data?.[feeTier] ?? 1;
+  // TXC's min relay fee sits well above Bitcoin's 1 sat/vB — floor every tier
+  // at the node's reported `minimumFee` (and never below 10) so a stale/low
+  // estimate can't produce a "min relay fee not met" broadcast rejection.
+  const rawFeeRate = fees.data?.[feeTier] ?? 10;
+  const minFloor = Math.max(fees.data?.minimumFee ?? 10, 10);
+  const feeRate = Math.max(rawFeeRate, minFloor);
 
   function review(e: React.FormEvent) {
     e.preventDefault();

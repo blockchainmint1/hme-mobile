@@ -18,7 +18,9 @@ import { CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { useChainLabel } from "@/lib/chain-labels";
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import { DERIVATION_PATHS } from "@/lib/txc/network";
-import { ISK_DERIVATION_BASE, ISK_DEFAULT_KIND } from "@/lib/isk/network";
+import { ISK_DERIVATION_PATHS, ISK_DEFAULT_KIND } from "@/lib/isk/network";
+import { LTC_DERIVATION_PATHS, LTC_DEFAULT_KIND } from "@/lib/ltc/network";
+import { DOGE_DERIVATION_PATHS, DOGE_DEFAULT_KIND } from "@/lib/doge/network";
 
 type Common = {
   open: boolean;
@@ -34,7 +36,7 @@ export type WalletDetailProps =
       txCount: number | null;
     })
   | (Common & {
-      kind: "isk";
+      kind: "isk" | "ltc" | "doge";
       balanceText: string;
       fiatText: string | null;
       receiveAddress: string | null;
@@ -58,10 +60,10 @@ export function WalletDetailSheet(props: WalletDetailProps) {
         <div className="px-4 pb-6 overflow-y-auto space-y-4">
           {props.kind === "txc" ? (
             <TxcDetails {...props} />
-          ) : props.kind === "isk" ? (
-            <IskDetails {...props} />
-          ) : (
+          ) : props.kind === "evm" ? (
             <EvmDetails {...props} />
+          ) : (
+            <BtcForkDetails {...props} />
           )}
         </div>
       </DrawerContent>
@@ -261,18 +263,26 @@ function RenamableName({
   );
 }
 
-function IskDetails(
-  props: Extract<WalletDetailProps, { kind: "isk" }>,
+const BTC_FORK_META: Record<
+  "isk" | "ltc" | "doge",
+  { chainName: string; path: string; kind: string }
+> = {
+  isk: { chainName: CHAIN_META.isk.name, path: `${ISK_DERIVATION_PATHS[ISK_DEFAULT_KIND]}/0/0`, kind: ISK_DEFAULT_KIND },
+  ltc: { chainName: CHAIN_META.ltc.name, path: `${LTC_DERIVATION_PATHS[LTC_DEFAULT_KIND]}/0/0`, kind: LTC_DEFAULT_KIND },
+  doge: { chainName: CHAIN_META.doge.name, path: `${DOGE_DERIVATION_PATHS[DOGE_DEFAULT_KIND]}/0/0`, kind: DOGE_DEFAULT_KIND },
+};
+
+function BtcForkDetails(
+  props: Extract<WalletDetailProps, { kind: "isk" | "ltc" | "doge" }>,
 ) {
-  const meta = CHAIN_META.isk;
-  const path = ISK_DERIVATION_BASE[ISK_DEFAULT_KIND];
+  const meta = BTC_FORK_META[props.kind];
   return (
     <>
-      <RenamableName chain="isk" />
+      <RenamableName chain={props.kind} />
       <BalanceRow balance={props.balanceText} fiat={props.fiatText} />
-      <Field label="Chain" value={meta.name} />
-      <Field label="Address type" value={KIND_LABEL[ISK_DEFAULT_KIND] ?? ISK_DEFAULT_KIND} />
-      <Field label="Derivation path" value={`${path}/0/0`} mono />
+      <Field label="Chain" value={meta.chainName} />
+      <Field label="Address type" value={KIND_LABEL[meta.kind] ?? meta.kind} />
+      <Field label="Derivation path" value={meta.path} mono />
       {props.receiveAddress && (
         <Field label="Current receive address" value={props.receiveAddress} mono copy />
       )}
