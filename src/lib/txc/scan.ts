@@ -25,7 +25,12 @@ const GAP_LIMIT = 20;
 // refresh from ~40 mempool.space calls down to ~5–10 without losing the
 // ability to detect new activity on the next receive address.
 const FAST_FRONTIER = 5;
+// How many receive addresses to probe on a *secondary* derivation branch
+// before concluding it has never been used. Index 0 alone is not enough —
+// funds can land at any index within the gap window.
+const PROBE_WINDOW = 10;
 const HINT_VERSION = 1;
+
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -290,18 +295,30 @@ export async function scanAccount(
         const hint = readHint(root, k);
         const known = hint ? hint.extUsed + hint.intUsed : 0;
         if (known === 0) {
-          // Cheap probe: has this branch ever been used at all?
+          // Cheap probe window: an unused index 0 does NOT mean the branch is
+          // empty — funds can land at any index (e.g. bridge deposits at /0/4).
+          // Probe the first PROBE_WINDOW receive addresses plus change index 0
+          // in parallel before deciding to skip the branch.
+          const candidates = [
+            ...Array.from({ length: PROBE_WINDOW }, (_, i) => deriveAddress(root, k, 0, i)),
+            deriveAddress(root, k, 1, 0),
+          ];
+          let anyUsed = false;
           try {
-            const first = deriveAddress(root, k, 0, 0);
-            const stats = await getAddressStats(first.address);
-            const used =
-              stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0;
-            if (!used) return null;
+            const results = await Promise.all(
+              candidates.map(async (d) => {
+                const stats = await getAddressStats(d.address);
+                return stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0;
+              }),
+            );
+            anyUsed = results.some(Boolean);
           } catch {
             return null;
           }
+          if (!anyUsed) return null;
         }
       }
+
       try {
         return { kind: k, snap: await scanSingleKind(root, k, opts) };
       } catch {
