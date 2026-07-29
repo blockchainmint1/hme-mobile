@@ -1,3 +1,4 @@
+import { isLegacyCoinTypeKind, type DerivationKind } from "./network";
 /**
  * Encrypted wallet storage for the TEXITcoin web wallet.
  *
@@ -20,9 +21,22 @@ const PBKDF2_ITERATIONS = 1_000_000;
 // Envelopes written before this field existed were all PBKDF2-SHA256 @ 600k.
 const LEGACY_ITERATIONS = 600_000;
 
+/**
+ * Envelopes written before the SLIP-0044 fix stored kinds like "bip84" that
+ * meant Bitcoin's coin type (m/84'/0'/0'). Those users' funds live on that
+ * path, so map them onto the explicit "-legacy" kinds. `pathsV` marks
+ * envelopes written after the fix, where the unsuffixed kinds mean 696969'.
+ */
+function migrateKind(env: StoredWalletEnvelope): DerivationKind {
+  if (env.pathsV && env.pathsV >= 2) return env.kind;
+  return isLegacyCoinTypeKind(env.kind)
+    ? env.kind
+    : (`${env.kind}-legacy` as DerivationKind);
+}
+
 export interface StoredWalletEnvelope {
   v: 1;
-  kind: "bip84" | "bip49" | "bip44";
+  kind: DerivationKind;
   label: string;
   /** base64 */ salt: string;
   /** base64 */ iv: string;
@@ -32,12 +46,14 @@ export interface StoredWalletEnvelope {
   kdf?: "pbkdf2-sha256";
   /** PBKDF2 iteration count this envelope was encrypted with. Absent = 600k. */
   iterations?: number;
+  /** Derivation-path scheme version. Absent/1 = pre-SLIP-0044 (coin type 0'). */
+  pathsV?: 2;
 }
 
 export interface UnlockedWallet {
   mnemonic: string;
   passphrase: string;
-  kind: "bip84" | "bip49" | "bip44";
+  kind: DerivationKind;
   label: string;
 }
 
@@ -113,6 +129,7 @@ export async function saveWallet(
     createdAt: Date.now(),
     kdf: "pbkdf2-sha256",
     iterations: PBKDF2_ITERATIONS,
+    pathsV: 2,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(env));
   return env;
@@ -145,7 +162,7 @@ export async function unlockWallet(password: string): Promise<UnlockedWallet | n
     const unlocked: UnlockedWallet = {
       mnemonic: parsed.m,
       passphrase: parsed.p,
-      kind: env.kind,
+      kind: migrateKind(env),
       label: env.label,
     };
 

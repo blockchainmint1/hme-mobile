@@ -134,6 +134,9 @@ const KIND_LABEL: Record<string, string> = {
   bip84: "Native SegWit (bech32)",
   bip49: "Wrapped SegWit (P2SH)",
   bip44: "Legacy (P2PKH)",
+  "bip84-legacy": "Native SegWit (bech32) — old app path",
+  "bip49-legacy": "Wrapped SegWit (P2SH) — old app path",
+  "bip44-legacy": "Legacy (P2PKH) — old app path",
 };
 
 function TxcDetails(
