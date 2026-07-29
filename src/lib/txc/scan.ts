@@ -290,18 +290,30 @@ export async function scanAccount(
         const hint = readHint(root, k);
         const known = hint ? hint.extUsed + hint.intUsed : 0;
         if (known === 0) {
-          // Cheap probe: has this branch ever been used at all?
+          // Cheap probe window: an unused index 0 does NOT mean the branch is
+          // empty — funds can land at any index (e.g. bridge deposits at /0/4).
+          // Probe the first PROBE_WINDOW receive addresses plus change index 0
+          // in parallel before deciding to skip the branch.
+          const candidates = [
+            ...Array.from({ length: PROBE_WINDOW }, (_, i) => deriveAddress(root, k, 0, i)),
+            deriveAddress(root, k, 1, 0),
+          ];
+          let anyUsed = false;
           try {
-            const first = deriveAddress(root, k, 0, 0);
-            const stats = await getAddressStats(first.address);
-            const used =
-              stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0;
-            if (!used) return null;
+            const results = await Promise.all(
+              candidates.map(async (d) => {
+                const stats = await getAddressStats(d.address);
+                return stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0;
+              }),
+            );
+            anyUsed = results.some(Boolean);
           } catch {
             return null;
           }
+          if (!anyUsed) return null;
         }
       }
+
       try {
         return { kind: k, snap: await scanSingleKind(root, k, opts) };
       } catch {
