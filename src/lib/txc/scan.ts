@@ -25,7 +25,12 @@ const GAP_LIMIT = 20;
 // refresh from ~40 mempool.space calls down to ~5–10 without losing the
 // ability to detect new activity on the next receive address.
 const FAST_FRONTIER = 5;
+// How many receive addresses to probe on a *secondary* derivation branch
+// before concluding it has never been used. Index 0 alone is not enough —
+// funds can land at any index within the gap window.
+const PROBE_WINDOW = 10;
 const HINT_VERSION = 1;
+
 
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
