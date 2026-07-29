@@ -10,6 +10,7 @@ import {
   type DerivedAddress,
   type UtxoInput,
 } from "./wallet";
+import { ALL_DERIVATION_KINDS, scriptKindOf } from "./network";
 import {
   getAddressStats,
   getAddressUtxos,
@@ -35,6 +36,8 @@ export interface AccountUtxo extends UtxoInput {
 }
 
 export interface AccountSnapshot {
+  /** Per-derivation-path breakdown (only paths with activity are listed). */
+  branches?: { kind: AddressKind; balanceSats: number; usedAddresses: number }[];
   external: DerivedAddress[];
   internal: DerivedAddress[];
   nextReceiveAddress: string;
@@ -149,11 +152,12 @@ async function scanChainFast(
 }
 
 
-export async function scanAccount(
+async function scanSingleKind(
   root: BIP32Interface,
   kind: AddressKind,
   opts?: { deep?: boolean },
 ): Promise<AccountSnapshot> {
+  const scriptKind = scriptKindOf(kind);
   const hint = opts?.deep ? null : readHint(root, kind);
   let ext: { all: DerivedAddress[]; firstUnusedIndex: number };
   let int: { all: DerivedAddress[]; firstUnusedIndex: number };
@@ -199,10 +203,11 @@ export async function scanAccount(
           value: u.value,
           change: d.change,
           index: d.index,
+          kind,
         };
         // For legacy inputs we need the previous full tx hex; for segwit we
         // only need the scriptPubKey, which we'll fill below.
-        if (kind === "bip44") {
+        if (scriptKind === "bip44") {
           try {
             utxo.nonWitnessUtxoHex = await getTxHex(u.txid);
           } catch {
@@ -221,13 +226,13 @@ export async function scanAccount(
 
   // For segwit inputs we need scriptPubKey for each UTXO's address.
   // mempool.space exposes it on the tx; cheapest is to re-derive from address type.
-  if (kind === "bip84" || kind === "bip49") {
+  if (scriptKind === "bip84" || scriptKind === "bip49") {
     const { payments } = await import("bitcoinjs-lib");
     const { TXC_NETWORK } = await import("./network");
     for (const u of utxos) {
       const d = (u.change === 0 ? ext.all : int.all)[u.index];
       const pubkey = d.pubkey;
-      if (kind === "bip84") {
+      if (scriptKind === "bip84") {
         const p = payments.p2wpkh({ pubkey, network: TXC_NETWORK });
         if (!p.output) throw new Error("Failed to derive witness script");
         u.witnessScriptHex = bytesToHex(p.output);
@@ -255,4 +260,78 @@ export async function scanAccount(
     balanceSats: balance,
     utxos,
   };
+}
+
+
+/**
+ * Scan a full TXC account across every derivation path we support.
+ *
+ * TXC's registered SLIP-0044 coin type is 696969', but the original mobile
+ * wallet (a BlueWallet fork) shipped on Bitcoin's 0'. Real funds exist on
+ * both, so a correct balance is the union of them. The wallet's own `kind`
+ * stays authoritative for new receive/change addresses.
+ *
+ * Cost control: the primary path always gets a full scan. Secondary paths are
+ * probed at external index 0 first and only fully scanned if that address has
+ * ever been used or a previous scan recorded activity — so a normal refresh
+ * costs ~5 extra requests, not ~200. A deep rescan scans everything.
+ */
+export async function scanAccount(
+  root: BIP32Interface,
+  kind: AddressKind,
+  opts?: { deep?: boolean },
+): Promise<AccountSnapshot> {
+  const primary = await scanSingleKind(root, kind, opts);
+  const others = ALL_DERIVATION_KINDS.filter((k) => k !== kind);
+
+  const extras = await Promise.all(
+    others.map(async (k) => {
+      if (!opts?.deep) {
+        const hint = readHint(root, k);
+        const known = hint ? hint.extUsed + hint.intUsed : 0;
+        if (known === 0) {
+          // Cheap probe: has this branch ever been used at all?
+          try {
+            const first = deriveAddress(root, k, 0, 0);
+            const stats = await getAddressStats(first.address);
+            const used =
+              stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0;
+            if (!used) return null;
+          } catch {
+            return null;
+          }
+        }
+      }
+      try {
+        return { kind: k, snap: await scanSingleKind(root, k, opts) };
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  const branches: NonNullable<AccountSnapshot["branches"]> = [
+    {
+      kind,
+      balanceSats: primary.balanceSats,
+      usedAddresses: primary.nextReceiveIndex + primary.nextChangeIndex,
+    },
+  ];
+  let balanceSats = primary.balanceSats;
+  const utxos: AccountUtxo[] = [...primary.utxos];
+  const external = [...primary.external];
+  const internal = [...primary.internal];
+
+  for (const e of extras) {
+    if (!e) continue;
+    const used = e.snap.nextReceiveIndex + e.snap.nextChangeIndex;
+    if (e.snap.balanceSats === 0 && used === 0) continue;
+    balanceSats += e.snap.balanceSats;
+    utxos.push(...e.snap.utxos);
+    external.push(...e.snap.external);
+    internal.push(...e.snap.internal);
+    branches.push({ kind: e.kind, balanceSats: e.snap.balanceSats, usedAddresses: used });
+  }
+
+  return { ...primary, external, internal, balanceSats, utxos, branches };
 }
