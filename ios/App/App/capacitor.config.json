@@ -1,57 +1,42 @@
 {
-	"appId": "money.honest.txcwallet",
-	"appName": "HME Wallet",
-	"webDir": "dist/client",
-	"backgroundColor": "#0b0f14",
-	"server": {
-		"hostname": "mobile.honest.money",
-		"cleartext": false,
-		"androidScheme": "https",
-		"iosScheme": "https",
-		"allowNavigation": [
-			"nectar-pay.com"
-		]
-	},
-	"ios": {
-		"contentInset": "always",
-		"backgroundColor": "#0b0f14"
-	},
-	"android": {
-		"backgroundColor": "#0b0f14",
-		"allowMixedContent": false
-	},
-	"plugins": {
-		"SplashScreen": {
-			"launchAutoHide": true,
-			"launchShowDuration": 900,
-			"backgroundColor": "#0b0f14",
-			"androidScaleType": "CENTER_CROP",
-			"showSpinner": false
-		},
-		"StatusBar": {
-			"style": "DARK",
-			"backgroundColor": "#0b0f14"
-		},
-		"PrivacyScreen": {
-			"enable": false,
-			"imageName": "Splash",
-			"contentMode": "center",
-			"preventScreenshots": false
-		}
-	},
-	"packageClassList": [
-		"BiometricAuthNative",
-		"SecureStorage",
-		"BarcodeScanner",
-		"PrivacyScreenPlugin",
-		"AppPlugin",
-		"CAPBrowserPlugin",
-		"ClipboardPlugin",
-		"HapticsPlugin",
-		"KeyboardPlugin",
-		"CAPNetworkPlugin",
-		"SharePlugin",
-		"SplashScreenPlugin",
-		"StatusBarPlugin"
-	]
+  "appId": "money.honest.txcwallet",
+  "appName": "HME Wallet",
+  "webDir": "dist/client",
+  "backgroundColor": "#0b0f14",
+  "server": {
+    "hostname": "mobile.honest.money",
+    "cleartext": false,
+    "androidScheme": "https",
+    "iosScheme": "https",
+    "allowNavigation": [
+      "nectar-pay.com"
+    ]
+  },
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#0b0f14"
+  },
+  "android": {
+    "backgroundColor": "#0b0f14",
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 900,
+      "backgroundColor": "#0b0f14",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0b0f14"
+    },
+    "PrivacyScreen": {
+      "enable": false,
+      "imageName": "Splash",
+      "contentMode": "center",
+      "preventScreenshots": false
+    }
+  }
 }
