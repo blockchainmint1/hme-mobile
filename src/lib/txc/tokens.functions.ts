@@ -47,6 +47,61 @@ interface OmniAddressBalance {
   frozen?: string;
 }
 
+interface OmniProperty {
+  propertyid: number;
+  name?: string;
+  divisible?: boolean;
+}
+
+/**
+ * Divisibility is a property of the token issuance, NOT of whatever the
+ * caller happens to have stored locally, and `omni_getallbalancesforaddress`
+ * does not always echo the flag back. Guessing "divisible unless told
+ * otherwise" silently multiplies indivisible balances by 1e8 (POP #37 showed
+ * as 1000000000 instead of 10), so always resolve it from the node and cache.
+ */
+const divisibleCache = new Map<number, boolean>();
+
+async function propertyDivisible(id: number): Promise<boolean> {
+  const hit = divisibleCache.get(id);
+  if (hit !== undefined) return hit;
+  try {
+    const prop = await rpc<OmniProperty>("omni_getproperty", [id]);
+    const d = prop.divisible !== false;
+    divisibleCache.set(id, d);
+    return d;
+  } catch {
+    // Unknown property → assume divisible (Omni's default) but don't cache.
+    return true;
+  }
+}
+
+/**
+ * Authoritative token metadata straight from the chain. Clients use this to
+ * override any locally-stored divisibility so amounts always render right.
+ */
+export const getTxcTokenProperties = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) =>
+    z.object({ propertyIds: z.array(z.number().int().positive()).min(1).max(50) }).parse(raw),
+  )
+  .handler(async ({ data }) => {
+    const out: Record<number, { divisible: boolean; name?: string }> = {};
+    await Promise.all(
+      data.propertyIds.map(async (id) => {
+        try {
+          const prop = await rpc<OmniProperty>("omni_getproperty", [id]);
+          const divisible = prop.divisible !== false;
+          divisibleCache.set(id, divisible);
+          out[id] = { divisible, name: prop.name };
+        } catch {
+          // leave undefined → client keeps its local metadata
+        }
+      }),
+    );
+    return out;
+  });
+
+
 /**
  * Look up a single Omni token balance for a single address.
  * Returns the raw string balance (matches Omni RPC formatting: decimal for
