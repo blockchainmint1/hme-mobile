@@ -208,14 +208,19 @@ export async function broadcastTx(hex: string): Promise<string> {
   const body = await res.text();
   if (!res.ok) throw new Error(`doge broadcast failed: ${res.status} ${cleanUpstreamBody(body)}`);
 
+  let parsed: { result?: string; error?: string | { message?: string } } | null = null;
   try {
-    const parsed = JSON.parse(body) as { result?: string; error?: { message?: string } };
-    if (parsed.error?.message) throw new Error(parsed.error.message);
-    if (parsed.result) return parsed.result;
-  } catch (err) {
-    if (err instanceof Error && err.message !== `Unexpected token '<'`) throw err;
+    parsed = JSON.parse(body) as typeof parsed;
+  } catch {
+    parsed = null;
   }
-  return body.trim();
+  if (parsed) {
+    const errMsg = typeof parsed.error === "string" ? parsed.error : parsed.error?.message;
+    if (errMsg) throw new Error(`doge broadcast rejected: ${errMsg}`);
+    if (parsed.result) return parsed.result;
+  }
+  return cleanUpstreamBody(body, 120);
+
 }
 
 export function explorerTxUrl(txid: string): string {
