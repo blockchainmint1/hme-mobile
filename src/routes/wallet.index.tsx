@@ -941,9 +941,11 @@ function TxcTile({
 }
 
 function TxcTokens({ addresses }: { addresses: string[] }) {
-  const tokens = useEnabledTxcTokens();
+  const localTokens = useEnabledTxcTokens();
+  const { resolved: tokens } = useTxcTokenProps(localTokens);
   const fetchBalances = useServerFn(getTxcTokenBalancesForAddresses);
   const [hideSpam] = useFeature("hideSpamTokens");
+
   const [hidden] = useHideBalances();
   const enabled = addresses.length > 0 && tokens.length > 0;
   const balances = useQuery({
