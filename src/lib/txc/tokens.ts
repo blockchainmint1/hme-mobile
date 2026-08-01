@@ -30,8 +30,9 @@ export interface TxcTokenMeta {
 export const OMNI_DIVISIBLE_DECIMALS = 8;
 
 export const BUILTIN_TXC_TOKENS: TxcTokenMeta[] = [
-  { id: 37, symbol: "POP", name: "CryptoPOP", divisible: false },
+  { id: 39, symbol: "TSD", name: "Texas Standard Dollar", divisible: true },
 ];
+
 
 const CUSTOM_KEY = "hme:txc-tokens:custom:v1";
 const HIDDEN_KEY = "hme:txc-tokens:hidden:v1";
