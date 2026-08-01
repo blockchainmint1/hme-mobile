@@ -127,6 +127,7 @@ export function buildAndSignTx(args: {
   }
 
   for (const o of outputs) psbt.addOutput({ address: o.address, value: BigInt(o.valueSats) });
+  if (memo) psbt.addOutput({ script: opReturnScript(memo), value: 0n });
   if (changeSats > 0) psbt.addOutput({ address: changeAddress, value: BigInt(changeSats) });
 
   inputs.forEach((u, i) => {
