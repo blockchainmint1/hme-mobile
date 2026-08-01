@@ -7,6 +7,7 @@ import * as ecc from "@bitcoinerlab/secp256k1";
 import type { BIP32Interface } from "bip32";
 import { payments, Psbt } from "bitcoinjs-lib";
 import { LTC_NETWORK, LTC_DERIVATION_PATHS, type LtcDerivationKind } from "./network";
+import { opReturnScript } from "@/lib/utxo/op-return";
 
 export type AddressKind = LtcDerivationKind;
 
