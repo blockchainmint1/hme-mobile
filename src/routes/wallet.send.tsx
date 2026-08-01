@@ -47,6 +47,8 @@ import {
   formatTokenAmount,
   type TxcTokenMeta,
 } from "@/lib/txc/tokens";
+import { useTxcTokenProps } from "@/lib/txc/token-props";
+
 import {
   getTxcTokenBalancesForAddresses,
   getTxcTokenBalancesPerAddress,
@@ -138,7 +140,9 @@ function SendPage() {
     staleTime: 60_000,
   });
 
-  const tokens = useEnabledTxcTokens();
+  const localTokens = useEnabledTxcTokens();
+  const { resolved: tokens } = useTxcTokenProps(localTokens);
+
   const search = Route.useSearch();
   const initialAsset: Asset = useMemo(() => {
     const t = search.token;
@@ -609,10 +613,22 @@ function SendPage() {
                 </div>
               </div>
               {error && (
-                <div className="flex items-start gap-2 text-sm text-destructive">
-                  <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
+                <div className="space-y-1">
+                  <div className="flex items-start gap-2 text-sm text-destructive">
+                    <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
+                  </div>
+                  {/^No single address holds/.test(error) && activeToken && (
+                    <Link
+                      to="/wallet/txc/consolidate"
+                      search={{ token: String(activeToken.id) }}
+                      className="inline-block text-sm font-medium underline underline-offset-4"
+                    >
+                      Consolidate {activeToken.symbol} into one address
+                    </Link>
+                  )}
                 </div>
               )}
+
               <Button
                 type="submit"
                 className="w-full"

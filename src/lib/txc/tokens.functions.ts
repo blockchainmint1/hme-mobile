@@ -47,6 +47,61 @@ interface OmniAddressBalance {
   frozen?: string;
 }
 
+interface OmniProperty {
+  propertyid: number;
+  name?: string;
+  divisible?: boolean;
+}
+
+/**
+ * Divisibility is a property of the token issuance, NOT of whatever the
+ * caller happens to have stored locally, and `omni_getallbalancesforaddress`
+ * does not always echo the flag back. Guessing "divisible unless told
+ * otherwise" silently multiplies indivisible balances by 1e8 (POP #37 showed
+ * as 1000000000 instead of 10), so always resolve it from the node and cache.
+ */
+const divisibleCache = new Map<number, boolean>();
+
+async function propertyDivisible(id: number): Promise<boolean> {
+  const hit = divisibleCache.get(id);
+  if (hit !== undefined) return hit;
+  try {
+    const prop = await rpc<OmniProperty>("omni_getproperty", [id]);
+    const d = prop.divisible !== false;
+    divisibleCache.set(id, d);
+    return d;
+  } catch {
+    // Unknown property → assume divisible (Omni's default) but don't cache.
+    return true;
+  }
+}
+
+/**
+ * Authoritative token metadata straight from the chain. Clients use this to
+ * override any locally-stored divisibility so amounts always render right.
+ */
+export const getTxcTokenProperties = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) =>
+    z.object({ propertyIds: z.array(z.number().int().positive()).min(1).max(50) }).parse(raw),
+  )
+  .handler(async ({ data }) => {
+    const out: Record<number, { divisible: boolean; name?: string }> = {};
+    await Promise.all(
+      data.propertyIds.map(async (id) => {
+        try {
+          const prop = await rpc<OmniProperty>("omni_getproperty", [id]);
+          const divisible = prop.divisible !== false;
+          divisibleCache.set(id, divisible);
+          out[id] = { divisible, name: prop.name };
+        } catch {
+          // leave undefined → client keeps its local metadata
+        }
+      }),
+    );
+    return out;
+  });
+
+
 /**
  * Look up a single Omni token balance for a single address.
  * Returns the raw string balance (matches Omni RPC formatting: decimal for
@@ -83,6 +138,11 @@ export const getTxcTokenBalancesForAddresses = createServerFn({ method: "POST" }
   )
   .handler(async ({ data }) => {
     const totals: Record<number, bigint> = {};
+    // Resolve divisibility once per property from the issuance record.
+    const divis = new Map<number, boolean>();
+    await Promise.all(
+      data.propertyIds.map(async (id) => divis.set(id, await propertyDivisible(id))),
+    );
     // Prefer omni_getallbalancesforaddress: one call per address returns every token.
     await Promise.all(
       data.addresses.map(async (addr) => {
@@ -90,7 +150,7 @@ export const getTxcTokenBalancesForAddresses = createServerFn({ method: "POST" }
           const rows = await rpc<OmniAddressBalance[]>("omni_getallbalancesforaddress", [addr]);
           for (const row of rows) {
             if (!data.propertyIds.includes(row.propertyid)) continue;
-            const units = toUnits(row.balance, row.divisible !== false);
+            const units = toUnits(row.balance, divis.get(row.propertyid) ?? true);
             totals[row.propertyid] = (totals[row.propertyid] ?? 0n) + units;
           }
         } catch {
@@ -103,6 +163,7 @@ export const getTxcTokenBalancesForAddresses = createServerFn({ method: "POST" }
     for (const id of data.propertyIds) out[id] = (totals[id] ?? 0n).toString();
     return out;
   });
+
 
 /**
  * Per-address token balances. Needed for Omni sends because the "sending
@@ -122,6 +183,10 @@ export const getTxcTokenBalancesPerAddress = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const out: Record<string, Record<number, string>> = {};
+    const divis = new Map<number, boolean>();
+    await Promise.all(
+      data.propertyIds.map(async (id) => divis.set(id, await propertyDivisible(id))),
+    );
     await Promise.all(
       data.addresses.map(async (addr) => {
         const perProp: Record<number, bigint> = {};
@@ -129,7 +194,7 @@ export const getTxcTokenBalancesPerAddress = createServerFn({ method: "POST" })
           const rows = await rpc<OmniAddressBalance[]>("omni_getallbalancesforaddress", [addr]);
           for (const row of rows) {
             if (!data.propertyIds.includes(row.propertyid)) continue;
-            perProp[row.propertyid] = toUnits(row.balance, row.divisible !== false);
+            perProp[row.propertyid] = toUnits(row.balance, divis.get(row.propertyid) ?? true);
           }
         } catch {
           // address unknown to node → zero
@@ -141,6 +206,7 @@ export const getTxcTokenBalancesPerAddress = createServerFn({ method: "POST" })
     );
     return out;
   });
+
 
 function toUnits(raw: string, divisible: boolean): bigint {
   if (!divisible) return BigInt(raw);

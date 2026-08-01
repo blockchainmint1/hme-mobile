@@ -26,6 +26,7 @@ import { getEvmHistory } from "@/lib/chains/history.functions";
 import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { useTokensForChain } from "@/lib/token-prefs";
 import { useEnabledTxcTokens, formatTokenAmount } from "@/lib/txc/tokens";
+import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { getTxcTokenBalancesForAddresses } from "@/lib/txc/tokens.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -941,9 +942,11 @@ function TxcTile({
 }
 
 function TxcTokens({ addresses }: { addresses: string[] }) {
-  const tokens = useEnabledTxcTokens();
+  const localTokens = useEnabledTxcTokens();
+  const { resolved: tokens } = useTxcTokenProps(localTokens);
   const fetchBalances = useServerFn(getTxcTokenBalancesForAddresses);
   const [hideSpam] = useFeature("hideSpamTokens");
+
   const [hidden] = useHideBalances();
   const enabled = addresses.length > 0 && tokens.length > 0;
   const balances = useQuery({
@@ -974,8 +977,18 @@ function TxcTokens({ addresses }: { addresses: string[] }) {
 
   return (
     <section className="mt-8 px-4">
-      <h2 className="text-lg font-semibold mb-3">TXC tokens</h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">TXC tokens</h2>
+        <Link
+          to="/wallet/txc/consolidate"
+          search={{ token: undefined }}
+          className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Consolidate
+        </Link>
+      </div>
       <ul className="space-y-2">
+
         {visible.map(({ token: t, units }) => {
           const amtStr = formatTokenAmount(units, t.divisible);
           return (
