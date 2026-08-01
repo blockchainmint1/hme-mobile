@@ -1096,6 +1096,7 @@ function BtcForkTile({
   onOpenDetails: () => void;
 }) {
   const [hidden] = useHideBalances();
+  const [utxoSwapEnabled] = useFeature("utxoSwap");
   const v = BTC_FORK_VARIANTS[variant];
   const balanceUsd = priceUsd ? v.toCoin(balanceSats) * priceUsd : null;
   const balText = loading ? "..." : v.formatCompact(balanceSats);
@@ -1108,19 +1109,32 @@ function BtcForkTile({
     >
       <div className="flex items-center justify-between">
         <p className={`text-sm ${v.subText}`}>{label}</p>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRefresh();
-          }}
-          className={`${v.subText} hover:text-white`}
-          aria-label="Refresh"
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-        </span>
+        <div className="flex items-center gap-2">
+          {utxoSwapEnabled && (
+            <Link
+              to={variant === "ltc" ? "/wallet/ltc/swap" : "/wallet/doge/swap"}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 px-2.5 py-1 text-[11px] font-medium"
+              aria-label={`Swap ${v.ticker}`}
+            >
+              <ArrowLeftRight className="h-3 w-3" /> Swap
+            </Link>
+          )}
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRefresh();
+            }}
+            className={`${v.subText} hover:text-white`}
+            aria-label="Refresh"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          </span>
+        </div>
       </div>
+
       <p className={`mt-3 text-[10px] uppercase tracking-widest ${v.subTextFaint}`}>Native</p>
       <p className="mt-0.5 text-4xl font-bold tracking-tight">
         {hidden ? maskAmount(balText) : balText}
