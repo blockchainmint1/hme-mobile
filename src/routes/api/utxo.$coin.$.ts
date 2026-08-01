@@ -20,9 +20,9 @@ const UPSTREAMS: Record<string, string[]> = {
   doge: [
     "https://dogecoin.atomicwallet.io/api/v2",
     "https://blockbook.doge.zelcore.io/api/v2",
-    "https://doge1.trezor.io/api/v2",
   ],
 };
+
 
 // Only explorer read paths + raw broadcast. Nothing else is forwarded.
 // NOTE: bare "tx" is the Esplora broadcast endpoint (POST /api/tx) — it must
@@ -89,8 +89,13 @@ async function forward(request: Request, coin: string, path: string, search: str
       if (!upstream.ok) {
         lastStatus = upstream.status;
         lastBody = text;
+        // A 400/422 is the node itself rejecting the payload (e.g. an invalid
+        // or non-standard tx). Surface it immediately instead of masking it
+        // with the next upstream's infrastructure error.
+        if (upstream.status === 400 || upstream.status === 422) break;
         continue;
       }
+
       return new Response(text, {
         status: 200,
         headers: {

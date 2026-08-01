@@ -6,6 +6,7 @@
  * Backend: Trezor's public Blockbook (rate-limited free tier). This is
  * knowingly temporary — see plan/instructions.
  */
+import { cleanUpstreamBody } from "@/lib/broadcast-error";
 import { DOGE_BLOCKBOOK_API, DOGE_EXPLORER_BASE } from "./network";
 
 export interface MempoolAddressStats {
@@ -204,7 +205,7 @@ export async function broadcastTx(hex: string): Promise<string> {
     body: hex,
   });
   const body = await res.text();
-  if (!res.ok) throw new Error(`doge broadcast failed: ${res.status} ${body}`);
+  if (!res.ok) throw new Error(`doge broadcast failed: ${res.status} ${cleanUpstreamBody(body)}`);
   try {
     const parsed = JSON.parse(body) as { result?: string; error?: { message?: string } };
     if (parsed.error?.message) throw new Error(parsed.error.message);

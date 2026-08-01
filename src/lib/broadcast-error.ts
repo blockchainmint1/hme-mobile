@@ -26,3 +26,13 @@ export function friendlyBroadcastError(raw: unknown): string {
   }
   return msg || "Send failed";
 }
+
+/**
+ * Upstream explorers sometimes answer with a full HTML page (Cloudflare block,
+ * gateway error). Collapse that into something readable before it reaches the UI.
+ */
+export function cleanUpstreamBody(body: string, max = 300): string {
+  const trimmed = body.trim();
+  if (/^\s*<(!doctype|html)/i.test(trimmed)) return "explorer node unavailable (blocked upstream)";
+  return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
+}
