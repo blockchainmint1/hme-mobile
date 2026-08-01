@@ -47,6 +47,8 @@ import {
   formatTokenAmount,
   type TxcTokenMeta,
 } from "@/lib/txc/tokens";
+import { useTxcTokenProps } from "@/lib/txc/token-props";
+
 import {
   getTxcTokenBalancesForAddresses,
   getTxcTokenBalancesPerAddress,
