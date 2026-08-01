@@ -977,8 +977,18 @@ function TxcTokens({ addresses }: { addresses: string[] }) {
 
   return (
     <section className="mt-8 px-4">
-      <h2 className="text-lg font-semibold mb-3">TXC tokens</h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">TXC tokens</h2>
+        <Link
+          to="/wallet/txc/consolidate"
+          search={{ token: undefined }}
+          className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Consolidate
+        </Link>
+      </div>
       <ul className="space-y-2">
+
         {visible.map(({ token: t, units }) => {
           const amtStr = formatTokenAmount(units, t.divisible);
           return (
