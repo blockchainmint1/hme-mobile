@@ -2,6 +2,7 @@
  * Minimal client for the mempool.texitcoin.org REST API.
  * Assumes the mempool.space-compatible endpoint shape used by the public instance.
  */
+import { cleanUpstreamBody } from "@/lib/broadcast-error";
 import { MEMPOOL_API, MEMPOOL_BASE } from "./network";
 
 export interface MempoolAddressStats {
@@ -80,7 +81,7 @@ export async function broadcastTx(hex: string): Promise<string> {
     body: hex,
   });
   const body = await res.text();
-  if (!res.ok) throw new Error(`broadcast failed: ${res.status} ${body}`);
+  if (!res.ok) throw new Error(`broadcast failed: ${res.status} ${cleanUpstreamBody(body)}`);
   return body.trim();
 }
 

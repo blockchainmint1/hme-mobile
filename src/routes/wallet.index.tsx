@@ -26,6 +26,7 @@ import { getEvmHistory } from "@/lib/chains/history.functions";
 import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { useTokensForChain } from "@/lib/token-prefs";
 import { useEnabledTxcTokens, formatTokenAmount } from "@/lib/txc/tokens";
+import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { getTxcTokenBalancesForAddresses } from "@/lib/txc/tokens.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -941,9 +942,11 @@ function TxcTile({
 }
 
 function TxcTokens({ addresses }: { addresses: string[] }) {
-  const tokens = useEnabledTxcTokens();
+  const localTokens = useEnabledTxcTokens();
+  const { resolved: tokens } = useTxcTokenProps(localTokens);
   const fetchBalances = useServerFn(getTxcTokenBalancesForAddresses);
   const [hideSpam] = useFeature("hideSpamTokens");
+
   const [hidden] = useHideBalances();
   const enabled = addresses.length > 0 && tokens.length > 0;
   const balances = useQuery({
@@ -974,8 +977,18 @@ function TxcTokens({ addresses }: { addresses: string[] }) {
 
   return (
     <section className="mt-8 px-4">
-      <h2 className="text-lg font-semibold mb-3">TXC tokens</h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">TXC tokens</h2>
+        <Link
+          to="/wallet/txc/consolidate"
+          search={{ token: undefined }}
+          className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+        >
+          Consolidate
+        </Link>
+      </div>
       <ul className="space-y-2">
+
         {visible.map(({ token: t, units }) => {
           const amtStr = formatTokenAmount(units, t.divisible);
           return (
@@ -1083,6 +1096,7 @@ function BtcForkTile({
   onOpenDetails: () => void;
 }) {
   const [hidden] = useHideBalances();
+  const [utxoSwapEnabled] = useFeature("utxoSwap");
   const v = BTC_FORK_VARIANTS[variant];
   const balanceUsd = priceUsd ? v.toCoin(balanceSats) * priceUsd : null;
   const balText = loading ? "..." : v.formatCompact(balanceSats);
@@ -1095,19 +1109,32 @@ function BtcForkTile({
     >
       <div className="flex items-center justify-between">
         <p className={`text-sm ${v.subText}`}>{label}</p>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRefresh();
-          }}
-          className={`${v.subText} hover:text-white`}
-          aria-label="Refresh"
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-        </span>
+        <div className="flex items-center gap-2">
+          {utxoSwapEnabled && (
+            <Link
+              to={variant === "ltc" ? "/wallet/ltc/swap" : "/wallet/doge/swap"}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 px-2.5 py-1 text-[11px] font-medium"
+              aria-label={`Swap ${v.ticker}`}
+            >
+              <ArrowLeftRight className="h-3 w-3" /> Swap
+            </Link>
+          )}
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRefresh();
+            }}
+            className={`${v.subText} hover:text-white`}
+            aria-label="Refresh"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          </span>
+        </div>
       </div>
+
       <p className={`mt-3 text-[10px] uppercase tracking-widest ${v.subTextFaint}`}>Native</p>
       <p className="mt-0.5 text-4xl font-bold tracking-tight">
         {hidden ? maskAmount(balText) : balText}

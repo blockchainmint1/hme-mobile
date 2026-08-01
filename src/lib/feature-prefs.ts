@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
  * Kept off by default — every feature we surface is another button
  * that can go wrong or confuse a first-time user.
  */
-export type FeatureId = "evmSwap" | "confirmLast4" | "hideSpamTokens";
+export type FeatureId = "evmSwap" | "utxoSwap" | "confirmLast4" | "hideSpamTokens";
 
 /** Default value when the user hasn't set the toggle yet. */
 const DEFAULTS: Record<FeatureId, boolean> = {
   evmSwap: false,
+  utxoSwap: true,
   confirmLast4: true,
   hideSpamTokens: true,
 };

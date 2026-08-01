@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import type { DerivationKind } from "@/lib/txc/network";
+import { ALL_DERIVATION_KINDS, type DerivationKind } from "@/lib/txc/network";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { toast } from "sonner";
@@ -39,6 +39,9 @@ const KIND_LABEL: Record<DerivationKind, string> = {
   bip84: "Native segwit (txc1…)",
   bip49: "Wrapped segwit",
   bip44: "Legacy (T…)",
+  "bip84-legacy": "Native segwit — old app path",
+  "bip49-legacy": "Wrapped segwit — old app path",
+  "bip44-legacy": "Legacy (T…) — old app path",
 };
 
 const IMPORT_GAP_LIMIT = 20;
@@ -213,7 +216,7 @@ function ImportPage() {
   }
 
   function fallbackCandidates(root: ReturnType<typeof rootFromSeed>): Candidate[] {
-    return (["bip84", "bip49", "bip44"] as DerivationKind[]).map((kind) => ({
+    return ([...ALL_DERIVATION_KINDS] as DerivationKind[]).map((kind) => ({
       kind,
       address: deriveAddress(root, kind, 0, 0).address,
       txCount: 0,
@@ -248,7 +251,7 @@ function ImportPage() {
     try {
       const seed = await seedFromMnemonic(m, passphrase);
       const root = rootFromSeed(seed);
-      const kinds: DerivationKind[] = ["bip84", "bip49", "bip44"];
+      const kinds: DerivationKind[] = [...ALL_DERIVATION_KINDS];
 
       // Fast probe first: just address 0 of each kind (3 requests instead of ~360).
       // This works for the vast majority of imports and is mobile-network friendly.

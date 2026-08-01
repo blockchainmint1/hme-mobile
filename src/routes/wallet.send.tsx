@@ -6,6 +6,7 @@ import { z } from "zod";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
 import { buildAndSignTx } from "@/lib/txc/wallet";
+import { scriptKindOf, type DerivationKind } from "@/lib/txc/network";
 import { broadcastTx, explorerTxUrl, getFeeEstimates, type FeeEstimates } from "@/lib/txc/mempool";
 import { formatTxc, txcToSats } from "@/lib/txc/units";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,8 @@ import {
   formatTokenAmount,
   type TxcTokenMeta,
 } from "@/lib/txc/tokens";
+import { useTxcTokenProps } from "@/lib/txc/token-props";
+
 import {
   getTxcTokenBalancesForAddresses,
   getTxcTokenBalancesPerAddress,
@@ -85,14 +88,24 @@ const OMNI_OP_RETURN_VBYTES = 31;
 // TXC dust threshold used for the Omni reference output. Matches CryptoPOP.
 const OMNI_DUST_SATS = 10_000;
 
-function estimateVsize(
-  kind: keyof typeof VBYTES,
-  nIn: number,
+/**
+ * Inputs can come from different derivation branches (SLIP-0044 696969' and
+ * the legacy 0' paths), and those branches can have different script types,
+ * so size each input by its own kind and only fall back to the wallet's
+ * primary kind when an input doesn't carry one.
+ */
+function estimateVsizeFor(
+  primaryKind: DerivationKind,
+  inputs: { kind?: DerivationKind }[],
   nOut: number,
   withOmni = false,
 ): number {
-  const v = VBYTES[kind];
-  return v.overhead + v.input * nIn + v.output * nOut + (withOmni ? OMNI_OP_RETURN_VBYTES : 0);
+  const base = VBYTES[scriptKindOf(primaryKind)];
+  const inputBytes = inputs.reduce(
+    (sum, u) => sum + VBYTES[scriptKindOf(u.kind ?? primaryKind)].input,
+    0,
+  );
+  return base.overhead + inputBytes + base.output * nOut + (withOmni ? OMNI_OP_RETURN_VBYTES : 0);
 }
 
 type Stage =
@@ -127,7 +140,9 @@ function SendPage() {
     staleTime: 60_000,
   });
 
-  const tokens = useEnabledTxcTokens();
+  const localTokens = useEnabledTxcTokens();
+  const { resolved: tokens } = useTxcTokenProps(localTokens);
+
   const search = Route.useSearch();
   const initialAsset: Asset = useMemo(() => {
     const t = search.token;
@@ -290,7 +305,7 @@ function SendPage() {
       for (const u of ordered) {
         picked.push(u);
         acc += u.value;
-        vsize = estimateVsize(unlocked.kind, picked.length, 2, true);
+        vsize = estimateVsizeFor(unlocked.kind, picked, 2, true);
         feeSats = Math.ceil(vsize * feeRate);
         if (acc >= OMNI_DUST_SATS + feeSats + OMNI_DUST_SATS) break;
       }
@@ -317,7 +332,7 @@ function SendPage() {
         setError("No funds available.");
         return;
       }
-      const vsize = estimateVsize(unlocked.kind, nIn, 1);
+      const vsize = estimateVsizeFor(unlocked.kind, sorted, 1);
       const feeSats = Math.ceil(vsize * feeRate);
       const outSats = totalAvailable - feeSats;
       if (outSats <= 546) {
@@ -340,7 +355,7 @@ function SendPage() {
     for (const u of sorted) {
       picked.push(u);
       acc += u.value;
-      vsize = estimateVsize(unlocked.kind, picked.length, 2);
+      vsize = estimateVsizeFor(unlocked.kind, picked, 2);
       feeSats = Math.ceil(vsize * feeRate);
       if (acc >= amountSats + feeSats) break;
     }
@@ -598,10 +613,22 @@ function SendPage() {
                 </div>
               </div>
               {error && (
-                <div className="flex items-start gap-2 text-sm text-destructive">
-                  <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
+                <div className="space-y-1">
+                  <div className="flex items-start gap-2 text-sm text-destructive">
+                    <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
+                  </div>
+                  {/^No single address holds/.test(error) && activeToken && (
+                    <Link
+                      to="/wallet/txc/consolidate"
+                      search={{ token: String(activeToken.id) }}
+                      className="inline-block text-sm font-medium underline underline-offset-4"
+                    >
+                      Consolidate {activeToken.symbol} into one address
+                    </Link>
+                  )}
                 </div>
               )}
+
               <Button
                 type="submit"
                 className="w-full"

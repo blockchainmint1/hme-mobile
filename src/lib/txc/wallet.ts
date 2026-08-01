@@ -16,7 +16,7 @@ import {
 import { wordlist as englishWordlist } from "@scure/bip39/wordlists/english.js";
 import { BIP32Factory, type BIP32Interface } from "bip32";
 import { payments, Psbt } from "bitcoinjs-lib";
-import { TXC_NETWORK, DERIVATION_PATHS, type DerivationKind } from "./network";
+import { TXC_NETWORK, DERIVATION_PATHS, scriptKindOf, type DerivationKind } from "./network";
 
 const bip32 = BIP32Factory(ecc);
 
@@ -49,6 +49,13 @@ export interface UtxoInput {
   // Which derived key signs this input.
   change: 0 | 1;
   index: number;
+  /**
+   * Derivation kind this UTXO's key comes from. A TXC account spans several
+   * paths (SLIP-0044 696969' plus the legacy 0' paths from the old mobile
+   * app), so inputs in one transaction can come from different branches.
+   * Defaults to the transaction's primary kind when absent.
+   */
+  kind?: AddressKind;
 }
 
 export function generateMnemonic(strengthBits: 128 | 256 = 128): string {
@@ -120,7 +127,7 @@ function pathFor(kind: AddressKind, change: 0 | 1, index: number): string {
 
 function deriveAddressFromNode(node: BIP32Interface, kind: AddressKind): string {
   const pubkey = node.publicKey;
-  switch (kind) {
+  switch (scriptKindOf(kind)) {
     case "bip84": {
       const p = payments.p2wpkh({ pubkey, network: TXC_NETWORK });
       if (!p.address) throw new Error("Failed to derive bech32 address");
@@ -193,19 +200,21 @@ export function buildAndSignTx(args: {
   const changeSats = totalIn - totalOut - feeSats;
   if (changeSats < 0) throw new Error("Insufficient funds for outputs + fee");
 
-  const psbt = new Psbt({ network: TXC_NETWORK });
+  const psbt = new Psbt({ network: TXC_NETWORK, maximumFeeRate: 10_000_000 });
 
   for (const u of inputs) {
+    const uKind = u.kind ?? kind;
+    const uScript = scriptKindOf(uKind);
     const base: Parameters<typeof psbt.addInput>[0] = { hash: u.txid, index: u.vout };
-    if (kind === "bip84") {
+    if (uScript === "bip84") {
       if (!u.witnessScriptHex) throw new Error("witnessScriptHex required for BIP84 input");
       base.witnessUtxo = {
         script: hexToBytes(u.witnessScriptHex),
         value: BigInt(u.value),
       };
-    } else if (kind === "bip49") {
+    } else if (uScript === "bip49") {
       if (!u.witnessScriptHex) throw new Error("witnessScriptHex required for BIP49 input");
-      const node = root.derivePath(`${DERIVATION_PATHS[kind]}/${u.change}/${u.index}`);
+      const node = root.derivePath(`${DERIVATION_PATHS[uKind]}/${u.change}/${u.index}`);
       const inner = payments.p2wpkh({ pubkey: node.publicKey, network: TXC_NETWORK });
       base.witnessUtxo = {
         script: hexToBytes(u.witnessScriptHex),
@@ -231,7 +240,7 @@ export function buildAndSignTx(args: {
 
   // Sign every input with its derived key.
   inputs.forEach((u, i) => {
-    const node = root.derivePath(`${DERIVATION_PATHS[kind]}/${u.change}/${u.index}`);
+    const node = root.derivePath(`${DERIVATION_PATHS[u.kind ?? kind]}/${u.change}/${u.index}`);
     if (!node.privateKey) throw new Error("Missing private key during signing");
     psbt.signInput(i, {
       publicKey: node.publicKey,

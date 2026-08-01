@@ -110,7 +110,9 @@ function CreatePage() {
     }
     setBusy(true);
     try {
-      const u = { mnemonic, passphrase: "", kind: "bip84" as const, label: "Main wallet" };
+      const u = { mnemonic, passphrase: "", // SLIP-0044 legacy path (m/44'/696969'/0') — matches the TXC Web Wallet
+      // and wTXC bridge, so seeds move between them cleanly.
+      kind: "bip44" as const, label: "Main wallet" };
       await saveWallet(u, password);
       await loadFromMemory(u);
       clearDraftMnemonic();

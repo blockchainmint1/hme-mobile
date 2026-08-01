@@ -1,7 +1,7 @@
 /**
  * TEXITcoin Omni Layer token support.
  *
- * - Built-in registry (POP #37, wUSDC #38) + user customs via localStorage.
+ * - Built-in registry (POP #37) + user customs via localStorage.
  * - Simple Send payload construction (client-side; deterministic byte layout).
  * - Token display prefs (show/hide) mirroring the EVM token-prefs module.
  *
@@ -30,9 +30,9 @@ export interface TxcTokenMeta {
 export const OMNI_DIVISIBLE_DECIMALS = 8;
 
 export const BUILTIN_TXC_TOKENS: TxcTokenMeta[] = [
-  { id: 38, symbol: "wUSDC", name: "Wrapped USDC", divisible: true },
-  { id: 37, symbol: "POP", name: "CryptoPOP", divisible: false },
+  { id: 39, symbol: "TSD", name: "Texas Standard Dollar", divisible: true },
 ];
+
 
 const CUSTOM_KEY = "hme:txc-tokens:custom:v1";
 const HIDDEN_KEY = "hme:txc-tokens:hidden:v1";
