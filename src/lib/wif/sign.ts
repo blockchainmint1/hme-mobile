@@ -44,7 +44,7 @@ export function buildAndSignWifTx(args: {
   const changeSats = totalIn - totalOut - feeSats;
   if (changeSats < 0) throw new Error("Insufficient funds for outputs + fee");
 
-  const psbt = new Psbt({ network });
+  const psbt = new Psbt({ network, maximumFeeRate: 10_000_000 });
   for (const u of inputs) {
     const base: Parameters<typeof psbt.addInput>[0] = { hash: u.txid, index: u.vout };
     if (kind === "bip84") {
