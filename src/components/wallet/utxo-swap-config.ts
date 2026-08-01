@@ -29,6 +29,7 @@ export interface BuildArgs {
 
 export interface UtxoSwapConfig {
   ticker: string;
+  kind: string;
   step: string;
   accountQueryKey: string;
   txsQueryKey: string;
@@ -42,6 +43,7 @@ export interface UtxoSwapConfig {
   format: (sats: number) => string;
   /** vsize estimate; `memo` adds an OP_RETURN output. */
   estimateVsize: (nIn: number, nOut: number, memo: boolean) => number;
+  buildAndSign: (args: BuildArgs) => { hex: string; txid: string; feeSats: number; changeSats: number };
 }
 
 // LTC swaps spend native SegWit (bip84) inputs by default.
@@ -54,6 +56,7 @@ const OP_RETURN_VBYTES = 90;
 export const UTXO_SWAP_COINS: Record<UtxoSwapCoin, UtxoSwapConfig> = {
   ltc: {
     ticker: "LTC",
+    kind: LTC_DEFAULT_KIND,
     step: "0.00000001",
     accountQueryKey: "ltc-account",
     txsQueryKey: "ltc-txs",
@@ -67,9 +70,11 @@ export const UTXO_SWAP_COINS: Record<UtxoSwapCoin, UtxoSwapConfig> = {
     format: (sats) => formatLtc(sats),
     estimateVsize: (nIn, nOut, memo) =>
       LTC_V.overhead + LTC_V.input * nIn + LTC_V.output * nOut + (memo ? OP_RETURN_VBYTES : 0),
+    buildAndSign: (args) => buildSwapTx("ltc", args),
   },
   doge: {
     ticker: "DOGE",
+    kind: DOGE_DEFAULT_KIND,
     step: "0.0001",
     accountQueryKey: "doge-account",
     txsQueryKey: "doge-txs",
@@ -83,6 +88,7 @@ export const UTXO_SWAP_COINS: Record<UtxoSwapCoin, UtxoSwapConfig> = {
     format: (sats) => formatDoge(sats),
     estimateVsize: (nIn, nOut, memo) =>
       DOGE_V.overhead + DOGE_V.input * nIn + DOGE_V.output * nOut + (memo ? OP_RETURN_VBYTES : 0),
+    buildAndSign: (args) => buildSwapTx("doge", args),
   },
 };
 
