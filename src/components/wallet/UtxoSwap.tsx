@@ -277,6 +277,22 @@ export function UtxoSwap({ coin }: { coin: UtxoSwapCoin }) {
                   </option>
                 ))}
               </select>
+              {destinations.error && (
+                <p className="mt-2 flex items-start gap-2 text-xs text-amber-500">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>
+                    {(destinations.error as Error).message}{" "}
+                    <button
+                      type="button"
+                      onClick={() => destinations.refetch()}
+                      className="underline hover:text-foreground"
+                    >
+                      Retry
+                    </button>
+                  </span>
+                </p>
+              )}
+
               <div className="mt-2 rounded-md bg-muted/40 px-3 py-2 text-sm">
                 {quote.isFetching ? (
                   <span className="inline-flex items-center gap-2 text-muted-foreground">
