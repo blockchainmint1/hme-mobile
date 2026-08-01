@@ -138,6 +138,11 @@ export const getTxcTokenBalancesForAddresses = createServerFn({ method: "POST" }
   )
   .handler(async ({ data }) => {
     const totals: Record<number, bigint> = {};
+    // Resolve divisibility once per property from the issuance record.
+    const divis = new Map<number, boolean>();
+    await Promise.all(
+      data.propertyIds.map(async (id) => divis.set(id, await propertyDivisible(id))),
+    );
     // Prefer omni_getallbalancesforaddress: one call per address returns every token.
     await Promise.all(
       data.addresses.map(async (addr) => {
@@ -145,7 +150,7 @@ export const getTxcTokenBalancesForAddresses = createServerFn({ method: "POST" }
           const rows = await rpc<OmniAddressBalance[]>("omni_getallbalancesforaddress", [addr]);
           for (const row of rows) {
             if (!data.propertyIds.includes(row.propertyid)) continue;
-            const units = toUnits(row.balance, row.divisible !== false);
+            const units = toUnits(row.balance, divis.get(row.propertyid) ?? true);
             totals[row.propertyid] = (totals[row.propertyid] ?? 0n) + units;
           }
         } catch {
@@ -158,6 +163,7 @@ export const getTxcTokenBalancesForAddresses = createServerFn({ method: "POST" }
     for (const id of data.propertyIds) out[id] = (totals[id] ?? 0n).toString();
     return out;
   });
+
 
 /**
  * Per-address token balances. Needed for Omni sends because the "sending
