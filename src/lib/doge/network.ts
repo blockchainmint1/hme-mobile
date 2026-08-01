@@ -33,10 +33,12 @@ export const DOGE_DEFAULT_KIND: DogeDerivationKind = "bip44";
 
 export const DOGE_URI_SCHEMES = ["dogecoin"] as const;
 
-// Trezor public Blockbook v2 instance. Rate-limited but free — the user
-// approved this as a temporary backend; something first-party will replace it.
-export const DOGE_BLOCKBOOK_BASE = "https://doge1.trezor.io";
-export const DOGE_BLOCKBOOK_API = `${DOGE_BLOCKBOOK_BASE}/api/v2`;
+// Chain data goes through our same-origin proxy (/api/utxo/doge), which
+// fails over across several public Blockbook instances. Trezor's public
+// node now 403s a lot of traffic and the alternatives send no CORS headers,
+// so a direct browser fetch is not viable.
+export const DOGE_BLOCKBOOK_BASE = "https://dogecoin.atomicwallet.io";
+export const DOGE_BLOCKBOOK_API = "/api/utxo/doge";
 
 // User-facing explorer for tx / address links.
 export const DOGE_EXPLORER_BASE = "https://dogechain.info";
