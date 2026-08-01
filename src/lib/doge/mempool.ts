@@ -199,21 +199,30 @@ export async function getFeeEstimates(): Promise<FeeEstimates> {
 }
 
 export async function broadcastTx(hex: string): Promise<string> {
-  const res = await fetch(`${DOGE_BLOCKBOOK_API}/sendtx/`, {
-    method: "POST",
-    headers: { "content-type": "text/plain" },
-    body: hex,
+  // Blockbook accepts the raw hex in the URL (GET /sendtx/{hex}). We use that
+  // instead of the POST body form because the request body doesn't survive
+  // every proxy / native-bridge hop, which shows up as "Missing tx blob".
+  const res = await fetch(`${DOGE_BLOCKBOOK_API}/sendtx/${hex}`, {
+    headers: { accept: "application/json" },
   });
   const body = await res.text();
   if (!res.ok) throw new Error(`doge broadcast failed: ${res.status} ${cleanUpstreamBody(body)}`);
+
+  type SendTxBody = { result?: string; error?: string | { message?: string } };
+  let parsed: SendTxBody | null = null;
   try {
-    const parsed = JSON.parse(body) as { result?: string; error?: { message?: string } };
-    if (parsed.error?.message) throw new Error(parsed.error.message);
-    if (parsed.result) return parsed.result;
-  } catch (err) {
-    if (err instanceof Error && err.message !== `Unexpected token '<'`) throw err;
+    parsed = JSON.parse(body) as SendTxBody;
+  } catch {
+    parsed = null;
   }
-  return body.trim();
+
+  if (parsed) {
+    const errMsg = typeof parsed.error === "string" ? parsed.error : parsed.error?.message;
+    if (errMsg) throw new Error(`doge broadcast rejected: ${errMsg}`);
+    if (parsed.result) return parsed.result;
+  }
+  return cleanUpstreamBody(body, 120);
+
 }
 
 export function explorerTxUrl(txid: string): string {
