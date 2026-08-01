@@ -11,12 +11,18 @@ import {
 } from "./assets";
 import type { ThorQuoteInput } from "./schemas";
 
-/** Public THORNode endpoints, tried in order. */
+/**
+ * Public THORNode endpoints, tried in order.
+ * NineRealms was retired in 2026; Liquify's gateway is the current public one.
+ */
 const NODES = [
-  "https://thornode.ninerealms.com",
+  "https://gateway.liquify.com/chain/thorchain_api",
+  "https://thornode.thorchain.network",
   "https://thornode.thorchain.liquify.com",
-  "https://thornode.thorswap.net",
 ];
+
+/** Transient node states worth retrying on another endpoint. */
+const RETRYABLE = /invalid height|context did not contain|unavailable|timeout|fetch|abort|502|503/i;
 
 async function nodeGet<T>(path: string): Promise<T> {
   let lastErr: unknown = null;
@@ -31,25 +37,26 @@ async function nodeGet<T>(path: string): Promise<T> {
       try {
         json = JSON.parse(text);
       } catch {
-        lastErr = new Error(`THORNode ${res.status}`);
+        lastErr = new Error(`Swap node returned an unreadable response (${res.status})`);
         continue;
       }
-      if (!res.ok) {
-        const msg =
-          (json as { message?: string; error?: string })?.message ??
-          (json as { error?: string })?.error ??
-          `THORNode error ${res.status}`;
-        // 4xx from the quote endpoint is a real, user-meaningful answer
-        // (amount too small, pool halted) — don't retry other nodes for it.
-        if (res.status >= 400 && res.status < 500) throw new Error(msg);
-        lastErr = new Error(msg);
-        continue;
+      // THORNode reports most errors as a 200 with a { code, message } body,
+      // so status alone isn't enough to tell success from failure.
+      const asErr = json as { code?: number; message?: string; error?: string };
+      const msg = asErr?.message ?? asErr?.error ?? null;
+      const failed = !res.ok || (typeof asErr?.code === "number" && !!msg);
+      if (failed) {
+        const message = msg ?? `Swap node error ${res.status}`;
+        if (RETRYABLE.test(message)) {
+          lastErr = new Error(message);
+          continue;
+        }
+        // A real, user-meaningful answer (amount too small, trading halted).
+        throw new Error(message);
       }
       return json as T;
     } catch (err) {
-      if (err instanceof Error && !/fetch|timeout|abort|THORNode error 5/i.test(err.message)) {
-        throw err;
-      }
+      if (err instanceof Error && !RETRYABLE.test(err.message)) throw err;
       lastErr = err;
     }
   }
@@ -60,18 +67,47 @@ async function nodeGet<T>(path: string): Promise<T> {
   );
 }
 
+/** THORChain chain codes for our source coins and destination chains. */
+const HALT_CHAIN_CODE: Record<string, string> = {
+  ltc: "LTC",
+  doge: "DOGE",
+  eth: "ETH",
+  base: "BASE",
+  bsc: "BSC",
+};
+
 /** Stablecoin pools that are currently live and tradeable. */
 export async function fetchAvailableStables(
   from: keyof typeof THOR_SOURCE_ASSET,
 ): Promise<StableDestination[]> {
-  const pools = await nodeGet<Array<{ asset: string; status: string }>>("/thorchain/pools");
+  const [pools, mimir] = await Promise.all([
+    nodeGet<Array<{ asset: string; status: string }>>("/thorchain/pools"),
+    nodeGet<Record<string, number>>("/thorchain/mimir").catch(
+      () => ({}) as Record<string, number>,
+    ),
+  ]);
   const live = new Set(
     pools.filter((p) => p.status === "Available").map((p) => p.asset.toUpperCase()),
   );
+  const halted = (chain: string) =>
+    mimir[`HALT${chain}TRADING`] === 1 || mimir[`SOLVENCYHALT${chain}CHAIN`] === 1;
+
+  if (mimir["HALTTRADING"] === 1) {
+    throw new Error("THORChain has paused trading network-wide. Try again a bit later.");
+  }
   // The source pool must be live too, or nothing can be swapped.
-  if (!live.has(THOR_SOURCE_ASSET[from].toUpperCase())) return [];
-  return STABLE_DESTINATIONS.filter((d) => live.has(d.asset.toUpperCase()));
+  if (!live.has(THOR_SOURCE_ASSET[from].toUpperCase()) || halted(HALT_CHAIN_CODE[from]!)) {
+    throw new Error(`${from.toUpperCase()} swaps are paused on THORChain right now.`);
+  }
+  const available = STABLE_DESTINATIONS.filter(
+    (d) => live.has(d.asset.toUpperCase()) && !halted(HALT_CHAIN_CODE[d.chain]!),
+  );
+  if (!available.length) {
+    throw new Error("Every stablecoin route is paused on THORChain right now. Try again later.");
+  }
+  return available;
 }
+
 
 export async function fetchQuote(input: ThorQuoteInput): Promise<ThorQuote> {
   const params = new URLSearchParams({
