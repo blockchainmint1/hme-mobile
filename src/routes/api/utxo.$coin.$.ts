@@ -20,9 +20,9 @@ const UPSTREAMS: Record<string, string[]> = {
   doge: [
     "https://dogecoin.atomicwallet.io/api/v2",
     "https://blockbook.doge.zelcore.io/api/v2",
-    "https://doge1.trezor.io/api/v2",
   ],
 };
+
 
 // Only explorer read paths + raw broadcast. Nothing else is forwarded.
 // NOTE: bare "tx" is the Esplora broadcast endpoint (POST /api/tx) — it must
