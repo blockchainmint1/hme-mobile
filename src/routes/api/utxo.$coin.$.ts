@@ -25,11 +25,16 @@ const UPSTREAMS: Record<string, string[]> = {
 };
 
 // Only explorer read paths + raw broadcast. Nothing else is forwarded.
+// NOTE: bare "tx" is the Esplora broadcast endpoint (POST /api/tx) — it must
+// be allowed on its own, not just as the "tx/<txid>" read prefix.
+const ALLOWED_EXACT = ["tx", "sendtx", "blocks", "fee-estimates"];
 const ALLOWED_PREFIXES = ["address/", "utxo/", "tx/", "estimatefee/", "sendtx", "v1/fees", "blocks", "fee-estimates"];
 
 function allowedPath(path: string): boolean {
+  if (ALLOWED_EXACT.includes(path)) return true;
   return ALLOWED_PREFIXES.some((p) => path === p || path.startsWith(p));
 }
+
 
 function isAllowedCaller(request: Request): boolean {
   const origin = request.headers.get("origin");
