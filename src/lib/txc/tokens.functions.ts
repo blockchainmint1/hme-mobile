@@ -183,6 +183,10 @@ export const getTxcTokenBalancesPerAddress = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const out: Record<string, Record<number, string>> = {};
+    const divis = new Map<number, boolean>();
+    await Promise.all(
+      data.propertyIds.map(async (id) => divis.set(id, await propertyDivisible(id))),
+    );
     await Promise.all(
       data.addresses.map(async (addr) => {
         const perProp: Record<number, bigint> = {};
@@ -190,7 +194,7 @@ export const getTxcTokenBalancesPerAddress = createServerFn({ method: "POST" })
           const rows = await rpc<OmniAddressBalance[]>("omni_getallbalancesforaddress", [addr]);
           for (const row of rows) {
             if (!data.propertyIds.includes(row.propertyid)) continue;
-            perProp[row.propertyid] = toUnits(row.balance, row.divisible !== false);
+            perProp[row.propertyid] = toUnits(row.balance, divis.get(row.propertyid) ?? true);
           }
         } catch {
           // address unknown to node → zero
@@ -202,6 +206,7 @@ export const getTxcTokenBalancesPerAddress = createServerFn({ method: "POST" })
     );
     return out;
   });
+
 
 function toUnits(raw: string, divisible: boolean): bigint {
   if (!divisible) return BigInt(raw);
