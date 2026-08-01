@@ -26,6 +26,7 @@ import { Route as PayInvoiceIdRouteImport } from './routes/pay.$invoiceId'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as WalletTxcConsolidateRouteImport } from './routes/wallet.txc.consolidate'
+import { Route as WalletLtcSwapRouteImport } from './routes/wallet.ltc.swap'
 import { Route as WalletLtcSendRouteImport } from './routes/wallet.ltc.send'
 import { Route as WalletLtcReceiveRouteImport } from './routes/wallet.ltc.receive'
 import { Route as WalletIskSendRouteImport } from './routes/wallet.isk.send'
@@ -125,6 +126,11 @@ const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
 const WalletTxcConsolidateRoute = WalletTxcConsolidateRouteImport.update({
   id: '/txc/consolidate',
   path: '/txc/consolidate',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletLtcSwapRoute = WalletLtcSwapRouteImport.update({
+  id: '/ltc/swap',
+  path: '/ltc/swap',
   getParentRoute: () => WalletRoute,
 } as any)
 const WalletLtcSendRoute = WalletLtcSendRouteImport.update({
@@ -228,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/wallet/isk/send': typeof WalletIskSendRoute
   '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
   '/wallet/ltc/send': typeof WalletLtcSendRoute
+  '/wallet/ltc/swap': typeof WalletLtcSwapRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/api/utxo/$coin/$': typeof ApiUtxoCoinSplatRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/wallet/isk/send': typeof WalletIskSendRoute
   '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
   '/wallet/ltc/send': typeof WalletLtcSendRoute
+  '/wallet/ltc/swap': typeof WalletLtcSwapRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/api/utxo/$coin/$': typeof ApiUtxoCoinSplatRoute
@@ -296,6 +304,7 @@ export interface FileRoutesById {
   '/wallet/isk/send': typeof WalletIskSendRoute
   '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
   '/wallet/ltc/send': typeof WalletLtcSendRoute
+  '/wallet/ltc/swap': typeof WalletLtcSwapRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
   '/api/utxo/$coin/$': typeof ApiUtxoCoinSplatRoute
@@ -332,6 +341,7 @@ export interface FileRouteTypes {
     | '/wallet/isk/send'
     | '/wallet/ltc/receive'
     | '/wallet/ltc/send'
+    | '/wallet/ltc/swap'
     | '/wallet/txc/consolidate'
     | '/api/nectar/pay/$invoiceId'
     | '/api/utxo/$coin/$'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/wallet/isk/send'
     | '/wallet/ltc/receive'
     | '/wallet/ltc/send'
+    | '/wallet/ltc/swap'
     | '/wallet/txc/consolidate'
     | '/api/nectar/pay/$invoiceId'
     | '/api/utxo/$coin/$'
@@ -399,6 +410,7 @@ export interface FileRouteTypes {
     | '/wallet/isk/send'
     | '/wallet/ltc/receive'
     | '/wallet/ltc/send'
+    | '/wallet/ltc/swap'
     | '/wallet/txc/consolidate'
     | '/api/nectar/pay/$invoiceId'
     | '/api/utxo/$coin/$'
@@ -544,6 +556,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalletTxcConsolidateRouteImport
       parentRoute: typeof WalletRoute
     }
+    '/wallet/ltc/swap': {
+      id: '/wallet/ltc/swap'
+      path: '/ltc/swap'
+      fullPath: '/wallet/ltc/swap'
+      preLoaderRoute: typeof WalletLtcSwapRouteImport
+      parentRoute: typeof WalletRoute
+    }
     '/wallet/ltc/send': {
       id: '/wallet/ltc/send'
       path: '/ltc/send'
@@ -684,6 +703,7 @@ interface WalletRouteChildren {
   WalletIskSendRoute: typeof WalletIskSendRoute
   WalletLtcReceiveRoute: typeof WalletLtcReceiveRoute
   WalletLtcSendRoute: typeof WalletLtcSendRoute
+  WalletLtcSwapRoute: typeof WalletLtcSwapRoute
   WalletTxcConsolidateRoute: typeof WalletTxcConsolidateRoute
   WalletWifIdReceiveRoute: typeof WalletWifIdReceiveRoute
   WalletWifIdSendRoute: typeof WalletWifIdSendRoute
@@ -705,6 +725,7 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletIskSendRoute: WalletIskSendRoute,
   WalletLtcReceiveRoute: WalletLtcReceiveRoute,
   WalletLtcSendRoute: WalletLtcSendRoute,
+  WalletLtcSwapRoute: WalletLtcSwapRoute,
   WalletTxcConsolidateRoute: WalletTxcConsolidateRoute,
   WalletWifIdReceiveRoute: WalletWifIdReceiveRoute,
   WalletWifIdSendRoute: WalletWifIdSendRoute,
