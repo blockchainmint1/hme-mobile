@@ -33,5 +33,9 @@ export const LTC_DEFAULT_KIND: LtcDerivationKind = "bip84";
 
 export const LTC_URI_SCHEMES = ["litecoin"] as const;
 
+// User-facing explorer links go direct…
 export const LTC_MEMPOOL_BASE = "https://litecoinspace.org";
-export const LTC_MEMPOOL_API = `${LTC_MEMPOOL_BASE}/api`;
+// …but data calls go through our same-origin proxy (/api/utxo/ltc) so the
+// strict CSP `connect-src` doesn't block them and the native shell can
+// forward them via the server-fn bridge.
+export const LTC_MEMPOOL_API = "/api/utxo/ltc";
