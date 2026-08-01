@@ -78,8 +78,10 @@ export function buildAndSignTx(args: {
   changeAddress: string;
   changeIndex: number;
   feeSats: number;
+  /** Optional OP_RETURN payload (e.g. a THORChain swap memo). Max 80 bytes. */
+  memo?: string;
 }): { hex: string; txid: string; feeSats: number; changeSats: number } {
-  const { root, kind, inputs, outputs, changeAddress, feeSats } = args;
+  const { root, kind, inputs, outputs, changeAddress, feeSats, memo } = args;
   const totalIn = inputs.reduce((s, u) => s + u.value, 0);
   const totalOut = outputs.reduce((s, o) => s + o.valueSats, 0);
   const changeSats = totalIn - totalOut - feeSats;
@@ -93,7 +95,10 @@ export function buildAndSignTx(args: {
   }
 
   for (const o of outputs) psbt.addOutput({ address: o.address, value: BigInt(o.valueSats) });
+  if (memo) psbt.addOutput({ script: opReturnScript(memo), value: 0n });
   if (changeSats > 0) psbt.addOutput({ address: changeAddress, value: BigInt(changeSats) });
+
+
 
   inputs.forEach((u, i) => {
     const node = root.derivePath(`${DOGE_DERIVATION_PATHS[kind]}/${u.change}/${u.index}`);
