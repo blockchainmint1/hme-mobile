@@ -138,7 +138,9 @@ function SendPage() {
     staleTime: 60_000,
   });
 
-  const tokens = useEnabledTxcTokens();
+  const localTokens = useEnabledTxcTokens();
+  const { resolved: tokens } = useTxcTokenProps(localTokens);
+
   const search = Route.useSearch();
   const initialAsset: Asset = useMemo(() => {
     const t = search.token;
