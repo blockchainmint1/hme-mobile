@@ -3,6 +3,7 @@
  * Kept API-compatible with src/lib/txc/mempool.ts so the ISK routes can reuse
  * the same query patterns.
  */
+import { cleanUpstreamBody } from "@/lib/broadcast-error";
 import { ISK_MEMPOOL_API, ISK_MEMPOOL_BASE } from "./network";
 
 export interface MempoolAddressStats {
@@ -87,7 +88,7 @@ export async function broadcastTx(hex: string): Promise<string> {
     body: hex,
   });
   const body = await res.text();
-  if (!res.ok) throw new Error(`isk broadcast failed: ${res.status} ${body}`);
+  if (!res.ok) throw new Error(`isk broadcast failed: ${res.status} ${cleanUpstreamBody(body)}`);
   return body.trim();
 }
 

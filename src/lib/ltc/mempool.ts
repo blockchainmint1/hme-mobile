@@ -3,6 +3,7 @@
  * TXC and ISK clients — kept API-compatible so scan.ts and route code reuse
  * the same query patterns.
  */
+import { cleanUpstreamBody } from "@/lib/broadcast-error";
 import { LTC_MEMPOOL_API, LTC_MEMPOOL_BASE } from "./network";
 
 export interface MempoolAddressStats {
@@ -83,7 +84,7 @@ export async function broadcastTx(hex: string): Promise<string> {
     body: hex,
   });
   const body = await res.text();
-  if (!res.ok) throw new Error(`ltc broadcast failed: ${res.status} ${body}`);
+  if (!res.ok) throw new Error(`ltc broadcast failed: ${res.status} ${cleanUpstreamBody(body)}`);
   return body.trim();
 }
 
