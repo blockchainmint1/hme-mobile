@@ -97,8 +97,10 @@ export function buildAndSignTx(args: {
   changeAddress: string;
   changeIndex: number;
   feeSats: number;
+  /** Optional OP_RETURN payload (e.g. a THORChain swap memo). Max 80 bytes. */
+  memo?: string;
 }): { hex: string; txid: string; feeSats: number; changeSats: number } {
-  const { root, kind, inputs, outputs, changeAddress, feeSats } = args;
+  const { root, kind, inputs, outputs, changeAddress, feeSats, memo } = args;
   const totalIn = inputs.reduce((s, u) => s + u.value, 0);
   const totalOut = outputs.reduce((s, o) => s + o.valueSats, 0);
   const changeSats = totalIn - totalOut - feeSats;
