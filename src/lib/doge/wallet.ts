@@ -87,7 +87,7 @@ export function buildAndSignTx(args: {
   const changeSats = totalIn - totalOut - feeSats;
   if (changeSats < 0) throw new Error("Insufficient funds for outputs + fee");
 
-  const psbt = new Psbt({ network: DOGE_NETWORK });
+  const psbt = new Psbt({ network: DOGE_NETWORK, maximumFeeRate: 10_000_000 });
 
   for (const u of inputs) {
     if (!u.nonWitnessUtxoHex) throw new Error("nonWitnessUtxoHex required for DOGE legacy input");

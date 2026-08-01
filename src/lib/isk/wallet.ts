@@ -113,7 +113,7 @@ export function buildAndSignTx(args: {
   const changeSats = totalIn - totalOut - feeSats;
   if (changeSats < 0) throw new Error("Insufficient funds for outputs + fee");
 
-  const psbt = new Psbt({ network: ISK_NETWORK });
+  const psbt = new Psbt({ network: ISK_NETWORK, maximumFeeRate: 10_000_000 });
 
   for (const u of inputs) {
     const base: Parameters<typeof psbt.addInput>[0] = { hash: u.txid, index: u.vout };
