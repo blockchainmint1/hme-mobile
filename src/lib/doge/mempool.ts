@@ -208,12 +208,14 @@ export async function broadcastTx(hex: string): Promise<string> {
   const body = await res.text();
   if (!res.ok) throw new Error(`doge broadcast failed: ${res.status} ${cleanUpstreamBody(body)}`);
 
-  let parsed: { result?: string; error?: string | { message?: string } } | null = null;
+  type SendTxBody = { result?: string; error?: string | { message?: string } };
+  let parsed: SendTxBody | null = null;
   try {
-    parsed = JSON.parse(body) as typeof parsed;
+    parsed = JSON.parse(body) as SendTxBody;
   } catch {
     parsed = null;
   }
+
   if (parsed) {
     const errMsg = typeof parsed.error === "string" ? parsed.error : parsed.error?.message;
     if (errMsg) throw new Error(`doge broadcast rejected: ${errMsg}`);
