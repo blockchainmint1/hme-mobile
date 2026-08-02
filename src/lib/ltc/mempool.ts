@@ -69,11 +69,31 @@ export interface FeeEstimates {
   minimumFee: number;
 }
 
+/**
+ * Litecoin Core's default minrelaytxfee is 0.001 LTC/kB = 100 sat/vB, but the
+ * Esplora estimator often reports 1-5 sat/vB, which nodes reject with
+ * "min relay fee not met". Floor every tier at the real relay minimum.
+ */
+const LTC_MIN_RELAY_SAT_VB = 100;
+
 export async function getFeeEstimates(): Promise<FeeEstimates> {
+  const floor = (v: number | undefined, fallback: number) =>
+    Math.max(LTC_MIN_RELAY_SAT_VB, Math.ceil(Number(v) || fallback));
   try {
-    return await getJson<FeeEstimates>("/v1/fees/recommended");
+    const raw = await getJson<FeeEstimates>("/v1/fees/recommended");
+    return {
+      fastestFee: floor(raw.fastestFee, 5),
+      halfHourFee: floor(raw.halfHourFee, 3),
+      hourFee: floor(raw.hourFee, 2),
+      minimumFee: floor(raw.minimumFee, 1),
+    };
   } catch {
-    return { fastestFee: 5, halfHourFee: 3, hourFee: 2, minimumFee: 1 };
+    return {
+      fastestFee: LTC_MIN_RELAY_SAT_VB,
+      halfHourFee: LTC_MIN_RELAY_SAT_VB,
+      hourFee: LTC_MIN_RELAY_SAT_VB,
+      minimumFee: LTC_MIN_RELAY_SAT_VB,
+    };
   }
 }
 
