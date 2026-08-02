@@ -200,16 +200,25 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
 
 /**
  * Parse a wallet URI like `texitcoin:txc1...?amount=1.23` or a plain address.
- * Returns { address, amount? } where amount is a decimal string in TXC.
+ * Returns { address, amount?, tokenId? } where amount is a decimal string and
+ * tokenId is an Omni property id (`?omni=39`) when the URI requests a token.
  */
-export function parseWalletUri(input: string): { address: string; amount?: string } {
+export function parseWalletUri(input: string): { address: string; amount?: string; tokenId?: number } {
   const trimmed = input.trim();
   const schemeMatch = trimmed.match(/^(texitcoin|txc|bitcoin|iskandercoin|isk|litecoin|ltc|dogecoin|doge):([^?]+)(\?(.*))?$/i);
   if (schemeMatch) {
     const address = schemeMatch[2];
     const params = new URLSearchParams(schemeMatch[4] ?? "");
     const amount = params.get("amount") ?? undefined;
-    return { address, amount };
+    const rawId =
+      params.get("omni") ??
+      params.get("propertyid") ??
+      params.get("property") ??
+      params.get("token") ??
+      "";
+    const n = Number(rawId.trim());
+    const tokenId = Number.isInteger(n) && n > 0 ? n : undefined;
+    return { address, amount, tokenId };
   }
   return { address: trimmed };
 }
