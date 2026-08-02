@@ -198,7 +198,17 @@ function ContactForm({
               id="c-addr"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder={chain === "txc" ? "txc1..." : "0x..."}
+              placeholder={
+                chain === "txc"
+                  ? "txc1..."
+                  : chain === "isk"
+                    ? "is..."
+                    : chain === "ltc"
+                      ? "ltc1..."
+                      : chain === "doge"
+                        ? "D..."
+                        : "0x..."
+              }
               className="mt-1 font-mono"
               autoCapitalize="off"
               autoCorrect="off"
