@@ -39,6 +39,8 @@ export const Route = createFileRoute("/wallet/settings")({
 
 function SettingsPage() {
   const { unlocked, forget } = useWallet();
+  const keyOnly = unlocked?.mode === "keyonly";
+
   const navigate = useNavigate();
   const [confirmText, setConfirmText] = useState("");
   const [bio, setBio] = useState({ available: false, enabled: false });
