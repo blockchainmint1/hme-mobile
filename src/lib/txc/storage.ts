@@ -48,6 +48,12 @@ export interface StoredWalletEnvelope {
   iterations?: number;
   /** Derivation-path scheme version. Absent/1 = pre-SLIP-0044 (coin type 0'). */
   pathsV?: 2;
+  /**
+   * "keyonly" = seed-free wallet. There is no BIP39 mnemonic; the envelope
+   * holds a random 32-byte anchor used solely to derive the wrapping key for
+   * imported WIF private keys. Absent = normal seed wallet.
+   */
+  mode?: "keyonly";
 }
 
 export interface UnlockedWallet {
@@ -55,7 +61,12 @@ export interface UnlockedWallet {
   passphrase: string;
   kind: DerivationKind;
   label: string;
+  /** Seed-free wallets carry no mnemonic; see StoredWalletEnvelope.mode. */
+  mode?: "seed" | "keyonly";
+  /** base64 random anchor — present only for key-only wallets. */
+  anchor?: string;
 }
+
 
 function b64encode(bytes: Uint8Array): string {
   let s = "";
