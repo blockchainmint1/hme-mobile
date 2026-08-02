@@ -1423,6 +1423,22 @@ function EvmActivity({
   }, [transfersList, hideSpam]);
   const spamCount = transfersList.length - visibleTransfers.length;
 
+  // Locally-tracked sends: shown at the top until the indexer catches up.
+  const indexedHashes = useMemo(
+    () => transfersList.map((t) => t.hash),
+    [transfersList],
+  );
+  const pending = usePendingTxs(chainId, address, indexedHashes);
+  // Once a tx confirms, refresh indexed history so the real row replaces ours.
+  const qc = useQueryClient();
+  const confirmedCount = pending.filter((p) => p.status).length;
+  useEffect(() => {
+    if (confirmedCount > 0) {
+      qc.invalidateQueries({ queryKey: ["evm-history", chainId, address] });
+      qc.invalidateQueries({ queryKey: ["evm-balance", chainId, address] });
+    }
+  }, [confirmedCount, qc, chainId, address]);
+
   return (
     <>
       <section className="mt-8 px-4">
