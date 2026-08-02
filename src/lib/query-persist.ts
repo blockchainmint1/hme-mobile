@@ -82,6 +82,7 @@ export function clearWalletTraces(): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.removeItem("hme-query-cache-v1");
+    window.localStorage.removeItem("hme.pending-evm-tx.v1");
     const doomed: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
       const k = window.localStorage.key(i);
