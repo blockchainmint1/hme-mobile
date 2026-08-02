@@ -257,6 +257,17 @@ function EvmSend() {
     onSuccess: (hash) => {
       hapticSuccess();
       setTxHash(hash as `0x${string}`);
+      if (account) {
+        addPendingTx({
+          hash: hash as string,
+          chain: chainId,
+          from: account.address,
+          to,
+          value: amount,
+          asset: symbol,
+          createdAt: Date.now(),
+        });
+      }
     },
   });
 
