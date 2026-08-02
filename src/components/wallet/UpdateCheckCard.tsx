@@ -10,7 +10,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { APK_URL, APP_VERSION, applyWebUpdate, checkForWebUpdate } from "@/lib/app-release";
 import { isNative, nativePlatform } from "@/lib/native/platform";
-import { openExternal } from "@/lib/native/ui";
+
+async function openExternal(url: string) {
+  if (isNative()) {
+    try {
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url });
+      return;
+    } catch {
+      /* fall through */
+    }
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
 
 export function UpdateCheckCard() {
   const [status, setStatus] = useState<"idle" | "checking" | "current" | "update" | "unknown">(
