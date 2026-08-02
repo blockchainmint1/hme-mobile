@@ -165,8 +165,9 @@ function SendPage() {
   const isTokenSend = activeToken !== null;
 
   function applyUri(raw: string) {
-    const { address, amount: amt } = parseWalletUri(raw);
+    const { address, amount: amt, tokenId } = parseWalletUri(raw);
     setTo(address);
+    if (tokenId) setAsset(tokenId);
     if (amt) {
       setAmount(amt);
       setSendAll(false);

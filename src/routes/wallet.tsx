@@ -136,7 +136,11 @@ function WalletLayout() {
     if (intent.kind === "txc") {
       navigate({
         to: "/wallet/send",
-        search: { to: intent.address, amount: intent.amount },
+        search: {
+          to: intent.address,
+          amount: intent.amount,
+          token: intent.tokenId ? String(intent.tokenId) : undefined,
+        },
       });
       return;
     }
