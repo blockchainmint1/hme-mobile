@@ -159,33 +159,56 @@ function Home() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card className="border-border/60 hover:border-primary/60 transition-colors">
-            <CardHeader>
-              <CardTitle>I already have a wallet</CardTitle>
-              <CardDescription>
-                Already use the old TXC Wallet app? Open it, write down your 12 / 24-word seed,
-                and import it here.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <a href="/import" data-native-route="/import" onClick={goImport} className={buttonVariants({ className: "w-full" })}>Import seed phrase</a>
-            </CardContent>
-          </Card>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Card className="border-border/60 hover:border-primary/60 transition-colors">
+              <CardHeader>
+                <CardTitle>I already have a wallet</CardTitle>
+                <CardDescription>
+                  Already use the old TXC Wallet app? Open it, write down your 12 / 24-word seed,
+                  and import it here.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <a href="/import" data-native-route="/import" onClick={goImport} className={buttonVariants({ className: "w-full" })}>Import seed phrase</a>
+              </CardContent>
+            </Card>
 
-          <Card className="border-border/60 hover:border-primary/60 transition-colors">
+            <Card className="border-border/60 hover:border-primary/60 transition-colors">
+              <CardHeader>
+                <CardTitle>Create a new wallet</CardTitle>
+                <CardDescription>
+                  Generate a fresh 24-word seed phrase. You'll back it up on the next screen.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <a href="/create" data-native-route="/create" onClick={goCreate} className={buttonVariants({ variant: "secondary", className: "w-full" })}>Create new wallet</a>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="mt-4 border-border/60 hover:border-primary/60 transition-colors">
             <CardHeader>
-              <CardTitle>Create a new wallet</CardTitle>
+              <CardTitle>I only have a private key</CardTitle>
               <CardDescription>
-                Generate a fresh 24-word seed phrase. You'll back it up on the next screen.
+                Import a single WIF key (TXC, ISK, LTC or DOGE) — no seed phrase. One key, one
+                address, and you keep your own backup of the key.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <a href="/create" data-native-route="/create" onClick={goCreate} className={buttonVariants({ variant: "secondary", className: "w-full" })}>Create new wallet</a>
+              <a
+                href="/import-key"
+                data-native-route="/import-key"
+                onClick={goImportKey}
+                className={buttonVariants({ variant: "outline", className: "w-full" })}
+              >
+                Import private key
+              </a>
             </CardContent>
           </Card>
-        </div>
+        </>
       )}
+
 
       <section className="mt-12 rounded-xl border border-border/60 bg-card/40 p-5 text-sm text-muted-foreground">
         <h2 className="font-semibold text-foreground mb-2">Moving from the old TXC Wallet app?</h2>
