@@ -136,6 +136,8 @@ function SettingsPage() {
         <FeaturesCard />
       </div>
 
+      <UpdateCheckCard />
+
       <Card className="mt-5">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
