@@ -190,14 +190,59 @@ function WalletHome() {
       );
       const map = new Map<string, MempoolTx>();
       for (const list of all) for (const tx of list) map.set(tx.txid, tx);
-      return [...map.values()].sort((a, b) => (b.status.block_time ?? 0) - (a.status.block_time ?? 0));
+      // Unconfirmed first (mempool.space returns block_time undefined for them),
+      // then newest confirmed.
+      return [...map.values()].sort((a, b) => {
+        if (a.status.confirmed !== b.status.confirmed) return a.status.confirmed ? 1 : -1;
+        return (b.status.block_time ?? 0) - (a.status.block_time ?? 0);
+      });
+    },
+    // TXC blocks are slow, so watch the mempool while the tile is open: poll
+    // every 15s while anything is unconfirmed, otherwise a lazy 60s so an
+    // inbound payment shows up as "Pending" without the user pulling refresh.
+    refetchInterval: (q) => {
+      if (activeChain !== "txc") return false;
+      const data = q.state.data as MempoolTx[] | undefined;
+      return data?.some((t) => !t.status.confirmed) ? 15_000 : 60_000;
     },
   });
+
+  // Unconfirmed activity also moves the balance (mempool UTXOs count), so
+  // re-scan whenever the set of pending txids changes.
+  const pendingTxcIds = (txs.data ?? [])
+    .filter((t) => !t.status.confirmed)
+    .map((t) => t.txid)
+    .join(",");
+  useEffect(() => {
+    if (!pendingTxcIds) return;
+    void account.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingTxcIds]);
 
   const ownAddresses = new Set([
     ...(account.data?.external.map((a) => a.address) ?? []),
     ...(account.data?.internal.map((a) => a.address) ?? []),
   ]);
+
+  // Omni token transfers ride inside ordinary TXC transactions — decode the
+  // OP_RETURN so the history shows "Sent 25 TSD" instead of a dust move.
+  const enabledTxcTokens = useEnabledTxcTokens();
+  const omniTokenList = useMemo(() => {
+    const byId = new Map<number, { id: number; symbol: string; divisible: boolean; name?: string }>();
+    for (const t of enabledTxcTokens) byId.set(t.id, t);
+    for (const tx of txs.data ?? []) {
+      const o = decodeOmniSend(tx);
+      if (o && !byId.has(o.propertyId))
+        byId.set(o.propertyId, { id: o.propertyId, symbol: `#${o.propertyId}`, divisible: true });
+    }
+    return [...byId.values()];
+  }, [enabledTxcTokens, txs.data]);
+  const { resolve: resolveOmniToken } = useTxcTokenProps(omniTokenList);
+  const omniMetaFor = (id: number) =>
+    resolveOmniToken(
+      omniTokenList.find((t) => t.id === id) ?? { id, symbol: `#${id}`, divisible: true },
+    );
+
 
   // ISK data — runs when ISK is enabled so the tile has a balance immediately.
   const iskEnabled = enabled.includes("isk");
