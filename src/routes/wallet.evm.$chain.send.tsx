@@ -165,6 +165,7 @@ function EvmSend() {
   const [confirmLast4Enabled] = useFeature("confirmLast4");
   const [amount, setAmount] = useState(search.amount ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
 
   // Native balance (always fetched — used for gas visibility and native sends).
   const nativeBal = useQuery({
