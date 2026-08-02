@@ -109,29 +109,45 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      <div className="mt-5">
-        <ChainsCard />
-      </div>
+      {keyOnly ? (
+        <Card className="mt-5">
+          <CardHeader>
+            <CardTitle>Key-only wallet</CardTitle>
+            <CardDescription>
+              This wallet has no seed phrase, so HD chain tiles, address rotation and deep rescan
+              don&apos;t apply. Each imported private key is its own tile. Keep your own offline
+              backup of every WIF — it can&apos;t be regenerated from anything stored here.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : (
+        <>
+          <div className="mt-5">
+            <ChainsCard />
+          </div>
 
-      <div className="mt-5">
-        <TokensCard />
-      </div>
+          <div className="mt-5">
+            <TokensCard />
+          </div>
 
-      <div className="mt-5">
-        <TxcTokensCard />
-      </div>
+          <div className="mt-5">
+            <TxcTokensCard />
+          </div>
 
-      <div className="mt-5">
-        <HideBalancesToggle />
-      </div>
+          <div className="mt-5">
+            <HideBalancesToggle />
+          </div>
 
-      <div className="mt-5">
-        <RotationPolicyCard />
-      </div>
+          <div className="mt-5">
+            <RotationPolicyCard />
+          </div>
 
-      <div className="mt-5">
-        <DeepRescanCard />
-      </div>
+          <div className="mt-5">
+            <DeepRescanCard />
+          </div>
+        </>
+      )}
+
 
       <div className="mt-5">
         <FeaturesCard />
