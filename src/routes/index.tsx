@@ -106,6 +106,14 @@ function Home() {
     },
     [navigate],
   );
+  const goImportKey = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      void navigate({ to: "/import-key" }).catch(() => window.location.assign("/import-key"));
+    },
+    [navigate],
+  );
+
 
   return (
     <main className="mx-auto max-w-3xl px-4 pt-16 pb-12">
