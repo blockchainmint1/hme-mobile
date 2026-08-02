@@ -137,10 +137,6 @@ function SettingsPage() {
           </div>
 
           <div className="mt-5">
-            <HideBalancesToggle />
-          </div>
-
-          <div className="mt-5">
             <RotationPolicyCard />
           </div>
 
@@ -149,6 +145,12 @@ function SettingsPage() {
           </div>
         </>
       )}
+
+      <div className="mt-5">
+        <HideBalancesToggle />
+      </div>
+
+
 
 
       <div className="mt-5">
