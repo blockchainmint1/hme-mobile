@@ -9,6 +9,7 @@ import { RotationPolicyCard } from "@/components/wallet/RotationPolicyCard";
 import { DeepRescanCard } from "@/components/wallet/DeepRescanCard";
 import { FeaturesCard } from "@/components/wallet/FeaturesCard";
 import { SecurityCheckupCard } from "@/components/wallet/SecurityCheckupCard";
+import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { HideBalancesToggle } from "@/components/wallet/WalletDetailSheet";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
@@ -135,6 +136,8 @@ function SettingsPage() {
       <div className="mt-5">
         <FeaturesCard />
       </div>
+
+      <UpdateCheckCard />
 
       <Card className="mt-5">
         <CardHeader>

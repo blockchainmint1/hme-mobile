@@ -59,6 +59,7 @@ import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";
 import { confirmWithBiometric } from "@/lib/native/biometric";
 import { useFeature } from "@/lib/feature-prefs";
+import { addPendingTx } from "@/lib/pending-tx";
 
 function findKnownToken(chain: EvmChainId, symbol: string): Erc20TokenMeta | null {
   const s = symbol.toUpperCase();
@@ -165,6 +166,7 @@ function EvmSend() {
   const [confirmLast4Enabled] = useFeature("confirmLast4");
   const [amount, setAmount] = useState(search.amount ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
 
   // Native balance (always fetched — used for gas visibility and native sends).
   const nativeBal = useQuery({
@@ -253,11 +255,102 @@ function EvmSend() {
       hapticError();
       setError(e.message);
     },
-    onSuccess: () => {
+    onSuccess: (hash) => {
       hapticSuccess();
-      navigate({ to: "/wallet" });
+      setTxHash(hash as `0x${string}`);
+      if (account) {
+        addPendingTx({
+          hash: hash as string,
+          chain: chainId,
+          from: account.address,
+          to,
+          value: amount,
+          asset: symbol,
+          createdAt: Date.now(),
+        });
+      }
     },
   });
+
+  // Poll for the receipt so a broadcast that never lands is visible instead of
+  // silently "succeeding".
+  const receipt = useQuery({
+    queryKey: ["evm-receipt", chainId, txHash],
+    enabled: !!txHash,
+    refetchInterval: (q) => (q.state.data ? false : 5_000),
+    retry: false,
+    queryFn: async () => {
+      try {
+        return await evmClient(chainId).getTransactionReceipt({
+          hash: txHash as `0x${string}`,
+        });
+      } catch {
+        return null; // still pending / not yet indexed
+      }
+    },
+  });
+
+  if (txHash) {
+    const status = receipt.data?.status;
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-6">
+        <h1 className="text-2xl font-semibold mb-1">
+          {status === "success"
+            ? "Sent"
+            : status === "reverted"
+              ? "Transaction reverted"
+              : "Broadcast — waiting for confirmation"}
+        </h1>
+        <p className="text-sm text-muted-foreground mb-4">
+          {amount} {symbol} on {meta.name}
+        </p>
+        <Card>
+          <CardContent className="pt-6 space-y-3">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                Transaction hash
+              </div>
+              <code className="block font-mono break-all text-xs bg-muted rounded p-2 mt-1">
+                {txHash}
+              </code>
+            </div>
+            {!status && (
+              <p className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Pending. If it stays pending, the network fee may be too low —
+                the hash below is the proof it was broadcast.
+              </p>
+            )}
+            {status === "reverted" && (
+              <p className="text-xs text-rose-400">
+                The network rejected this transfer, so no funds moved (gas was
+                still spent).
+              </p>
+            )}
+            <a
+              className="block text-sm underline break-all"
+              href={meta.explorerTx(txHash)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View on {meta.name} explorer
+            </a>
+            <p className="text-xs text-muted-foreground">
+              This transfer is on <strong>{meta.name}</strong>. It will not
+              appear on another chain's explorer.
+            </p>
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={() => navigate({ to: "/wallet" })}
+            >
+              Back to wallet
+            </Button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">

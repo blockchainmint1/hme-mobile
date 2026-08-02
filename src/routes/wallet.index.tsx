@@ -30,8 +30,9 @@ import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { getTxcTokenBalancesForAddresses } from "@/lib/txc/tokens.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key, Loader2 } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
+import { usePendingTxs, removePendingTx } from "@/lib/pending-tx";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { getChainLabel, CHAIN_LABEL_EVENT } from "@/lib/chain-labels";
@@ -1422,6 +1423,22 @@ function EvmActivity({
   }, [transfersList, hideSpam]);
   const spamCount = transfersList.length - visibleTransfers.length;
 
+  // Locally-tracked sends: shown at the top until the indexer catches up.
+  const indexedHashes = useMemo(
+    () => transfersList.map((t) => t.hash),
+    [transfersList],
+  );
+  const pending = usePendingTxs(chainId, address, indexedHashes);
+  // Once a tx confirms, refresh indexed history so the real row replaces ours.
+  const qc = useQueryClient();
+  const confirmedCount = pending.filter((p) => p.status).length;
+  useEffect(() => {
+    if (confirmedCount > 0) {
+      qc.invalidateQueries({ queryKey: ["evm-history", chainId, address] });
+      qc.invalidateQueries({ queryKey: ["evm-balance", chainId, address] });
+    }
+  }, [confirmedCount, qc, chainId, address]);
+
   return (
     <>
       <section className="mt-8 px-4">
@@ -1485,6 +1502,72 @@ function EvmActivity({
             <RefreshCw className={`h-3 w-3 ${history.isFetching ? "animate-spin" : ""}`} /> Refresh
           </button>
         </div>
+        {pending.length > 0 && (
+          <ul className="space-y-2 mb-2">
+            {pending.map((p) => {
+              const reverted = p.status === "reverted";
+              const confirmed = p.status === "success";
+              return (
+                <li key={p.hash}>
+                  <div className="w-full flex items-center gap-3 rounded-lg border border-dashed border-border/70 bg-card/30 px-4 py-3">
+                    <div
+                      className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                        reverted
+                          ? "bg-rose-500/15 text-rose-400"
+                          : confirmed
+                            ? "bg-emerald-500/15 text-emerald-400"
+                            : "bg-amber-500/15 text-amber-400"
+                      }`}
+                    >
+                      {confirmed ? (
+                        <ArrowUp className="h-4 w-4" />
+                      ) : (
+                        <Loader2 className={`h-4 w-4 ${reverted ? "" : "animate-spin"}`} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">
+                        Sent
+                        <span
+                          className={`ml-2 text-[10px] uppercase tracking-wide ${
+                            reverted
+                              ? "text-rose-400"
+                              : confirmed
+                                ? "text-emerald-400"
+                                : "text-amber-400"
+                          }`}
+                        >
+                          {reverted ? "reverted" : confirmed ? "confirmed" : "pending"}
+                        </span>
+                      </p>
+                      <a
+                        href={meta.explorerTx(p.hash)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-muted-foreground underline truncate block"
+                      >
+                        {p.hash.slice(0, 10)}…{p.hash.slice(-8)}
+                      </a>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">
+                        −{Number(p.value).toLocaleString(undefined, { maximumFractionDigits: 6 })}{" "}
+                        {p.asset}
+                      </p>
+                      <button
+                        type="button"
+                        className="text-[10px] text-muted-foreground hover:text-foreground"
+                        onClick={() => removePendingTx(p.hash)}
+                      >
+                        dismiss
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
         {history.isLoading ? (
           <div className="space-y-2">
             {[0, 1, 2].map((i) => (

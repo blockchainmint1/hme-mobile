@@ -18,7 +18,7 @@ import { TOKENS_BY_CHAIN, tokenAmountFromRaw } from "@/lib/chains/erc20";
 import type { EvmChainId } from "@/lib/chains/evm";
 
 export type PaymentIntent =
-  | { kind: "txc"; address: string; amount?: string }
+  | { kind: "txc"; address: string; amount?: string; tokenId?: number }
   | { kind: "isk"; address: string; amount?: string }
   | {
       kind: "evm";
@@ -48,6 +48,22 @@ function isTxcAddress(s: string): boolean {
 function isIskAddress(s: string): boolean {
   // bech32 isk1..., legacy K...
   return /^(isk1|K)[0-9a-zA-Z]{20,}$/.test(s);
+}
+
+/**
+ * Omni/L2 token id from a TXC payment URI. Accepts `omni=39`,
+ * `propertyid=39`, `property=39` or a numeric `token=39` (a non-numeric
+ * `token=TSD` is just a display label and is ignored).
+ */
+function parseOmniId(params: URLSearchParams): number | undefined {
+  const raw =
+    params.get("omni") ??
+    params.get("propertyid") ??
+    params.get("property") ??
+    params.get("token") ??
+    "";
+  const n = Number(raw.trim());
+  return Number.isInteger(n) && n > 0 ? n : undefined;
 }
 
 function safeAmountFromWei(raw: string, decimals: number): string | undefined {
@@ -94,7 +110,8 @@ export function parsePaymentUri(input: string): PaymentIntent {
     const address = m[1];
     const params = new URLSearchParams(m[2] ?? "");
     const amount = params.get("amount") ?? undefined;
-    return { kind: "txc", address, amount };
+    const tokenId = parseOmniId(params);
+    return { kind: "txc", address, amount, ...(tokenId ? { tokenId } : {}) };
   }
 
   if (proto === "iskandercoin" || proto === "isk") {
