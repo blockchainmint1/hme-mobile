@@ -120,11 +120,14 @@ export async function saveWallet(
   password: string,
 ): Promise<StoredWalletEnvelope> {
   if (typeof window === "undefined") throw new Error("saveWallet requires a browser");
+  const keyOnly = unlocked.mode === "keyonly";
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt, PBKDF2_ITERATIONS);
   const payload = new TextEncoder().encode(
-    JSON.stringify({ m: unlocked.mnemonic, p: unlocked.passphrase }),
+    keyOnly
+      ? JSON.stringify({ mode: "keyonly", a: unlocked.anchor })
+      : JSON.stringify({ m: unlocked.mnemonic, p: unlocked.passphrase }),
   );
   const ct = new Uint8Array(
     await crypto.subtle.encrypt({ name: "AES-GCM", iv: toAB(iv) }, key, toAB(payload)),
@@ -141,9 +144,33 @@ export async function saveWallet(
     kdf: "pbkdf2-sha256",
     iterations: PBKDF2_ITERATIONS,
     pathsV: 2,
+    ...(keyOnly ? { mode: "keyonly" as const } : {}),
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(env));
   return env;
+}
+
+/**
+ * Create and persist a seed-free ("key-only") wallet. There is no BIP39
+ * mnemonic: we store a random 32-byte anchor, encrypted with the user's
+ * password, which is used solely to derive the wrapping key for imported WIF
+ * private keys. Everything else about the wallet lifecycle stays the same.
+ */
+export async function createKeyOnlyWallet(
+  password: string,
+  label = "Imported keys",
+): Promise<UnlockedWallet> {
+  const anchorBytes = crypto.getRandomValues(new Uint8Array(32));
+  const unlocked: UnlockedWallet = {
+    mnemonic: "",
+    passphrase: "",
+    kind: "bip84",
+    label,
+    mode: "keyonly",
+    anchor: b64encode(anchorBytes),
+  };
+  await saveWallet(unlocked, password);
+  return unlocked;
 }
 
 export function loadEnvelope(): StoredWalletEnvelope | null {
@@ -155,6 +182,11 @@ export function loadEnvelope(): StoredWalletEnvelope | null {
   } catch {
     return null;
   }
+}
+
+/** True when the stored wallet has no seed phrase (WIF-only wallet). */
+export function isKeyOnlyWallet(): boolean {
+  return loadEnvelope()?.mode === "keyonly";
 }
 
 export async function unlockWallet(password: string): Promise<UnlockedWallet | null> {
@@ -169,13 +201,29 @@ export async function unlockWallet(password: string): Promise<UnlockedWallet | n
       toAB(b64decode(env.ciphertext)),
     );
 
-    const parsed = JSON.parse(new TextDecoder().decode(pt)) as { m: string; p: string };
-    const unlocked: UnlockedWallet = {
-      mnemonic: parsed.m,
-      passphrase: parsed.p,
-      kind: migrateKind(env),
-      label: env.label,
+    const parsed = JSON.parse(new TextDecoder().decode(pt)) as {
+      m?: string;
+      p?: string;
+      mode?: string;
+      a?: string;
     };
+    const keyOnly = env.mode === "keyonly" || parsed.mode === "keyonly";
+    const unlocked: UnlockedWallet = keyOnly
+      ? {
+          mnemonic: "",
+          passphrase: "",
+          kind: migrateKind(env),
+          label: env.label,
+          mode: "keyonly",
+          anchor: parsed.a ?? "",
+        }
+      : {
+          mnemonic: parsed.m ?? "",
+          passphrase: parsed.p ?? "",
+          kind: migrateKind(env),
+          label: env.label,
+          mode: "seed",
+        };
 
     // Silent KDF upgrade: if this envelope predates the current cost (or has
     // no recorded iteration count), transparently re-encrypt at the stronger
@@ -194,6 +242,7 @@ export async function unlockWallet(password: string): Promise<UnlockedWallet | n
     return null;
   }
 }
+
 
 export function deleteWallet(): void {
   if (typeof window === "undefined") return;
