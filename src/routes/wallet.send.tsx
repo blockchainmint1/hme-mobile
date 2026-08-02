@@ -446,7 +446,16 @@ function SendPage() {
       setStage({ kind: "sent", txid });
     } catch (err) {
       hapticError();
+      const msg = String((err as Error)?.message ?? err).toLowerCase();
+      if (msg.includes("missingorspent") || msg.includes("mempool-conflict")) {
+        // Stale inputs — pull a fresh UTXO set and send the user back to the
+        // form so the next attempt is built from current data.
+        void account.refetch();
+        void qc.invalidateQueries({ queryKey: ["txs"] });
+        setStage({ kind: "form" });
+      }
       setError(friendlyBroadcastError(err));
+
     } finally {
       setBusy(false);
     }
