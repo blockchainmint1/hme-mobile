@@ -625,7 +625,17 @@ function WalletHome() {
                       .filter((v) => v.scriptpubkey_address && ownAddresses.has(v.scriptpubkey_address))
                       .reduce((s, v) => s + v.value, 0);
                     const net = outToOwn - inSum;
-                    const incoming = net > 0;
+                    const omni = decodeOmniSend(tx);
+                    const omniMine =
+                      omni &&
+                      ((omni.sender && ownAddresses.has(omni.sender)) ||
+                        (omni.reference && ownAddresses.has(omni.reference)));
+                    const omniIncoming =
+                      !!omni && !!omni.reference && ownAddresses.has(omni.reference) &&
+                      !(omni.sender && ownAddresses.has(omni.sender));
+                    const meta = omni && omniMine ? omniMetaFor(omni.propertyId) : null;
+                    const incoming = meta ? omniIncoming : net > 0;
+                    const pending = !tx.status.confirmed;
                     return (
                       <li key={tx.txid}>
                         <button
@@ -635,29 +645,55 @@ function WalletHome() {
                         >
                           <div
                             className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                              incoming ? "bg-emerald-500/15 text-emerald-400" : "bg-rose-500/15 text-rose-400"
+                              meta
+                                ? "bg-amber-500/15 text-amber-300 text-xs font-bold"
+                                : incoming
+                                  ? "bg-emerald-500/15 text-emerald-400"
+                                  : "bg-rose-500/15 text-rose-400"
                             }`}
                           >
-                            {incoming ? <ArrowDown className="h-4 w-4" /> : <ArrowUp className="h-4 w-4" />}
+                            {meta ? (
+                              meta.symbol.slice(0, 2)
+                            ) : incoming ? (
+                              <ArrowDown className="h-4 w-4" />
+                            ) : (
+                              <ArrowUp className="h-4 w-4" />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{incoming ? "Received" : "Sent"}</p>
+                            <p className="text-sm font-medium">
+                              {incoming ? "Received" : "Sent"}
+                              {meta ? ` ${meta.symbol}` : ""}
+                            </p>
                             <p className="text-xs text-muted-foreground truncate">
-                              {tx.status.confirmed
-                                ? new Date((tx.status.block_time ?? 0) * 1000).toLocaleString()
-                                : "Pending"}
+                              {pending ? (
+                                <span className="inline-flex items-center gap-1 text-amber-400">
+                                  <Loader2 className="h-3 w-3 animate-spin" /> In mempool · unconfirmed
+                                </span>
+                              ) : (
+                                new Date((tx.status.block_time ?? 0) * 1000).toLocaleString()
+                              )}
                             </p>
                           </div>
                           <div className="text-right">
                             <p className={`text-sm font-semibold ${incoming ? "text-emerald-400" : ""}`}>
                               {incoming ? "+" : "−"}
-                              {formatTxc(Math.abs(net))}
+                              {meta && omni
+                                ? `${formatTokenAmount(omni.amount, meta.divisible)} ${meta.symbol}`
+                                : formatTxc(Math.abs(net))}
                             </p>
+                            {meta && net !== 0 && (
+                              <p className="text-[11px] text-muted-foreground">
+                                {net > 0 ? "+" : "−"}
+                                {formatTxc(Math.abs(net))} TXC
+                              </p>
+                            )}
                           </div>
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </button>
                       </li>
                     );
+
                   })}
                 </ul>
               )}
