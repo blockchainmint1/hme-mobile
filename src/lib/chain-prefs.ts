@@ -3,6 +3,8 @@
  * Stored in localStorage so it persists across sessions on-device.
  */
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
+import { isKeyOnlyWallet } from "@/lib/txc/storage";
+
 
 export type ChainId = "txc" | EvmChainId | "isk" | "ltc" | "doge" | "zcu";
 
@@ -126,9 +128,13 @@ export function getChainPrefs(): Record<ChainId, boolean> {
 }
 
 export function getEnabledChains(): ChainId[] {
+  // A key-only wallet has no seed, so there are no derived HD chain tiles —
+  // only the imported WIF tiles.
+  if (isKeyOnlyWallet()) return [];
   const prefs = read();
   return readOrder().filter((c) => prefs[c]);
 }
+
 
 export function setChainEnabled(id: ChainId, enabled: boolean): void {
   if (CHAIN_META[id].soon) return;

@@ -68,8 +68,25 @@ function BackupPage() {
     setShown(w.mnemonic);
   }
 
+  if (unlocked?.mode === "keyonly") {
+    return (
+      <main className="mx-auto max-w-xl px-4 py-8">
+        <Link to="/wallet" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Back
+        </Link>
+        <h1 className="mt-3 text-2xl font-bold">No seed phrase</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This is a key-only wallet — it was created from an imported private key, so there is no
+          12/24-word phrase to back up. Your backup is the WIF private key itself; keep your own
+          copy of it somewhere safe and offline.
+        </p>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-xl px-4 py-8">
+
       <Link to="/wallet" className="text-sm text-muted-foreground hover:text-foreground">
         ← Back
       </Link>

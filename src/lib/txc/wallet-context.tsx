@@ -31,14 +31,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const autoLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadFromMemory = useCallback(async (w: UnlockedWallet) => {
-    const seed = await seedFromMnemonic(w.mnemonic, w.passphrase);
-    const nextRoot = rootFromSeed(seed);
+    // Key-only wallets have no mnemonic. Their BIP32 "root" is derived from a
+    // random anchor and is used only as the wrapping key for imported WIFs —
+    // no addresses are ever derived from it.
+    let nextRoot;
+    if (w.mode === "keyonly") {
+      const bin = atob(w.anchor ?? "");
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      nextRoot = rootFromSeed(bytes);
+    } else {
+      const seed = await seedFromMnemonic(w.mnemonic, w.passphrase);
+      nextRoot = rootFromSeed(seed);
+    }
     flushSync(() => {
       setRoot(nextRoot);
       setUnlocked(w);
     });
     await saveSession(w);
   }, []);
+
 
   const unlock = useCallback(
     async (password: string) => {

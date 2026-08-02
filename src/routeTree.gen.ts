@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as ManifestoRouteImport } from './routes/manifesto'
+import { Route as ImportKeyRouteImport } from './routes/import-key'
 import { Route as ImportRouteImport } from './routes/import'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as IndexRouteImport } from './routes/index'
@@ -52,6 +53,11 @@ const WalletRoute = WalletRouteImport.update({
 const ManifestoRoute = ManifestoRouteImport.update({
   id: '/manifesto',
   path: '/manifesto',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImportKeyRoute = ImportKeyRouteImport.update({
+  id: '/import-key',
+  path: '/import-key',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImportRoute = ImportRouteImport.update({
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/import': typeof ImportRoute
+  '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
   '/wallet': typeof WalletRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/import': typeof ImportRoute
+  '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
@@ -291,6 +299,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/create': typeof CreateRoute
   '/import': typeof ImportRoute
+  '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
   '/wallet': typeof WalletRouteWithChildren
   '/legal/privacy': typeof LegalPrivacyRoute
@@ -329,6 +338,7 @@ export interface FileRouteTypes {
     | '/'
     | '/create'
     | '/import'
+    | '/import-key'
     | '/manifesto'
     | '/wallet'
     | '/legal/privacy'
@@ -365,6 +375,7 @@ export interface FileRouteTypes {
     | '/'
     | '/create'
     | '/import'
+    | '/import-key'
     | '/manifesto'
     | '/legal/privacy'
     | '/legal/terms'
@@ -400,6 +411,7 @@ export interface FileRouteTypes {
     | '/'
     | '/create'
     | '/import'
+    | '/import-key'
     | '/manifesto'
     | '/wallet'
     | '/legal/privacy'
@@ -437,6 +449,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CreateRoute: typeof CreateRoute
   ImportRoute: typeof ImportRoute
+  ImportKeyRoute: typeof ImportKeyRoute
   ManifestoRoute: typeof ManifestoRoute
   WalletRoute: typeof WalletRouteWithChildren
   LegalPrivacyRoute: typeof LegalPrivacyRoute
@@ -461,6 +474,13 @@ declare module '@tanstack/react-router' {
       path: '/manifesto'
       fullPath: '/manifesto'
       preLoaderRoute: typeof ManifestoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/import-key': {
+      id: '/import-key'
+      path: '/import-key'
+      fullPath: '/import-key'
+      preLoaderRoute: typeof ImportKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/import': {
@@ -759,6 +779,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CreateRoute: CreateRoute,
   ImportRoute: ImportRoute,
+  ImportKeyRoute: ImportKeyRoute,
   ManifestoRoute: ManifestoRoute,
   WalletRoute: WalletRouteWithChildren,
   LegalPrivacyRoute: LegalPrivacyRoute,
@@ -771,13 +792,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
