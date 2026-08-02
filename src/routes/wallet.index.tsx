@@ -30,7 +30,7 @@ import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { getTxcTokenBalancesForAddresses } from "@/lib/txc/tokens.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key, Loader2 } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
 import { usePendingTxs, removePendingTx } from "@/lib/pending-tx";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
