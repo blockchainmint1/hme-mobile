@@ -18,7 +18,7 @@ import { TOKENS_BY_CHAIN, tokenAmountFromRaw } from "@/lib/chains/erc20";
 import type { EvmChainId } from "@/lib/chains/evm";
 
 export type PaymentIntent =
-  | { kind: "txc"; address: string; amount?: string }
+  | { kind: "txc"; address: string; amount?: string; tokenId?: number }
   | { kind: "isk"; address: string; amount?: string }
   | {
       kind: "evm";
