@@ -94,7 +94,8 @@ export function parsePaymentUri(input: string): PaymentIntent {
     const address = m[1];
     const params = new URLSearchParams(m[2] ?? "");
     const amount = params.get("amount") ?? undefined;
-    return { kind: "txc", address, amount };
+    const tokenId = parseOmniId(params);
+    return { kind: "txc", address, amount, ...(tokenId ? { tokenId } : {}) };
   }
 
   if (proto === "iskandercoin" || proto === "isk") {
