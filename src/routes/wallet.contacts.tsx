@@ -21,7 +21,7 @@ export const Route = createFileRoute("/wallet/contacts")({
   component: ContactsPage,
 });
 
-const CHAIN_OPTIONS: ContactChain[] = ["txc", "isk", "eth", "base", "bsc"];
+const CHAIN_OPTIONS: ContactChain[] = ["txc", "isk", "ltc", "doge", "eth", "base", "bsc"];
 
 function ContactsPage() {
   const [items, setItems] = useState<Contact[]>([]);
@@ -198,7 +198,17 @@ function ContactForm({
               id="c-addr"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder={chain === "txc" ? "txc1..." : "0x..."}
+              placeholder={
+                chain === "txc"
+                  ? "txc1..."
+                  : chain === "isk"
+                    ? "is..."
+                    : chain === "ltc"
+                      ? "ltc1..."
+                      : chain === "doge"
+                        ? "D..."
+                        : "0x..."
+              }
               className="mt-1 font-mono"
               autoCapitalize="off"
               autoCorrect="off"

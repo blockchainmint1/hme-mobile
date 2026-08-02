@@ -60,7 +60,7 @@ export const UTXO_SWAP_COINS: Record<UtxoSwapCoin, UtxoSwapConfig> = {
     step: "0.00000001",
     accountQueryKey: "ltc-account",
     txsQueryKey: "ltc-txs",
-    fallbackFeeRate: 10,
+    fallbackFeeRate: 100,
     scan: (root) => scanLtcAccount(root, LTC_DEFAULT_KIND),
     getFeeEstimates: ltcNode.getFeeEstimates,
     broadcast: ltcNode.broadcastTx,

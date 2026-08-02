@@ -88,7 +88,7 @@ function SendLtcPage() {
   const utxos = account.data?.utxos ?? [];
   const totalAvailable = utxos.reduce((s, u) => s + u.value, 0);
   const amountSats = useMemo(() => ltcToSats(amount || "0"), [amount]);
-  const feeRate = fees.data?.[feeTier] ?? 1;
+  const feeRate = Math.max(100, fees.data?.[feeTier] ?? 100);
 
   function review(e: React.FormEvent) {
     e.preventDefault();
