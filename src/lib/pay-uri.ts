@@ -50,6 +50,22 @@ function isIskAddress(s: string): boolean {
   return /^(isk1|K)[0-9a-zA-Z]{20,}$/.test(s);
 }
 
+/**
+ * Omni/L2 token id from a TXC payment URI. Accepts `omni=39`,
+ * `propertyid=39`, `property=39` or a numeric `token=39` (a non-numeric
+ * `token=TSD` is just a display label and is ignored).
+ */
+function parseOmniId(params: URLSearchParams): number | undefined {
+  const raw =
+    params.get("omni") ??
+    params.get("propertyid") ??
+    params.get("property") ??
+    params.get("token") ??
+    "";
+  const n = Number(raw.trim());
+  return Number.isInteger(n) && n > 0 ? n : undefined;
+}
+
 function safeAmountFromWei(raw: string, decimals: number): string | undefined {
   try {
     const big = /^[0-9]+$/.test(raw) ? BigInt(raw) : BigInt(Math.trunc(Number(raw)));
