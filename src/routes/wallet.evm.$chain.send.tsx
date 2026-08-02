@@ -59,6 +59,7 @@ import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";
 import { confirmWithBiometric } from "@/lib/native/biometric";
 import { useFeature } from "@/lib/feature-prefs";
+import { addPendingTx } from "@/lib/pending-tx";
 
 function findKnownToken(chain: EvmChainId, symbol: string): Erc20TokenMeta | null {
   const s = symbol.toUpperCase();
@@ -257,6 +258,17 @@ function EvmSend() {
     onSuccess: (hash) => {
       hapticSuccess();
       setTxHash(hash as `0x${string}`);
+      if (account) {
+        addPendingTx({
+          hash: hash as string,
+          chain: chainId,
+          from: account.address,
+          to,
+          value: amount,
+          asset: symbol,
+          createdAt: Date.now(),
+        });
+      }
     },
   });
 
