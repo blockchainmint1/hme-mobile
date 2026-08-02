@@ -381,7 +381,23 @@ function SendPage() {
     setBusy(true);
     setError(null);
     try {
-      const sorted = [...utxos].sort((a, b) => b.value - a.value);
+      // Re-scan right before signing: a cached UTXO set can contain outputs
+      // that were already spent (another device, an earlier send, or a
+      // mempool tx), which the node rejects with `inputs-missingorspent`.
+      const key = (u: { txid: string; vout: number }) => `${u.txid}:${u.vout}`;
+      const before = utxos.map(key).sort().join(",");
+      const refreshed = await account.refetch();
+      const liveUtxos = refreshed.data?.utxos ?? [];
+      if (liveUtxos.map(key).sort().join(",") !== before) {
+        setStage({ kind: "form" });
+        setError(
+          "Your balance changed since you reviewed this — the amounts have been refreshed, please review and send again.",
+        );
+        setBusy(false);
+        return;
+      }
+      const sorted = [...liveUtxos].sort((a, b) => b.value - a.value);
+
       // For token sends, reproduce the exact ordering used at review time so
       // the first input's address is the Omni sender.
       const ordered =
@@ -430,7 +446,16 @@ function SendPage() {
       setStage({ kind: "sent", txid });
     } catch (err) {
       hapticError();
+      const msg = String((err as Error)?.message ?? err).toLowerCase();
+      if (msg.includes("missingorspent") || msg.includes("mempool-conflict")) {
+        // Stale inputs — pull a fresh UTXO set and send the user back to the
+        // form so the next attempt is built from current data.
+        void account.refetch();
+        void qc.invalidateQueries({ queryKey: ["txs"] });
+        setStage({ kind: "form" });
+      }
       setError(friendlyBroadcastError(err));
+
     } finally {
       setBusy(false);
     }
