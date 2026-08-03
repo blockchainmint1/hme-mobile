@@ -485,6 +485,43 @@ function SendPage() {
       }
       const sorted = [...liveUtxos].sort((a, b) => b.value - a.value);
 
+      // Holder address has no TXC: broadcast a small funding tx to it first,
+      // then chain the Omni transfer onto that fresh output so the token
+      // layer still sees the holder as the sender.
+      let chainedInput: UtxoInput | null = null;
+      if (isTokenSend && stage.fund && stage.senderAddress) {
+        const info = addressInfos.find((a) => a.address === stage.senderAddress);
+        if (!info) throw new Error("Couldn't locate the sending address key.");
+        const fundInputs = sorted
+          .filter((u) => u.address !== stage.senderAddress)
+          .slice(0, stage.fund.inputs);
+        const acc = fundInputs.reduce((s, u) => s + u.value, 0);
+        let fundFee = stage.fund.feeSats;
+        // A dust-sized change output would be non-standard — absorb it.
+        if (acc - stage.fund.sats - fundFee < CHANGE_MIN_SATS) fundFee = acc - stage.fund.sats;
+        if (fundFee <= 0) throw new Error("Not enough TXC to cover the network fee.");
+        const fundTx = buildAndSignTx({
+          root,
+          kind: unlocked.kind,
+          inputs: fundInputs,
+          outputs: [{ address: stage.senderAddress, valueSats: stage.fund.sats }],
+          changeAddress: account.data.nextChangeAddress,
+          changeIndex: account.data.nextChangeIndex,
+          feeSats: fundFee,
+        });
+        const fundTxid = await broadcastTx(fundTx.hex);
+        chainedInput = {
+          txid: fundTxid,
+          vout: 0,
+          value: stage.fund.sats,
+          change: info.change,
+          index: info.index,
+          kind: info.kind,
+          witnessScriptHex: scriptHexFor(info.pubkey, info.kind),
+          nonWitnessUtxoHex: scriptKindOf(info.kind) === "bip44" ? fundTx.hex : undefined,
+        };
+      }
+
       // For token sends, reproduce the exact ordering used at review time so
       // the first input's address is the Omni sender.
       const ordered =
@@ -494,7 +531,9 @@ function SendPage() {
               ...sorted.filter((u) => u.address !== stage.senderAddress),
             ]
           : sorted;
-      const picked = ordered.slice(0, stage.selected);
+      const picked = chainedInput ? [chainedInput] : ordered.slice(0, stage.selected);
+
+
 
       let built;
       if (isTokenSend && activeToken) {
