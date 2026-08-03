@@ -199,12 +199,24 @@ function ImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
 
-  async function finish(kind: DerivationKind) {
+  /**
+   * The primary/receive branch is ALWAYS bip44 (m/44'/696969'/0', legacy T…):
+   * it's the only address type Omni tokens can use, and every other branch
+   * (including the old BlueWallet m/84'/0'/0' paths) is still scanned and
+   * spendable, so nothing is lost by defaulting here. Detection results are
+   * only used to reassure the user / drive the migrate sweep.
+   */
+  async function finish(_detected: DerivationKind) {
     const m = normalizeMnemonic(phrase);
     setBusy(true);
     setStatus("Saving wallet…");
     try {
-      const u = { mnemonic: m, passphrase, kind, label: "Imported wallet" };
+      const u = {
+        mnemonic: m,
+        passphrase,
+        kind: "bip44" as DerivationKind,
+        label: "Imported wallet",
+      };
       await saveWallet(u, password);
       await loadFromMemory(u);
       navigate({ to: "/wallet" });
@@ -350,15 +362,12 @@ function ImportPage() {
   if (candidates) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-10">
-        <h1 className="text-2xl font-bold">
-          {candidates.some((c) => c.txCount > 0)
-            ? "We found more than one wallet"
-            : "Choose the wallet type"}
-        </h1>
+        <h1 className="text-2xl font-bold">Confirm your wallet</h1>
         <p className="mt-2 text-muted-foreground">
-          {candidates.some((c) => c.txCount > 0)
-            ? "Your seed phrase has activity on multiple address types. Pick the one you want to import."
-            : "If this is from the old TXC Wallet, Legacy is usually the best next try. For a new wallet choose Legacy — it is the only type that can receive Omni tokens like TSD."}
+          Tap any address below to continue. Every address type is imported and scanned — coins on
+          all of them stay spendable. Your new receive address will be a Legacy{" "}
+          <span className="font-mono">T…</span> address, the only type that works with Omni tokens
+          like TSD.
         </p>
         <div className="mt-6 space-y-3">
           {candidates.map((c) => (
