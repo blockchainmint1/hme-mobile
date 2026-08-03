@@ -1151,12 +1151,15 @@ function TxcTokens({
   addresses,
   readOnly = false,
   sendFromWifId,
+  pendingIn,
 }: {
   addresses: string[];
   /** Hides HD-only actions (old paths / consolidate). */
   readOnly?: boolean;
   /** Imported-key wallets can still spend their tokens via the WIF send route. */
   sendFromWifId?: string;
+  /** Unconfirmed incoming amounts per property id, from the mempool. */
+  pendingIn?: Map<number, bigint>;
 }) {
   const localTokens = useEnabledTxcTokens();
   const { resolved: tokens } = useTxcTokenProps(localTokens);
@@ -1165,6 +1168,9 @@ function TxcTokens({
 
   const [hidden] = useHideBalances();
   const enabled = addresses.length > 0 && tokens.length > 0;
+  const pendingKey = pendingIn
+    ? [...pendingIn.entries()].map(([k, v]) => `${k}:${v}`).join(",")
+    : "";
   const balances = useQuery({
     queryKey: [
       "txc-token-balances",
@@ -1176,20 +1182,31 @@ function TxcTokens({
       fetchBalances({
         data: { addresses, propertyIds: tokens.map((t) => t.id) },
       }),
-    staleTime: 30_000,
+    staleTime: 10_000,
+    // Keep token balances close to the mempool view: poll while something is
+    // pending so the number flips the instant the transfer confirms.
+    refetchInterval: pendingKey ? 10_000 : 30_000,
+    refetchOnWindowFocus: true,
   });
+
+  // A new pending transfer means the confirmed balance may be about to change.
+  useEffect(() => {
+    if (pendingKey) void balances.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingKey]);
 
   if (!enabled) return null;
 
   const rows = tokens.map((t) => {
     const raw = balances.data?.[t.id] ?? "0";
     const units = BigInt(raw);
-    return { token: t, units };
+    return { token: t, units, pending: pendingIn?.get(t.id) ?? 0n };
   });
   const visible = hideSpam
-    ? rows.filter((r) => balances.isLoading || r.units > 0n)
+    ? rows.filter((r) => balances.isLoading || r.units > 0n || r.pending > 0n)
     : rows;
   const hiddenCount = rows.length - visible.length;
+
 
   return (
     <section className="mt-8 px-4">
