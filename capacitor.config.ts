@@ -51,7 +51,7 @@ const config: CapacitorConfig = {
     allowNavigation: ["nectar-pay.com"],
   },
   ios: {
-    contentInset: "always",
+    contentInset: "never",
     backgroundColor: "#ffffff",
   },
   android: {
