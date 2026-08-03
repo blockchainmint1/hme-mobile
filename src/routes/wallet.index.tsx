@@ -612,6 +612,13 @@ function WalletHome() {
           {activeChain === "txc" && !activeWatch && !activeWif && (
             <TxcTokens addresses={[...ownAddresses]} />
           )}
+          {/* Imported keys / watch-only TXC addresses can also hold Omni tokens */}
+          {activeWif?.chain === "txc" && (
+            <TxcTokens addresses={[activeWif.address]} readOnly />
+          )}
+          {activeWatch?.chain === "txc" && (
+            <TxcTokens addresses={[activeWatch.address]} readOnly />
+          )}
 
           {/* Recent activity (TXC only for now) */}
           {activeChain === "txc" && !activeWatch && !activeWif && (
