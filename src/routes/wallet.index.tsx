@@ -1102,14 +1102,23 @@ function TxcTokens({ addresses }: { addresses: string[] }) {
     <section className="mt-8 px-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold">TXC tokens</h2>
-        <Link
-          to="/wallet/txc/consolidate"
-          search={{ token: undefined }}
-          className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
-        >
-          Consolidate
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/wallet/txc/migrate"
+            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            Old paths
+          </Link>
+          <Link
+            to="/wallet/txc/consolidate"
+            search={{ token: undefined }}
+            className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            Consolidate
+          </Link>
+        </div>
       </div>
+
       <ul className="space-y-2">
 
         {visible.map(({ token: t, units }) => {
