@@ -36,9 +36,9 @@ const WEBVIEW_HOSTNAME = "mobile.honest.money";
 
 const config: CapacitorConfig = {
   appId: "money.honest.txcwallet",
-  appName: "HME Wallet",
+  appName: "honest.money",
   webDir: "dist/client",
-  backgroundColor: "#0b0f14",
+  backgroundColor: "#ffffff",
   server: {
     ...(REMOTE_URL ? { url: REMOTE_URL } : {}),
     // Stable origin across the remote -> bundled switch (see note above).
@@ -52,10 +52,10 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: "always",
-    backgroundColor: "#0b0f14",
+    backgroundColor: "#ffffff",
   },
   android: {
-    backgroundColor: "#0b0f14",
+    backgroundColor: "#ffffff",
     allowMixedContent: false,
   },
   plugins: {
@@ -64,13 +64,13 @@ const config: CapacitorConfig = {
       // splash overlay blocking every tap on the landing page.
       launchAutoHide: true,
       launchShowDuration: 900,
-      backgroundColor: "#0b0f14",
+      backgroundColor: "#ffffff",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
     },
     StatusBar: {
-      style: "DARK",
-      backgroundColor: "#0b0f14",
+      style: "LIGHT",
+      backgroundColor: "#ffffff",
     },
     PrivacyScreen: {
       // Do NOT enable at app startup. On iOS 17+ the screenshot-prevention

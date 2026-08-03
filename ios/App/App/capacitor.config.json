@@ -1,8 +1,8 @@
 {
   "appId": "money.honest.txcwallet",
-  "appName": "HME Wallet",
+  "appName": "honest.money",
   "webDir": "dist/client",
-  "backgroundColor": "#0b0f14",
+  "backgroundColor": "#ffffff",
   "server": {
     "hostname": "mobile.honest.money",
     "cleartext": false,
@@ -14,23 +14,23 @@
   },
   "ios": {
     "contentInset": "always",
-    "backgroundColor": "#0b0f14"
+    "backgroundColor": "#ffffff"
   },
   "android": {
-    "backgroundColor": "#0b0f14",
+    "backgroundColor": "#ffffff",
     "allowMixedContent": false
   },
   "plugins": {
     "SplashScreen": {
       "launchAutoHide": true,
       "launchShowDuration": 900,
-      "backgroundColor": "#0b0f14",
+      "backgroundColor": "#ffffff",
       "androidScaleType": "CENTER_CROP",
       "showSpinner": false
     },
     "StatusBar": {
-      "style": "DARK",
-      "backgroundColor": "#0b0f14"
+      "style": "LIGHT",
+      "backgroundColor": "#ffffff"
     },
     "PrivacyScreen": {
       "enable": false,
