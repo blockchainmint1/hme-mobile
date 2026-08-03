@@ -633,7 +633,7 @@ function WalletHome() {
             <OldPathBanner branches={account.data?.branches} />
           )}
           {activeChain === "txc" && !activeWatch && !activeWif && (
-            <TxcTokens addresses={[...ownAddresses]} />
+            <TxcTokens addresses={[...ownAddresses]} pendingIn={pendingOmniIn} />
           )}
           {/* Imported keys / watch-only TXC addresses can also hold Omni tokens */}
           {activeWif?.chain === "txc" && (
