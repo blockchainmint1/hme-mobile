@@ -605,10 +605,14 @@ function WalletHome() {
             </div>
           )}
 
-          {/* Recent activity (TXC only for now) */}
+          {/* Coins found on old derivation paths (old app / BlueWallet import) */}
+          {activeChain === "txc" && !activeWatch && !activeWif && (
+            <OldPathBanner branches={account.data?.branches} />
+          )}
           {activeChain === "txc" && !activeWatch && !activeWif && (
             <TxcTokens addresses={[...ownAddresses]} />
           )}
+
           {/* Recent activity (TXC only for now) */}
           {activeChain === "txc" && !activeWatch && !activeWif && (
             <section className="mt-8 px-4">
