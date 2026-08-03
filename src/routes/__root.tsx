@@ -283,6 +283,38 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
 
+  // Browser tabs often fail a lazy chunk import without ever reaching the
+  // router's error boundary (e.g. during a navigation the promise just
+  // rejects). Catch those globally and run the same one-shot cache purge.
+  useEffect(() => {
+    const recover = (msg: string) => {
+      if (!isStaleChunkError(msg)) return;
+      try {
+        if (sessionStorage.getItem("hme:chunk-recovered")) return;
+        sessionStorage.setItem("hme:chunk-recovered", "1");
+      } catch {
+        return;
+      }
+      void purgeCachesAndReload();
+    };
+    const onError = (e: ErrorEvent) => recover(e.message || "");
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const r = e.reason as unknown;
+      recover(
+        (r && typeof r === "object" && "message" in r
+          ? String((r as { message?: unknown }).message)
+          : String(r)) || "",
+      );
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
+
+
   // Wire up Nectar.Pay tap-to-pay deep links (nectar:// + https universal
   // link). Native-only — no-op on web. See lib/native/deeplink.ts.
   useEffect(() => {
