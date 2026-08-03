@@ -230,6 +230,25 @@ function WalletHome() {
     ...(account.data?.internal.map((a) => a.address) ?? []),
   ]);
 
+  // Incoming Omni transfers still sitting in the mempool. The node's balance
+  // only counts confirmed transfers, so surface these as a "+X pending" line
+  // on the token row the moment the tx hits the mempool.
+  const pendingOmniIn = useMemo(() => {
+    const map = new Map<number, bigint>();
+    for (const tx of txs.data ?? []) {
+      if (tx.status.confirmed) continue;
+      const o = decodeOmniSend(tx);
+      if (!o || !o.reference) continue;
+      if (!ownAddresses.has(o.reference)) continue;
+      if (o.sender && ownAddresses.has(o.sender)) continue; // self-move
+      map.set(o.propertyId, (map.get(o.propertyId) ?? 0n) + o.amount);
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txs.data, [...ownAddresses].join(",")]);
+
+
+
   // Omni token transfers ride inside ordinary TXC transactions — decode the
   // OP_RETURN so the history shows "Sent 25 TSD" instead of a dust move.
   const enabledTxcTokens = useEnabledTxcTokens();
