@@ -10,13 +10,16 @@
 import * as ecc from "@bitcoinerlab/secp256k1";
 import {
   entropyToMnemonic,
+  mnemonicToEntropy,
   mnemonicToSeed,
   validateMnemonic as validateBip39Mnemonic,
 } from "@scure/bip39";
 import { wordlist as englishWordlist } from "@scure/bip39/wordlists/english.js";
 import { BIP32Factory, type BIP32Interface } from "bip32";
 import { payments, Psbt } from "bitcoinjs-lib";
+import { extractEntropy, wipe } from "./entropy";
 import { TXC_NETWORK, DERIVATION_PATHS, scriptKindOf, type DerivationKind } from "./network";
+
 
 const bip32 = BIP32Factory(ecc);
 
