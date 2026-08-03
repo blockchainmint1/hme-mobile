@@ -403,6 +403,14 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <WalletProvider>
+          {/* Opaque status-bar scrim. Without this, scrolled content renders
+              underneath the iOS clock/battery (App Review Guideline 4 rejection
+              on iPhone 17 Pro Max). Fixed to the viewport so it never scrolls
+              away; zero height on devices with no top inset. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-x-0 top-0 z-50 h-[env(safe-area-inset-top)] bg-background"
+          />
           {/* Mobile-only frame: on phones it fills the screen; on larger screens
               we center a phone-width column so the app always feels like a mobile app. */}
           <div data-wallet-frame className="min-h-[100dvh] w-full bg-muted/40 sm:py-6">
@@ -410,19 +418,21 @@ function RootComponent() {
               data-wallet-frame
               className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:min-h-[calc(100dvh-3rem)] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-border overflow-hidden"
             >
+              <div className="pt-[env(safe-area-inset-top)]" />
               {offline && (
                 <div className="bg-amber-500/15 text-amber-300 text-xs text-center py-1.5 px-3 border-b border-amber-500/30">
                   You&apos;re offline — balances and prices may be out of date.
                 </div>
               )}
-              <div className="flex-1 pt-[env(safe-area-inset-top)]">
+              <div className="flex-1">
                 <Outlet />
               </div>
-              <div className="pb-[env(safe-area-inset-bottom)]">
+              <div className="pb-[max(env(safe-area-inset-bottom),0.75rem)]">
                 <SiteFooter />
               </div>
             </div>
           </div>
+
           <Toaster richColors closeButton position="top-center" />
         </WalletProvider>
       </ThemeProvider>
