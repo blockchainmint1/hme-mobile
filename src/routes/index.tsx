@@ -126,7 +126,7 @@ function Home() {
           className="mx-auto mb-5 h-16 w-16 rounded-2xl shadow-lg shadow-amber-900/40"
         />
 
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">HME Wallet</h1>
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">honest.money</h1>
         <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
           A self-custodial wallet for TEXITcoin (TXC), Iskander Coin (ISK), Zero
           Chill Units (ZCU), and EVM Stablecoins. Your seed phrase stays on your
