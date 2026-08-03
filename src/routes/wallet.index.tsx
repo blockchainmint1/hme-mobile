@@ -1068,6 +1068,51 @@ function TxcTile({
   );
 }
 
+/**
+ * Imported wallets often hold coins on the old app's derivation paths
+ * (Bitcoin's coin type, and/or native segwit). They're already scanned and
+ * spendable — this just offers to move them onto the legacy 696969' path,
+ * which is the only one Omni tokens work on.
+ */
+function OldPathBanner({
+  branches,
+}: {
+  branches?: { kind: string; balanceSats: number; usedAddresses: number }[];
+}) {
+  const [dismissed, setDismissed] = useState(false);
+  const stray = (branches ?? []).filter((b) => b.kind !== "bip44" && b.balanceSats > 0);
+  const total = stray.reduce((s, b) => s + b.balanceSats, 0);
+  if (dismissed || stray.length === 0 || total <= 0) return null;
+  return (
+    <section className="mt-6 px-4">
+      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+        <p className="text-sm font-medium">Coins on an old address type</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {formatTxc(total)} TXC sits on derivation paths from your previous wallet. It's safe and
+          spendable — move it to your main <span className="font-mono">T…</span> address so tokens
+          like TSD work there too.
+        </p>
+        <div className="mt-3 flex items-center gap-3">
+          <Link
+            to="/wallet/txc/migrate"
+            className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-semibold text-amber-950"
+          >
+            Review & move
+          </Link>
+          <button
+            type="button"
+            onClick={() => setDismissed(true)}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            Not now
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
 function TxcTokens({ addresses }: { addresses: string[] }) {
   const localTokens = useEnabledTxcTokens();
   const { resolved: tokens } = useTxcTokenProps(localTokens);
