@@ -182,6 +182,12 @@ function WifSendPage() {
     const sorted = [...utxos].sort((a, b) => b.value - a.value);
 
     if (isTokenSend && activeToken) {
+      if (entry!.kind !== "bip44") {
+        setError(
+          "Omni tokens can only be sent from a legacy T… address. This imported key uses a segwit address.",
+        );
+        return;
+      }
       if (!isOmniCompatibleAddress(cleanTo)) {
         setError(
           `Omni tokens can't be sent to a txc1… address. Ask for a legacy T… address instead.`,
@@ -315,7 +321,13 @@ function WifSendPage() {
   }
 
   const reviewedOutSats =
-    stage.kind === "review" ? (sendAll ? totalAvailable - stage.feeSats : amountSats) : 0;
+    stage.kind === "review"
+      ? isTokenSend
+        ? OMNI_DUST_SATS
+        : sendAll
+          ? totalAvailable - stage.feeSats
+          : amountSats
+      : 0;
 
   if (stage.kind === "sent") {
     return (

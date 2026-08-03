@@ -614,7 +614,11 @@ function WalletHome() {
           )}
           {/* Imported keys / watch-only TXC addresses can also hold Omni tokens */}
           {activeWif?.chain === "txc" && (
-            <TxcTokens addresses={[activeWif.address]} readOnly />
+            <TxcTokens
+              addresses={[activeWif.address]}
+              readOnly
+              sendFromWifId={activeWif.kind === "bip44" ? activeWif.id : undefined}
+            />
           )}
           {activeWatch?.chain === "txc" && (
             <TxcTokens addresses={[activeWatch.address]} readOnly />
@@ -1123,10 +1127,13 @@ function OldPathBanner({
 function TxcTokens({
   addresses,
   readOnly = false,
+  sendFromWifId,
 }: {
   addresses: string[];
-  /** Imported-key tiles can hold Omni balances but can't spend them yet. */
+  /** Hides HD-only actions (old paths / consolidate). */
   readOnly?: boolean;
+  /** Imported-key wallets can still spend their tokens via the WIF send route. */
+  sendFromWifId?: string;
 }) {
   const localTokens = useEnabledTxcTokens();
   const { resolved: tokens } = useTxcTokenProps(localTokens);
@@ -1211,12 +1218,23 @@ function TxcTokens({
                   {balances.isError && !balances.data ? "unavailable" : "—"}
                 </p>
               </div>
-              {!readOnly && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+              {(!readOnly || sendFromWifId) && (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
             </>
           );
           return (
             <li key={t.id}>
-              {readOnly ? (
+              {sendFromWifId ? (
+                <Link
+                  to="/wallet/wif/$id/send"
+                  params={{ id: sendFromWifId }}
+                  search={{ to: undefined, amount: undefined, token: String(t.id) }}
+                  className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors"
+                >
+                  {inner}
+                </Link>
+              ) : readOnly ? (
                 <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3">
                   {inner}
                 </div>
@@ -1232,10 +1250,10 @@ function TxcTokens({
             </li>
           );
         })}
-        {readOnly && visible.some((r) => r.units > 0n) && (
+        {readOnly && !sendFromWifId && visible.some((r) => r.units > 0n) && (
           <li className="text-xs text-muted-foreground pt-1">
-            Token balances on an imported key are view-only for now — import the seed phrase
-            for this address to spend them.
+            These token balances are view-only — Omni transfers need a legacy T… address with
+            its private key.
           </li>
         )}
         {hideSpam && hiddenCount > 0 && (
