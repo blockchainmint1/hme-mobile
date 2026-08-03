@@ -252,9 +252,15 @@ function ConsolidatePage() {
           label: `Fund ${needFunding.length} address${needFunding.length > 1 ? "es" : ""} with fee money`,
           status: "pending",
         });
-        const holderAddrs = new Set(needFunding.map((h) => h.address));
+        // Never spend a coin a later transfer is counting on: skip every
+        // holder address, plus the exact UTXOs the self-funded holders will
+        // use, otherwise the funding tx double-spends them (mempool conflict).
+        const holderAddrs = new Set(holders.map((h) => h.address));
+        const reserved = new Set(
+          holders.filter((h) => h.utxo).map((h) => `${h.utxo!.txid}:${h.utxo!.vout}`),
+        );
         const spendable = (account.data.utxos ?? [])
-          .filter((u) => !holderAddrs.has(u.address))
+          .filter((u) => !holderAddrs.has(u.address) && !reserved.has(`${u.txid}:${u.vout}`))
           .sort((a, b) => b.value - a.value);
         const outputs = needFunding.map((h) => ({ address: h.address, valueSats: h.fundSats }));
         const targetOut = outputs.reduce((s, o) => s + o.valueSats, 0);
