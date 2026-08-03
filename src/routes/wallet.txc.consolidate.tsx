@@ -283,6 +283,9 @@ function ConsolidatePage() {
             `Not enough TXC to fund the transfers. Need ~${formatTxc(targetOut + feeSats)}, have ${formatTxc(acc)}.`,
           );
         }
+        // Absorb a dust-sized change output into the fee so the funding tx
+        // stays standard.
+        if (acc - targetOut - feeSats < CHANGE_MIN_SATS) feeSats = acc - targetOut;
         const built = buildAndSignTx({
           root,
           kind: unlocked.kind,
