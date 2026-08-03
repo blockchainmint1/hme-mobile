@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
 import { buildAndSignTx } from "@/lib/txc/wallet";
-import { scriptKindOf, type DerivationKind } from "@/lib/txc/network";
+import { scriptKindOf, DERIVATION_PATHS, type DerivationKind } from "@/lib/txc/network";
 import { broadcastTx, explorerTxUrl, getFeeEstimates, type FeeEstimates } from "@/lib/txc/mempool";
 import { formatTxc, txcToSats } from "@/lib/txc/units";
 import { Button } from "@/components/ui/button";
