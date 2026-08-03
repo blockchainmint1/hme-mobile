@@ -199,15 +199,19 @@ function WalletHome() {
         return (b.status.block_time ?? 0) - (a.status.block_time ?? 0);
       });
     },
-    // TXC blocks are slow, so watch the mempool while the tile is open: poll
-    // every 15s while anything is unconfirmed, otherwise a lazy 60s so an
-    // inbound payment shows up as "Pending" without the user pulling refresh.
+    // TXC blocks are slow, so watch the mempool closely while the tile is
+    // open: 5s while anything is unconfirmed, 12s otherwise, plus an immediate
+    // refetch whenever the app comes back to the foreground. An inbound
+    // payment shows up as "Pending" within seconds without pulling refresh.
     refetchInterval: (q) => {
       if (activeChain !== "txc") return false;
       const data = q.state.data as MempoolTx[] | undefined;
-      return data?.some((t) => !t.status.confirmed) ? 15_000 : 60_000;
+      return data?.some((t) => !t.status.confirmed) ? 5_000 : 12_000;
     },
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
+
 
   // Unconfirmed activity also moves the balance (mempool UTXOs count), so
   // re-scan whenever the set of pending txids changes.
@@ -225,6 +229,25 @@ function WalletHome() {
     ...(account.data?.external.map((a) => a.address) ?? []),
     ...(account.data?.internal.map((a) => a.address) ?? []),
   ]);
+
+  // Incoming Omni transfers still sitting in the mempool. The node's balance
+  // only counts confirmed transfers, so surface these as a "+X pending" line
+  // on the token row the moment the tx hits the mempool.
+  const pendingOmniIn = useMemo(() => {
+    const map = new Map<number, bigint>();
+    for (const tx of txs.data ?? []) {
+      if (tx.status.confirmed) continue;
+      const o = decodeOmniSend(tx);
+      if (!o || !o.reference) continue;
+      if (!ownAddresses.has(o.reference)) continue;
+      if (o.sender && ownAddresses.has(o.sender)) continue; // self-move
+      map.set(o.propertyId, (map.get(o.propertyId) ?? 0n) + o.amount);
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txs.data, [...ownAddresses].join(",")]);
+
+
 
   // Omni token transfers ride inside ordinary TXC transactions — decode the
   // OP_RETURN so the history shows "Sent 25 TSD" instead of a dust move.
@@ -610,7 +633,7 @@ function WalletHome() {
             <OldPathBanner branches={account.data?.branches} />
           )}
           {activeChain === "txc" && !activeWatch && !activeWif && (
-            <TxcTokens addresses={[...ownAddresses]} />
+            <TxcTokens addresses={[...ownAddresses]} pendingIn={pendingOmniIn} />
           )}
           {/* Imported keys / watch-only TXC addresses can also hold Omni tokens */}
           {activeWif?.chain === "txc" && (
@@ -1128,12 +1151,15 @@ function TxcTokens({
   addresses,
   readOnly = false,
   sendFromWifId,
+  pendingIn,
 }: {
   addresses: string[];
   /** Hides HD-only actions (old paths / consolidate). */
   readOnly?: boolean;
   /** Imported-key wallets can still spend their tokens via the WIF send route. */
   sendFromWifId?: string;
+  /** Unconfirmed incoming amounts per property id, from the mempool. */
+  pendingIn?: Map<number, bigint>;
 }) {
   const localTokens = useEnabledTxcTokens();
   const { resolved: tokens } = useTxcTokenProps(localTokens);
@@ -1142,6 +1168,9 @@ function TxcTokens({
 
   const [hidden] = useHideBalances();
   const enabled = addresses.length > 0 && tokens.length > 0;
+  const pendingKey = pendingIn
+    ? [...pendingIn.entries()].map(([k, v]) => `${k}:${v}`).join(",")
+    : "";
   const balances = useQuery({
     queryKey: [
       "txc-token-balances",
@@ -1153,20 +1182,31 @@ function TxcTokens({
       fetchBalances({
         data: { addresses, propertyIds: tokens.map((t) => t.id) },
       }),
-    staleTime: 30_000,
+    staleTime: 10_000,
+    // Keep token balances close to the mempool view: poll while something is
+    // pending so the number flips the instant the transfer confirms.
+    refetchInterval: pendingKey ? 10_000 : 30_000,
+    refetchOnWindowFocus: true,
   });
+
+  // A new pending transfer means the confirmed balance may be about to change.
+  useEffect(() => {
+    if (pendingKey) void balances.refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingKey]);
 
   if (!enabled) return null;
 
   const rows = tokens.map((t) => {
     const raw = balances.data?.[t.id] ?? "0";
     const units = BigInt(raw);
-    return { token: t, units };
+    return { token: t, units, pending: pendingIn?.get(t.id) ?? 0n };
   });
   const visible = hideSpam
-    ? rows.filter((r) => balances.isLoading || r.units > 0n)
+    ? rows.filter((r) => balances.isLoading || r.units > 0n || r.pending > 0n)
     : rows;
   const hiddenCount = rows.length - visible.length;
+
 
   return (
     <section className="mt-8 px-4">
@@ -1193,8 +1233,10 @@ function TxcTokens({
 
       <ul className="space-y-2">
 
-        {visible.map(({ token: t, units }) => {
+        {visible.map(({ token: t, units, pending }) => {
           const amtStr = formatTokenAmount(units, t.divisible);
+          const pendingStr =
+            pending > 0n ? formatTokenAmount(pending, t.divisible) : null;
           const inner = (
             <>
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-amber-500/15 text-amber-300">
@@ -1214,10 +1256,18 @@ function TxcTokens({
                       ? maskAmount(amtStr)
                       : amtStr}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {balances.isError && !balances.data ? "unavailable" : "—"}
-                </p>
+                {pendingStr ? (
+                  <p className="text-xs text-amber-400 inline-flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />+
+                    {hidden ? maskAmount(pendingStr) : pendingStr} pending
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {balances.isError && !balances.data ? "unavailable" : "—"}
+                  </p>
+                )}
               </div>
+
               {(!readOnly || sendFromWifId) && (
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               )}
