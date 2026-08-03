@@ -72,7 +72,12 @@ export const Route = createFileRoute("/wallet/txc/consolidate")({
 });
 
 const OMNI_DUST_SATS = 10_000;
-const DUST_LIMIT = 546;
+/**
+ * TEXITcoin's relay fee makes small change outputs non-standard ("dust"), so a
+ * change output is only worth creating when it clears the same threshold we
+ * use for the Omni reference output. Anything smaller goes to the miners.
+ */
+const CHANGE_MIN_SATS = OMNI_DUST_SATS;
 const VBYTES = {
   bip84: { input: 68, output: 31, overhead: 11 },
   bip49: { input: 91, output: 32, overhead: 11 },
