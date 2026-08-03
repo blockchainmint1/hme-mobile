@@ -358,7 +358,7 @@ function ImportPage() {
         <p className="mt-2 text-muted-foreground">
           {candidates.some((c) => c.txCount > 0)
             ? "Your seed phrase has activity on multiple address types. Pick the one you want to import."
-            : "If this is from the old TXC Wallet, Legacy is usually the best next try. For a new wallet, choose Native segwit."}
+            : "If this is from the old TXC Wallet, Legacy is usually the best next try. For a new wallet choose Legacy — it is the only type that can receive Omni tokens like TSD."}
         </p>
         <div className="mt-6 space-y-3">
           {candidates.map((c) => (
