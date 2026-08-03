@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { friendlyBroadcastError } from "@/lib/broadcast-error";
 import { useMemo, useState } from "react";
@@ -344,9 +345,12 @@ function WifSendPage() {
       <Link to="/wallet" className="text-sm text-muted-foreground hover:text-foreground">
         ← Back
       </Link>
-      <h1 className="mt-3 text-2xl font-bold">Send {chainLabel}</h1>
+      <h1 className="mt-3 text-2xl font-bold">Send {unitLabel}</h1>
       <p className="text-sm text-muted-foreground">
-        {entry.label} · Available: {utxosQ.isLoading ? "…" : formatTxc(totalAvailable)}
+        {entry.label} ·{" "}
+        {isTokenSend
+          ? `${tokenBalanceQ.isLoading ? "…" : formatTokenAmount(tokenUnits, activeToken!.divisible)} ${activeToken!.symbol} · ${formatTxc(totalAvailable)} for fees`
+          : `Available: ${utxosQ.isLoading ? "…" : formatTxc(totalAvailable)}`}
       </p>
 
       {stage.kind === "form" && (
@@ -364,7 +368,13 @@ function WifSendPage() {
                     id="to"
                     value={to}
                     onChange={(e) => setTo(e.target.value)}
-                    placeholder={entry.chain === "txc" ? "txc1... or T..." : "isk1... or K..."}
+                    placeholder={
+                      isTokenSend
+                        ? "T... (legacy address required)"
+                        : entry.chain === "txc"
+                          ? "txc1... or T..."
+                          : "isk1... or K..."
+                    }
                     className="font-mono flex-1"
                     autoComplete="off"
                     spellCheck={false}
@@ -375,16 +385,18 @@ function WifSendPage() {
               </div>
               <div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="amount">Amount ({chainLabel})</Label>
-                  <label className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={sendAll}
-                      onChange={(e) => setSendAll(e.target.checked)}
-                      className="h-3.5 w-3.5"
-                    />
-                    Send all
-                  </label>
+                  <Label htmlFor="amount">Amount ({unitLabel})</Label>
+                  {!isTokenSend && (
+                    <label className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={sendAll}
+                        onChange={(e) => setSendAll(e.target.checked)}
+                        className="h-3.5 w-3.5"
+                      />
+                      Send all
+                    </label>
+                  )}
                 </div>
                 <Input
                   id="amount"
@@ -448,16 +460,28 @@ function WifSendPage() {
           <CardContent className="space-y-3 text-sm">
             <Row label="To"><code className="font-mono break-all">{to.trim()}</code></Row>
             <Row label="Amount">
-              {formatTxc(reviewedOutSats)}
-              {sendAll && <span className="text-muted-foreground text-xs ml-1">(all)</span>}
+              {isTokenSend ? (
+                `${amount} ${activeToken!.symbol}`
+              ) : (
+                <>
+                  {formatTxc(reviewedOutSats)}
+                  {sendAll && <span className="text-muted-foreground text-xs ml-1">(all)</span>}
+                </>
+              )}
             </Row>
+            {isTokenSend && (
+              <Row label="Reference output">
+                {formatTxc(OMNI_DUST_SATS)}{" "}
+                <span className="text-muted-foreground text-xs">(TXC, carries the transfer)</span>
+              </Row>
+            )}
             <Row label="Network fee">
               {formatTxc(stage.feeSats)}{" "}
               <span className="text-muted-foreground text-xs">
                 ({stage.vsize} vB × {feeRate} sat/vB)
               </span>
             </Row>
-            <Row label="Total">{formatTxc(reviewedOutSats + stage.feeSats)}</Row>
+            <Row label="Total TXC">{formatTxc(reviewedOutSats + stage.feeSats)}</Row>
             {error && (
               <div className="flex items-start gap-2 text-sm text-destructive">
                 <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
@@ -470,7 +494,7 @@ function WifSendPage() {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button className="flex-1" disabled={busy}>
-                    {busy ? "Broadcasting..." : `Send ${chainLabel}`}
+                    {busy ? "Broadcasting..." : `Send ${unitLabel}`}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -479,7 +503,13 @@ function WifSendPage() {
                     <AlertDialogDescription asChild>
                       <div className="space-y-2 text-sm">
                         <div>
-                          Send <strong>{formatTxc(reviewedOutSats)}</strong> to
+                          Send{" "}
+                          <strong>
+                            {isTokenSend
+                              ? `${amount} ${activeToken!.symbol}`
+                              : formatTxc(reviewedOutSats)}
+                          </strong>{" "}
+                          to
                         </div>
                         <code className="block font-mono break-all text-xs bg-muted rounded p-2">
                           {to.trim()}
