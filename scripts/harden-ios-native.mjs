@@ -22,7 +22,7 @@ const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>HME Wallet</string>
+	<string>honest.money</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -55,9 +55,9 @@ const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>HME Wallet uses the camera to scan wallet address and payment QR codes.</string>
+	<string>honest.money uses the camera to scan wallet address and payment QR codes.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>HME Wallet uses Face ID to unlock your wallet.</string>
+	<string>honest.money uses Face ID to unlock your wallet.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

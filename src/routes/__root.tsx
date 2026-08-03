@@ -217,7 +217,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "HME Wallet" },
+      { name: "apple-mobile-web-app-title", content: "honest.money" },
       { name: "format-detection", content: "telephone=no" },
       { title: "HME Wallet — TEXITcoin & EVM multi-chain wallet" },
       {
@@ -225,7 +225,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "HME Wallet — a self-custodial multi-chain wallet for TEXITcoin (TXC), Ethereum, Base, and BSC. Part of the Honest Money ecosystem.",
       },
-      { name: "theme-color", content: "#0b0f14" },
+      { name: "theme-color", content: "#ffffff" },
       { property: "og:title", content: "HME Wallet" },
       {
         property: "og:description",
