@@ -155,11 +155,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md w-full text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          {stale ? "Updating the app…" : "This page didn't load"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong. Your wallet data is unaffected. Try again, or
-          send this error to support so we can fix it.
+          {stale
+            ? "This app was updated since it was last opened, so part of it couldn't load from the cache. Clearing it and reloading now — your wallet data is unaffected."
+            : "Something went wrong. Your wallet data is unaffected. Try again, or send this error to support so we can fix it."}
         </p>
         <details className="mt-4 text-left rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground open:pb-3">
           <summary className="cursor-pointer font-medium text-foreground">
@@ -175,13 +176,18 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
+              if (stale) {
+                void purgeCachesAndReload();
+                return;
+              }
               router.invalidate();
               reset();
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            {stale ? "Reload now" : "Try again"}
           </button>
+
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
