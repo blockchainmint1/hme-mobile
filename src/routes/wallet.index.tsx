@@ -1113,7 +1113,14 @@ function OldPathBanner({
 }
 
 
-function TxcTokens({ addresses }: { addresses: string[] }) {
+function TxcTokens({
+  addresses,
+  readOnly = false,
+}: {
+  addresses: string[];
+  /** Imported-key tiles can hold Omni balances but can't spend them yet. */
+  readOnly?: boolean;
+}) {
   const localTokens = useEnabledTxcTokens();
   const { resolved: tokens } = useTxcTokenProps(localTokens);
   const fetchBalances = useServerFn(getTxcTokenBalancesForAddresses);
