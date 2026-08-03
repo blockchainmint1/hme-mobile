@@ -66,3 +66,16 @@ if (xml === original) {
   writeFileSync(manifestPath, xml);
   console.log("Patched AndroidManifest.xml (permissions + deep links).");
 }
+
+// App display name (home screen / app switcher). cap sync does not rewrite this.
+const stringsPath = resolve(process.cwd(), "android/app/src/main/res/values/strings.xml");
+if (existsSync(stringsPath)) {
+  let strings = readFileSync(stringsPath, "utf8");
+  const next = strings
+    .replace(/(<string name="app_name">)[^<]*(<\/string>)/, "$1honest.money$2")
+    .replace(/(<string name="title_activity_main">)[^<]*(<\/string>)/, "$1honest.money$2");
+  if (next !== strings) {
+    writeFileSync(stringsPath, next);
+    console.log("Set Android app name to honest.money.");
+  }
+}
