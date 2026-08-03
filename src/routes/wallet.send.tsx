@@ -342,11 +342,45 @@ function SendPage() {
       const senderUtxos = sorted.filter((u) => u.address === senderAddress);
       const otherUtxos = sorted.filter((u) => u.address !== senderAddress);
       if (senderUtxos.length === 0) {
-        setError(
-          `Your ${activeToken.symbol} is at ${senderAddress}, but that address has no TXC to pay the network fee. Send a small amount of TXC (≈ ${formatTxc(OMNI_DUST_SATS * 2)}) to that address first, then retry.`,
-        );
+        // The holder address has no TXC of its own. Omni takes the sender from
+        // the first input, so we can't just pay the fee from another address —
+        // instead we fund this one first and chain the transfer onto it.
+        const info = addressInfos.find((a) => a.address === senderAddress);
+        if (!info) {
+          setError(
+            `Your ${activeToken.symbol} is at ${senderAddress}, but that address has no TXC to pay the network fee. Send a small amount of TXC to it first, then retry.`,
+          );
+          return;
+        }
+        const need = OMNI_DUST_SATS + Math.ceil(omniVsize(info.kind) * feeRate);
+        // Headroom so a fee bump between planning and broadcast can't strand it.
+        const fundSats = Math.ceil(need * 1.4);
+        const picked: typeof sorted = [];
+        let acc = 0;
+        let fundFee = 0;
+        for (const u of otherUtxos) {
+          picked.push(u);
+          acc += u.value;
+          fundFee = Math.ceil(estimateVsizeFor(unlocked.kind, picked, 2) * feeRate);
+          if (acc >= fundSats + fundFee) break;
+        }
+        if (acc < fundSats + fundFee) {
+          setError(
+            `Not enough TXC to cover the network fee. Need ~${formatTxc(fundSats + fundFee)}, have ${formatTxc(acc)}.`,
+          );
+          return;
+        }
+        setStage({
+          kind: "review",
+          vsize: omniVsize(info.kind),
+          feeSats: fundSats - OMNI_DUST_SATS,
+          selected: picked.length,
+          senderAddress,
+          fund: { sats: fundSats, feeSats: fundFee, inputs: picked.length },
+        });
         return;
       }
+
 
       // Sender-owned UTXOs first (largest first), then top up from other own
       // addresses if needed for fee. Change goes back to the sender address so
