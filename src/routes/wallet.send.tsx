@@ -225,6 +225,14 @@ function SendPage() {
     ],
     [account.data],
   );
+  /** Derived address metadata (key index + script kind), keyed by address. */
+  const addressInfos = useMemo(() => {
+    const list = [...(account.data?.external ?? []), ...(account.data?.internal ?? [])];
+    return list
+      .map((d) => ({ ...d, kind: kindFromPath(d.path) }))
+      .filter((d): d is typeof d & { kind: DerivationKind } => d.kind !== null);
+  }, [account.data]);
+
   const tokenBalances = useQuery({
     queryKey: [
       "txc-token-balances",
