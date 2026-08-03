@@ -609,6 +609,14 @@ function SendPage() {
         </div>
         <h1 className="mt-4 text-2xl font-bold">Sent</h1>
         <p className="mt-2 text-muted-foreground">Your transaction was broadcast to the network.</p>
+        {isTokenSend && activeToken && (
+          <p className="mx-auto mt-3 max-w-sm rounded-lg border border-border/60 bg-card/40 p-3 text-sm text-muted-foreground">
+            Token transfers are only applied once the transaction confirms — usually a few minutes on
+            TEXITcoin. Your {activeToken.symbol} balance and the recipient's will update then, so check
+            back shortly rather than sending again.
+          </p>
+        )}
+
         <a
           href={explorerTxUrl(stage.txid)}
           target="_blank"
