@@ -17,7 +17,7 @@ import { useWallet } from "@/lib/txc/wallet-context";
 import { CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { useChainLabel } from "@/lib/chain-labels";
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
-import { DERIVATION_PATHS } from "@/lib/txc/network";
+import { ALL_DERIVATION_KINDS, DERIVATION_PATHS } from "@/lib/txc/network";
 import { ISK_DERIVATION_PATHS, ISK_DEFAULT_KIND } from "@/lib/isk/network";
 import { LTC_DERIVATION_PATHS, LTC_DEFAULT_KIND } from "@/lib/ltc/network";
 import { DOGE_DERIVATION_PATHS, DOGE_DEFAULT_KIND } from "@/lib/doge/network";
@@ -142,7 +142,7 @@ const KIND_LABEL: Record<string, string> = {
 function TxcDetails(
   props: Extract<WalletDetailProps, { kind: "txc" }>,
 ) {
-  const { unlocked, rename } = useWallet();
+  const { unlocked, rename, setKind } = useWallet();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(unlocked?.label ?? "");
 
@@ -201,7 +201,54 @@ function TxcDetails(
 
       <Field label="Chain" value={meta.name} />
       <Field label="Address type" value={KIND_LABEL[unlocked.kind] ?? unlocked.kind} />
-      <Field label="Derivation path" value={`${path}/0/0`} mono />
+      <Field label="Primary derivation path" value={`${path}/0/0`} mono />
+
+      {/* Every path we keep scanning, so nothing is ever hidden by the choice
+          of primary branch. Legacy (coin type 0') paths came from the old app. */}
+      <div className="rounded-lg border border-border/60 bg-card/40 px-4 py-3">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+          Paths monitored ({ALL_DERIVATION_KINDS.length})
+        </p>
+        <ul className="mt-2 space-y-1.5">
+          {ALL_DERIVATION_KINDS.map((k) => (
+            <li key={k} className="flex items-center justify-between gap-3">
+              <span
+                className={`font-mono text-xs break-all ${
+                  k === unlocked.kind ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {DERIVATION_PATHS[k]}
+              </span>
+              {k === unlocked.kind ? (
+                <span className="shrink-0 rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                  Primary
+                </span>
+              ) : (
+                <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  Watched
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+        {unlocked.kind !== "bip44" && (
+          <div className="mt-3 border-t border-border/50 pt-3">
+            <p className="text-xs text-muted-foreground">
+              New addresses come from the primary path. The standards-correct legacy path
+              (m/44&apos;/696969&apos;/0&apos;) is the one Omni tokens like TSD need. Switching
+              changes new addresses only — every path above stays monitored and spendable.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2"
+              onClick={() => setKind("bip44")}
+            >
+              Make m/44&apos;/696969&apos;/0&apos; primary
+            </Button>
+          </div>
+        )}
+      </div>
       {props.receiveAddress && (
         <Field label="Current receive address" value={props.receiveAddress} mono copy />
       )}

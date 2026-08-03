@@ -186,8 +186,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
 
   const value = useMemo<WalletContextValue>(
-    () => ({ unlocked, root, unlock, lock, forget, loadFromMemory, rename }),
-    [unlocked, root, unlock, lock, forget, loadFromMemory, rename],
+    () => ({ unlocked, root, unlock, lock, forget, loadFromMemory, rename, setKind }),
+    [unlocked, root, unlock, lock, forget, loadFromMemory, rename, setKind],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
