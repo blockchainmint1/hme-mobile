@@ -471,19 +471,31 @@ function SendPage() {
       // Re-scan right before signing: a cached UTXO set can contain outputs
       // that were already spent (another device, an earlier send, or a
       // mempool tx), which the node rejects with `inputs-missingorspent`.
+      //
+      // Only *disappearing* outputs invalidate the review. New incoming funds
+      // (very common on a wallet that's receiving) don't affect the coins we
+      // already selected, so we ignore additions and keep the reviewed
+      // selection instead of bouncing the user back to the form.
       const key = (u: { txid: string; vout: number }) => `${u.txid}:${u.vout}`;
-      const before = utxos.map(key).sort().join(",");
+      const reviewedKeys = new Set(utxos.map(key));
       const refreshed = await account.refetch();
       const liveUtxos = refreshed.data?.utxos ?? [];
-      if (liveUtxos.map(key).sort().join(",") !== before) {
+      const liveKeys = new Set(liveUtxos.map(key));
+      const spentAway = [...reviewedKeys].some((k) => !liveKeys.has(k));
+      if (spentAway) {
         setStage({ kind: "form" });
         setError(
-          "Your balance changed since you reviewed this — the amounts have been refreshed, please review and send again.",
+          "Some of the coins you were spending were just used elsewhere — the amounts have been refreshed, please review and send again.",
         );
         setBusy(false);
         return;
       }
-      const sorted = [...liveUtxos].sort((a, b) => b.value - a.value);
+      // Restrict to the coins that existed at review time so fee/amount math
+      // stays exactly as reviewed.
+      const sorted = liveUtxos
+        .filter((u) => reviewedKeys.has(key(u)))
+        .sort((a, b) => b.value - a.value);
+
 
       // Holder address has no TXC: broadcast a small funding tx to it first,
       // then chain the Omni transfer onto that fresh output so the token
