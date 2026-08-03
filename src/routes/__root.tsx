@@ -95,6 +95,37 @@ function NotFoundComponent() {
   );
 }
 
+/**
+ * A failed dynamic import ("Importing a module script failed", "Failed to
+ * fetch dynamically imported module") almost always means stale cached HTML is
+ * pointing at code chunks that no longer exist — typical after a deploy, or in
+ * a PWA/APK webview holding an old service-worker cache. Recover automatically
+ * by dumping caches and reloading once.
+ */
+function isStaleChunkError(message: string): boolean {
+  return /importing a module script failed|failed to fetch dynamically imported module|error loading dynamically imported module|module script failed|chunkloaderror/i.test(
+    message,
+  );
+}
+
+async function purgeCachesAndReload() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch {
+    // best effort — reload anyway
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.set("_r", Date.now().toString(36));
+  window.location.replace(url.toString());
+}
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
@@ -104,16 +135,32 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
   const message = error?.message || String(error);
   const stack = error?.stack || "";
+  const stale = isStaleChunkError(message);
+
+  useEffect(() => {
+    if (!stale) return;
+    // Only auto-recover once per session, so a genuinely broken build can't
+    // put the app into a reload loop.
+    try {
+      if (sessionStorage.getItem("hme:chunk-recovered")) return;
+      sessionStorage.setItem("hme:chunk-recovered", "1");
+    } catch {
+      return;
+    }
+    void purgeCachesAndReload();
+  }, [stale]);
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md w-full text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+          {stale ? "Updating the app…" : "This page didn't load"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong. Your wallet data is unaffected. Try again, or
-          send this error to support so we can fix it.
+          {stale
+            ? "This app was updated since it was last opened, so part of it couldn't load from the cache. Clearing it and reloading now — your wallet data is unaffected."
+            : "Something went wrong. Your wallet data is unaffected. Try again, or send this error to support so we can fix it."}
         </p>
         <details className="mt-4 text-left rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground open:pb-3">
           <summary className="cursor-pointer font-medium text-foreground">
@@ -129,13 +176,18 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
+              if (stale) {
+                void purgeCachesAndReload();
+                return;
+              }
               router.invalidate();
               reset();
             }}
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Try again
+            {stale ? "Reload now" : "Try again"}
           </button>
+
           <a
             href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
@@ -230,6 +282,38 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+
+  // Browser tabs often fail a lazy chunk import without ever reaching the
+  // router's error boundary (e.g. during a navigation the promise just
+  // rejects). Catch those globally and run the same one-shot cache purge.
+  useEffect(() => {
+    const recover = (msg: string) => {
+      if (!isStaleChunkError(msg)) return;
+      try {
+        if (sessionStorage.getItem("hme:chunk-recovered")) return;
+        sessionStorage.setItem("hme:chunk-recovered", "1");
+      } catch {
+        return;
+      }
+      void purgeCachesAndReload();
+    };
+    const onError = (e: ErrorEvent) => recover(e.message || "");
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const r = e.reason as unknown;
+      recover(
+        (r && typeof r === "object" && "message" in r
+          ? String((r as { message?: unknown }).message)
+          : String(r)) || "",
+      );
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
+
 
   // Wire up Nectar.Pay tap-to-pay deep links (nectar:// + https universal
   // link). Native-only — no-op on web. See lib/native/deeplink.ts.

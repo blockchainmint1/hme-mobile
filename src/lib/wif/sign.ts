@@ -37,8 +37,13 @@ export function buildAndSignWifTx(args: {
   outputs: { address: string; valueSats: number }[];
   changeAddress: string;
   feeSats: number;
+  /**
+   * Optional OP_RETURN payload bytes (e.g. an Omni Simple Send). Added as the
+   * first output so Omni's reference-output rules match the HD signer.
+   */
+  opReturnData?: Uint8Array;
 }): { hex: string; txid: string; feeSats: number; changeSats: number } {
-  const { network, kind, privateKey, publicKey, inputs, outputs, changeAddress, feeSats } = args;
+  const { network, kind, privateKey, publicKey, inputs, outputs, changeAddress, feeSats, opReturnData } = args;
   const totalIn = inputs.reduce((s, u) => s + u.value, 0);
   const totalOut = outputs.reduce((s, o) => s + o.valueSats, 0);
   const changeSats = totalIn - totalOut - feeSats;
@@ -62,6 +67,11 @@ export function buildAndSignWifTx(args: {
     psbt.addInput(base);
   }
 
+  if (opReturnData) {
+    const embed = payments.embed({ data: [opReturnData as unknown as Buffer] });
+    if (!embed.output) throw new Error("Failed to build OP_RETURN output");
+    psbt.addOutput({ script: embed.output, value: 0n });
+  }
   for (const o of outputs) psbt.addOutput({ address: o.address, value: BigInt(o.valueSats) });
   if (changeSats > 0) psbt.addOutput({ address: changeAddress, value: BigInt(changeSats) });
 

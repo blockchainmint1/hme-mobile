@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { friendlyBroadcastError } from "@/lib/broadcast-error";
 import { useMemo, useState } from "react";
@@ -9,6 +10,15 @@ import { decodeWif } from "@/lib/wif/decode";
 import { api } from "@/lib/wif/chain-io";
 import { buildAndSignWifTx, estimateWifVsize, type WifUtxoInput } from "@/lib/wif/sign";
 import { formatTxc, txcToSats } from "@/lib/txc/units";
+import {
+  buildSimpleSendPayload,
+  formatTokenAmount,
+  isOmniCompatibleAddress,
+  parseTokenAmount,
+  useEnabledTxcTokens,
+} from "@/lib/txc/tokens";
+import { useTxcTokenProps } from "@/lib/txc/token-props";
+import { getTxcTokenBalancesForAddresses } from "@/lib/txc/tokens.functions";
 import { TXC_NETWORK } from "@/lib/txc/network";
 import { ISK_NETWORK } from "@/lib/isk/network";
 import { address as addrLib } from "bitcoinjs-lib";
@@ -36,7 +46,14 @@ import { confirmWithBiometric } from "@/lib/native/biometric";
 const searchSchema = z.object({
   to: z.string().optional(),
   amount: z.string().optional(),
+  /** Omni property id — when present this is a token (e.g. TSD) send. */
+  token: z.string().optional(),
 });
+
+/** Omni reference output value, matching the HD send flow. */
+const OMNI_DUST_SATS = 10_000;
+/** Extra vbytes for the OP_RETURN payload output. */
+const OP_RETURN_VBYTES = 32;
 
 export const Route = createFileRoute("/wallet/wif/$id/send")({
   head: () => ({ meta: [{ title: "Send — HME Wallet" }] }),
@@ -56,6 +73,14 @@ function WifSendPage() {
   const search = Route.useSearch();
   const qc = useQueryClient();
   const entry = useMemo(() => getWifWallet(id), [id]);
+
+  const tokenId = search.token ? Number(search.token) : null;
+  const localTokens = useEnabledTxcTokens();
+  const { resolved: knownTokens } = useTxcTokenProps(localTokens);
+  const activeToken =
+    tokenId != null ? (knownTokens.find((t) => t.id === tokenId) ?? null) : null;
+  const isTokenSend = !!activeToken && entry?.chain === "txc";
+  const fetchTokenBalances = useServerFn(getTxcTokenBalancesForAddresses);
 
   const chainApi = entry ? api(entry.chain) : null;
   const network = entry ? (entry.chain === "txc" ? TXC_NETWORK : ISK_NETWORK) : null;
@@ -93,6 +118,16 @@ function WifSendPage() {
     staleTime: 60_000,
   });
 
+  const tokenBalanceQ = useQuery({
+    queryKey: ["wif-token-balance", entry?.address, tokenId],
+    enabled: !!entry && isTokenSend,
+    queryFn: () =>
+      fetchTokenBalances({
+        data: { addresses: [entry!.address], propertyIds: [tokenId!] },
+      }),
+    staleTime: 30_000,
+  });
+
   const [to, setTo] = useState(search.to ?? "");
   const [amount, setAmount] = useState(search.amount ?? "");
   const [sendAll, setSendAll] = useState(false);
@@ -115,6 +150,10 @@ function WifSendPage() {
   const amountSats = txcToSats(amount || "0"); // same 8 decimals for ISK
   const feeRate = feesQ.data?.[feeTier] ?? 1;
   const chainLabel = entry.chain.toUpperCase();
+  const unitLabel = isTokenSend ? activeToken!.symbol : chainLabel;
+  const tokenUnits = BigInt(
+    (tokenBalanceQ.data as Record<string, string> | undefined)?.[String(tokenId)] ?? "0",
+  );
 
   function isValidAddress(addr: string): boolean {
     try {
@@ -143,6 +182,58 @@ function WifSendPage() {
       return;
     }
     const sorted = [...utxos].sort((a, b) => b.value - a.value);
+
+    if (isTokenSend && activeToken) {
+      if (entry!.kind !== "bip44") {
+        setError(
+          "Omni tokens can only be sent from a legacy T… address. This imported key uses a segwit address.",
+        );
+        return;
+      }
+      if (!isOmniCompatibleAddress(cleanTo)) {
+        setError(
+          `Omni tokens can't be sent to a txc1… address. Ask for a legacy T… address instead.`,
+        );
+        return;
+      }
+      let amountUnits: bigint;
+      try {
+        amountUnits = parseTokenAmount(amount, activeToken.divisible);
+      } catch {
+        setError("Enter a valid amount.");
+        return;
+      }
+      if (amountUnits <= 0n) {
+        setError("Enter an amount greater than zero.");
+        return;
+      }
+      if (amountUnits > tokenUnits) {
+        setError(
+          `You only hold ${formatTokenAmount(tokenUnits, activeToken.divisible)} ${activeToken.symbol} on this address.`,
+        );
+        return;
+      }
+      const picked: typeof sorted = [];
+      let acc = 0;
+      let vsize = 0;
+      let feeSats = 0;
+      for (const u of sorted) {
+        picked.push(u);
+        acc += u.value;
+        vsize = estimateWifVsize(entry!.kind, picked.length, 2) + OP_RETURN_VBYTES;
+        feeSats = Math.ceil(vsize * feeRate);
+        if (acc >= OMNI_DUST_SATS + feeSats + OMNI_DUST_SATS) break;
+      }
+      if (acc < OMNI_DUST_SATS + feeSats) {
+        setError(
+          `Not enough TXC on this address for the transfer. Need about ${formatTxc(OMNI_DUST_SATS + feeSats)}, have ${formatTxc(acc)}.`,
+        );
+        return;
+      }
+      setStage({ kind: "review", vsize, feeSats, selected: picked.length });
+      return;
+    }
+
     if (sendAll) {
       const nIn = sorted.length;
       if (nIn === 0) {
@@ -194,7 +285,11 @@ function WifSendPage() {
       const decoded = decodeWif(wifStr);
       const sorted = [...utxos].sort((a, b) => b.value - a.value);
       const picked = sorted.slice(0, stage.selected);
-      const outValue = sendAll ? totalAvailable - stage.feeSats : amountSats;
+      const outValue = isTokenSend
+        ? OMNI_DUST_SATS
+        : sendAll
+          ? totalAvailable - stage.feeSats
+          : amountSats;
       const built = buildAndSignWifTx({
         network,
         kind: entry.kind,
@@ -204,11 +299,20 @@ function WifSendPage() {
         outputs: [{ address: to.trim(), valueSats: outValue }],
         changeAddress: entry.address, // change back to same single address
         feeSats: stage.feeSats,
+        opReturnData:
+          isTokenSend && activeToken
+            ? buildSimpleSendPayload(
+                activeToken.id,
+                parseTokenAmount(amount, activeToken.divisible),
+              )
+            : undefined,
       });
       const txid = await chainApi.broadcastTx(built.hex);
       hapticSuccess();
       void qc.invalidateQueries({ queryKey: ["wif-utxos", id] });
       void qc.invalidateQueries({ queryKey: ["wif-txs", id] });
+      void qc.invalidateQueries({ queryKey: ["wif-token-balance"] });
+      void qc.invalidateQueries({ queryKey: ["txc-token-balances"] });
       setStage({ kind: "sent", txid });
     } catch (err) {
       hapticError();
@@ -219,7 +323,13 @@ function WifSendPage() {
   }
 
   const reviewedOutSats =
-    stage.kind === "review" ? (sendAll ? totalAvailable - stage.feeSats : amountSats) : 0;
+    stage.kind === "review"
+      ? isTokenSend
+        ? OMNI_DUST_SATS
+        : sendAll
+          ? totalAvailable - stage.feeSats
+          : amountSats
+      : 0;
 
   if (stage.kind === "sent") {
     return (
@@ -249,9 +359,12 @@ function WifSendPage() {
       <Link to="/wallet" className="text-sm text-muted-foreground hover:text-foreground">
         ← Back
       </Link>
-      <h1 className="mt-3 text-2xl font-bold">Send {chainLabel}</h1>
+      <h1 className="mt-3 text-2xl font-bold">Send {unitLabel}</h1>
       <p className="text-sm text-muted-foreground">
-        {entry.label} · Available: {utxosQ.isLoading ? "…" : formatTxc(totalAvailable)}
+        {entry.label} ·{" "}
+        {isTokenSend
+          ? `${tokenBalanceQ.isLoading ? "…" : formatTokenAmount(tokenUnits, activeToken!.divisible)} ${activeToken!.symbol} · ${formatTxc(totalAvailable)} for fees`
+          : `Available: ${utxosQ.isLoading ? "…" : formatTxc(totalAvailable)}`}
       </p>
 
       {stage.kind === "form" && (
@@ -269,7 +382,13 @@ function WifSendPage() {
                     id="to"
                     value={to}
                     onChange={(e) => setTo(e.target.value)}
-                    placeholder={entry.chain === "txc" ? "txc1... or T..." : "isk1... or K..."}
+                    placeholder={
+                      isTokenSend
+                        ? "T... (legacy address required)"
+                        : entry.chain === "txc"
+                          ? "txc1... or T..."
+                          : "isk1... or K..."
+                    }
                     className="font-mono flex-1"
                     autoComplete="off"
                     spellCheck={false}
@@ -280,16 +399,18 @@ function WifSendPage() {
               </div>
               <div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="amount">Amount ({chainLabel})</Label>
-                  <label className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={sendAll}
-                      onChange={(e) => setSendAll(e.target.checked)}
-                      className="h-3.5 w-3.5"
-                    />
-                    Send all
-                  </label>
+                  <Label htmlFor="amount">Amount ({unitLabel})</Label>
+                  {!isTokenSend && (
+                    <label className="text-xs text-muted-foreground flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={sendAll}
+                        onChange={(e) => setSendAll(e.target.checked)}
+                        className="h-3.5 w-3.5"
+                      />
+                      Send all
+                    </label>
+                  )}
                 </div>
                 <Input
                   id="amount"
@@ -353,16 +474,28 @@ function WifSendPage() {
           <CardContent className="space-y-3 text-sm">
             <Row label="To"><code className="font-mono break-all">{to.trim()}</code></Row>
             <Row label="Amount">
-              {formatTxc(reviewedOutSats)}
-              {sendAll && <span className="text-muted-foreground text-xs ml-1">(all)</span>}
+              {isTokenSend ? (
+                `${amount} ${activeToken!.symbol}`
+              ) : (
+                <>
+                  {formatTxc(reviewedOutSats)}
+                  {sendAll && <span className="text-muted-foreground text-xs ml-1">(all)</span>}
+                </>
+              )}
             </Row>
+            {isTokenSend && (
+              <Row label="Reference output">
+                {formatTxc(OMNI_DUST_SATS)}{" "}
+                <span className="text-muted-foreground text-xs">(TXC, carries the transfer)</span>
+              </Row>
+            )}
             <Row label="Network fee">
               {formatTxc(stage.feeSats)}{" "}
               <span className="text-muted-foreground text-xs">
                 ({stage.vsize} vB × {feeRate} sat/vB)
               </span>
             </Row>
-            <Row label="Total">{formatTxc(reviewedOutSats + stage.feeSats)}</Row>
+            <Row label="Total TXC">{formatTxc(reviewedOutSats + stage.feeSats)}</Row>
             {error && (
               <div className="flex items-start gap-2 text-sm text-destructive">
                 <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
@@ -375,7 +508,7 @@ function WifSendPage() {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button className="flex-1" disabled={busy}>
-                    {busy ? "Broadcasting..." : `Send ${chainLabel}`}
+                    {busy ? "Broadcasting..." : `Send ${unitLabel}`}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -384,7 +517,13 @@ function WifSendPage() {
                     <AlertDialogDescription asChild>
                       <div className="space-y-2 text-sm">
                         <div>
-                          Send <strong>{formatTxc(reviewedOutSats)}</strong> to
+                          Send{" "}
+                          <strong>
+                            {isTokenSend
+                              ? `${amount} ${activeToken!.symbol}`
+                              : formatTxc(reviewedOutSats)}
+                          </strong>{" "}
+                          to
                         </div>
                         <code className="block font-mono break-all text-xs bg-muted rounded p-2">
                           {to.trim()}

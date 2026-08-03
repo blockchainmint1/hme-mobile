@@ -8,7 +8,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { flushSync } from "react-dom";
 import type { BIP32Interface } from "bip32";
 import { rootFromSeed, seedFromMnemonic } from "./wallet";
-import { deleteWallet, renameStoredWallet, unlockWallet, type UnlockedWallet } from "./storage";
+import { deleteWallet, renameStoredWallet, setStoredKind, unlockWallet, type UnlockedWallet } from "./storage";
+import type { DerivationKind } from "./network";
 import { AUTO_LOCK_MS, clearSession, loadSession, saveSession, touchSession } from "./session-cache";
 import { clearWalletTraces } from "@/lib/query-persist";
 
@@ -21,6 +22,8 @@ interface WalletContextValue {
   forget: () => void;
   loadFromMemory: (w: UnlockedWallet) => Promise<void>;
   rename: (label: string) => void;
+  /** Switch the primary derivation branch (all paths stay scanned). */
+  setKind: (kind: DerivationKind) => void;
 }
 
 const Ctx = createContext<WalletContextValue | null>(null);
@@ -31,14 +34,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const autoLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadFromMemory = useCallback(async (w: UnlockedWallet) => {
-    const seed = await seedFromMnemonic(w.mnemonic, w.passphrase);
-    const nextRoot = rootFromSeed(seed);
+    // Key-only wallets have no mnemonic. Their BIP32 "root" is derived from a
+    // random anchor and is used only as the wrapping key for imported WIFs —
+    // no addresses are ever derived from it.
+    let nextRoot;
+    if (w.mode === "keyonly") {
+      const bin = atob(w.anchor ?? "");
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      nextRoot = rootFromSeed(bytes);
+    } else {
+      const seed = await seedFromMnemonic(w.mnemonic, w.passphrase);
+      nextRoot = rootFromSeed(seed);
+    }
     flushSync(() => {
       setRoot(nextRoot);
       setUnlocked(w);
     });
     await saveSession(w);
   }, []);
+
 
   const unlock = useCallback(
     async (password: string) => {
@@ -70,6 +85,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setUnlocked((prev) => {
       if (!prev) return prev;
       const next = { ...prev, label };
+      void saveSession(next);
+      return next;
+    });
+  }, []);
+
+  const setKind = useCallback((kind: DerivationKind) => {
+    setStoredKind(kind);
+    setUnlocked((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, kind };
       void saveSession(next);
       return next;
     });
@@ -161,8 +186,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
 
   const value = useMemo<WalletContextValue>(
-    () => ({ unlocked, root, unlock, lock, forget, loadFromMemory, rename }),
-    [unlocked, root, unlock, lock, forget, loadFromMemory, rename],
+    () => ({ unlocked, root, unlock, lock, forget, loadFromMemory, rename, setKind }),
+    [unlocked, root, unlock, lock, forget, loadFromMemory, rename, setKind],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

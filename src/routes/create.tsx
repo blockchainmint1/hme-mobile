@@ -66,6 +66,10 @@ function CreatePage() {
     }
   }, [mnemonic]);
 
+  // Drop the in-memory draft when leaving the screen without finishing.
+  useEffect(() => () => clearDraftMnemonic(), []);
+
+
   function revealSeed(useScribbleEntropy: boolean) {
     setError(null);
     try {
