@@ -151,7 +151,9 @@ function WifSendPage() {
   const feeRate = feesQ.data?.[feeTier] ?? 1;
   const chainLabel = entry.chain.toUpperCase();
   const unitLabel = isTokenSend ? activeToken!.symbol : chainLabel;
-  const tokenUnits = BigInt(tokenBalanceQ.data?.[String(tokenId)] ?? "0");
+  const tokenUnits = BigInt(
+    (tokenBalanceQ.data as Record<string, string> | undefined)?.[String(tokenId)] ?? "0",
+  );
 
   function isValidAddress(addr: string): boolean {
     try {
