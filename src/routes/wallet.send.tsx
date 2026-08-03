@@ -118,8 +118,15 @@ type Stage =
       selected: number;
       /** Omni sender address (first input's address). Only set for token sends. */
       senderAddress?: string;
+      /**
+       * Set when the token holder address has no TXC of its own: we first
+       * broadcast a small funding transaction to it, then chain the Omni
+       * transfer onto that output.
+       */
+      fund?: { sats: number; feeSats: number; inputs: number };
     }
   | { kind: "sent"; txid: string };
+
 
 // "txc" or an Omni property id encoded as string.
 type Asset = "txc" | number;
