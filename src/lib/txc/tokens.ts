@@ -32,7 +32,7 @@ export const OMNI_DIVISIBLE_DECIMALS = 8;
 export const BUILTIN_TXC_TOKENS: TxcTokenMeta[] = [
   // Display name is intentionally app-authoritative and takes precedence over
   // the on-chain Omni property name (which is still "Texas Standard Dollar").
-  { id: 39, symbol: "TSD", name: "Stable", divisible: true },
+  { id: 39, symbol: "TSD", name: "Texas Stable Dollar", divisible: true },
 ];
 
 
