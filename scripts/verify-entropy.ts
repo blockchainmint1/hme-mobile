@@ -1,6 +1,27 @@
-import { describe, expect, it } from "vitest";
-import { extractEntropy, healthCheckRandom } from "@/lib/txc/entropy";
-import { generateMnemonic, generateMnemonicFromUserEntropy, validateMnemonic } from "@/lib/txc/wallet";
+// Standalone entropy verification: `bun run scripts/verify-entropy.ts`
+let failures = 0;
+function describe(name: string, fn: () => void) { console.log("\n" + name); fn(); }
+function it(name: string, fn: () => void) {
+  try { fn(); console.log("  PASS " + name); }
+  catch (e) { failures++; console.log("  FAIL " + name + " -> " + (e as Error).message); }
+}
+function expect(actual: any) {
+  const eq = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
+  return {
+    toBe: (v: any) => { if (actual !== v) throw new Error(`${actual} !== ${v}`); },
+    toEqual: (v: any) => { if (!eq(actual, v)) throw new Error("not equal"); },
+    toBeNull: () => { if (actual !== null) throw new Error(`expected null, got ${actual}`); },
+    toBeTruthy: () => { if (!actual) throw new Error("expected truthy"); },
+    toHaveLength: (n: number) => { if (actual.length !== n) throw new Error(`length ${actual.length} !== ${n}`); },
+    toBeLessThan: (n: number) => { if (!(actual < n)) throw new Error(`${actual} >= ${n}`); },
+    not: {
+      toBe: (v: any) => { if (actual === v) throw new Error("expected difference"); },
+      toEqual: (v: any) => { if (eq(actual, v)) throw new Error("expected difference"); },
+    },
+  };
+}
+import { extractEntropy, healthCheckRandom } from "../src/lib/txc/entropy";
+import { generateMnemonic, generateMnemonicFromUserEntropy, validateMnemonic } from "../src/lib/txc/wallet";
 
 describe("entropy health checks", () => {
   it("rejects degenerate output", () => {
@@ -74,3 +95,6 @@ describe("mnemonic generation", () => {
     expect(validateMnemonic(b)).toBe(true);
   });
 });
+
+if (failures) { console.error(`\n${failures} check(s) failed`); process.exit(1); }
+console.log("\nAll entropy checks passed.");
