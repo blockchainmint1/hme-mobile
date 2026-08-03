@@ -245,6 +245,26 @@ function WalletHome() {
       omniTokenList.find((t) => t.id === id) ?? { id, symbol: `#${id}`, divisible: true },
     );
 
+  // A confirmed TXC transaction can still carry an Omni transfer the node
+  // rejected (wrong sending address, insufficient token balance…). Ask the
+  // node so the history doesn't show a "sent" that never moved any tokens.
+  const fetchOmniValidity = useServerFn(getOmniTxValidity);
+  const confirmedOmniTxids = useMemo(() => {
+    const ids: string[] = [];
+    for (const tx of txs.data ?? []) {
+      if (!tx.status.confirmed) continue;
+      if (decodeOmniSend(tx)) ids.push(tx.txid);
+    }
+    return ids.slice(0, 50);
+  }, [txs.data]);
+  const omniValidity = useQuery({
+    queryKey: ["omni-validity", confirmedOmniTxids.join(",")],
+    enabled: confirmedOmniTxids.length > 0,
+    queryFn: () => fetchOmniValidity({ data: { txids: confirmedOmniTxids } }),
+    staleTime: 5 * 60_000,
+  });
+
+
 
   // ISK data — runs when ISK is enabled so the tile has a balance immediately.
   const iskEnabled = enabled.includes("isk");
