@@ -72,7 +72,12 @@ export const Route = createFileRoute("/wallet/txc/consolidate")({
 });
 
 const OMNI_DUST_SATS = 10_000;
-const DUST_LIMIT = 546;
+/**
+ * TEXITcoin's relay fee makes small change outputs non-standard ("dust"), so a
+ * change output is only worth creating when it clears the same threshold we
+ * use for the Omni reference output. Anything smaller goes to the miners.
+ */
+const CHANGE_MIN_SATS = OMNI_DUST_SATS;
 const VBYTES = {
   bip84: { input: 68, output: 31, overhead: 11 },
   bip49: { input: 91, output: 32, overhead: 11 },
@@ -247,9 +252,15 @@ function ConsolidatePage() {
           label: `Fund ${needFunding.length} address${needFunding.length > 1 ? "es" : ""} with fee money`,
           status: "pending",
         });
-        const holderAddrs = new Set(needFunding.map((h) => h.address));
+        // Never spend a coin a later transfer is counting on: skip every
+        // holder address, plus the exact UTXOs the self-funded holders will
+        // use, otherwise the funding tx double-spends them (mempool conflict).
+        const holderAddrs = new Set(holders.map((h) => h.address));
+        const reserved = new Set(
+          holders.filter((h) => h.utxo).map((h) => `${h.utxo!.txid}:${h.utxo!.vout}`),
+        );
         const spendable = (account.data.utxos ?? [])
-          .filter((u) => !holderAddrs.has(u.address))
+          .filter((u) => !holderAddrs.has(u.address) && !reserved.has(`${u.txid}:${u.vout}`))
           .sort((a, b) => b.value - a.value);
         const outputs = needFunding.map((h) => ({ address: h.address, valueSats: h.fundSats }));
         const targetOut = outputs.reduce((s, o) => s + o.valueSats, 0);
@@ -272,6 +283,9 @@ function ConsolidatePage() {
             `Not enough TXC to fund the transfers. Need ~${formatTxc(targetOut + feeSats)}, have ${formatTxc(acc)}.`,
           );
         }
+        // Absorb a dust-sized change output into the fee so the funding tx
+        // stays standard.
+        if (acc - targetOut - feeSats < CHANGE_MIN_SATS) feeSats = acc - targetOut;
         const built = buildAndSignTx({
           root,
           kind: unlocked.kind,
@@ -330,8 +344,9 @@ function ConsolidatePage() {
           const twoOutVsize = omniVsize(h.kind, 2);
           let feeSats = Math.ceil(twoOutVsize * feeRate);
           let change = input.value - OMNI_DUST_SATS - feeSats;
-          if (change < DUST_LIMIT) {
-            // Not worth a change output — hand the remainder to the miners.
+          if (change < CHANGE_MIN_SATS) {
+            // A small change output would be rejected as dust — hand the
+            // remainder to the miners instead.
             feeSats = input.value - OMNI_DUST_SATS;
             change = 0;
           }
