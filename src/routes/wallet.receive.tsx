@@ -43,24 +43,34 @@ function ReceivePage() {
   // firstUnusedIndex without waiting for a payment to come in.
   const [manualBump, setManualBump] = useState(0);
 
+  // Omni (TSD, POP…) can only read legacy P2PKH / P2SH outputs, so a wallet
+  // whose primary branch is native segwit needs a `T…` address for tokens.
+  // Every branch of this seed is scanned and spendable, so handing out the
+  // BIP44 address is safe — the funds show up in the same balance.
+  const [mode, setMode] = useState<"txc" | "token">("txc");
+  const primaryKind = unlocked?.kind ?? "bip44";
+  const primaryIsOmniSafe = primaryKind === "bip44" || primaryKind === "bip49";
+  const activeKind = mode === "token" && !primaryIsOmniSafe ? "bip44" : primaryKind;
+
   const firstUnused = account.data?.nextReceiveIndex ?? 0;
 
   const shown = useMemo(() => {
     if (!root || !unlocked || !accountId) return null;
     const policy = getRotationPolicy();
-    const stored = getDisplayIndex(accountId, unlocked.kind);
-    const base = resolveDisplayIndex(policy, stored, firstUnused);
+    const stored = getDisplayIndex(accountId, activeKind);
+    const base =
+      activeKind === unlocked.kind ? resolveDisplayIndex(policy, stored, firstUnused) : stored;
     const idx = Math.max(base, manualBump);
     // Persist advances so a reload doesn't rewind the displayed address.
-    if (idx !== stored) setDisplayIndex(accountId, unlocked.kind, idx);
-    const derived = deriveAddress(root, unlocked.kind, 0, idx);
+    if (idx !== stored) setDisplayIndex(accountId, activeKind, idx);
+    const derived = deriveAddress(root, activeKind, 0, idx);
     return { index: idx, address: derived.address, path: derived.path };
-  }, [root, unlocked, accountId, firstUnused, manualBump]);
+  }, [root, unlocked, accountId, firstUnused, manualBump, activeKind]);
 
   // Reset any manual bump if the account changes underneath us.
   useEffect(() => {
     setManualBump(0);
-  }, [accountId, unlocked?.kind]);
+  }, [accountId, unlocked?.kind, mode]);
 
   const address = shown?.address ?? "";
 
@@ -74,6 +84,24 @@ function ReceivePage() {
         Share this address with the sender. Old addresses always keep working — anything sent to
         them still lands in your wallet.
       </p>
+
+      {!primaryIsOmniSafe && (
+        <div className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+          {(["txc", "token"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                mode === m
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {m === "txc" ? "TXC" : "Tokens (TSD…)"}
+            </button>
+          ))}
+        </div>
+      )}
 
       <Card className="mt-6">
         <CardHeader>
@@ -90,12 +118,20 @@ function ReceivePage() {
               <div className="text-xs text-muted-foreground text-center">
                 Address #{shown.index} · <span className="font-mono">{shown.path}</span>
               </div>
-              {/^txc1/i.test(address) && (
-                <div className="text-xs text-destructive text-center px-2">
-                  Plain TXC only. Tokens (TSD, POP…) can't be delivered to a txc1… address — share
-                  a legacy T… address for token payments.
+              {mode === "token" && !primaryIsOmniSafe ? (
+                <div className="text-xs text-muted-foreground text-center px-2">
+                  Legacy address for Omni tokens (TSD, POP…). Balances still roll into this same
+                  wallet — plain TXC works here too.
                 </div>
+              ) : (
+                /^txc1/i.test(address) && (
+                  <div className="text-xs text-destructive text-center px-2">
+                    Plain TXC only. Tokens (TSD, POP…) can't be delivered to a txc1… address —
+                    switch to the Tokens tab above for a legacy T… address.
+                  </div>
+                )
               )}
+
 
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button
