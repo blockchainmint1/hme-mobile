@@ -75,7 +75,7 @@ const NATIVE_NAV_FALLBACK_SCRIPT = `(function(){if(window.__HME_NATIVE_NAV_FALLB
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
@@ -152,7 +152,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
       <div className="max-w-md w-full text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           {stale ? "Updating the app…" : "This page didn't load"}
@@ -270,7 +270,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-background text-foreground antialiased">
+      <body className="min-h-[100dvh] bg-background text-foreground antialiased">
         {children}
         <script dangerouslySetInnerHTML={{ __html: NATIVE_NAV_FALLBACK_SCRIPT }} />
         <Scripts />
