@@ -823,6 +823,16 @@ function SendPage() {
                 ({stage.vsize} vB × {feeRate} sat/vB)
               </span>
             </Row>
+            {stage.fund && (
+              <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
+                That address holds your tokens but no TXC, so this sends two
+                transactions: first {formatTxc(stage.fund.sats)} (+{" "}
+                {formatTxc(stage.fund.feeSats)} fee) from your other coins to{" "}
+                <span className="font-mono break-all">{stage.senderAddress}</span>, then the
+                token transfer itself. Both are automatic.
+              </div>
+            )}
+
             {!isTokenSend && (
               <Row label="Total">{formatTxc(reviewedOutSats + stage.feeSats)}</Row>
             )}
