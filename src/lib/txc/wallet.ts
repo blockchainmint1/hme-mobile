@@ -10,23 +10,21 @@
 import * as ecc from "@bitcoinerlab/secp256k1";
 import {
   entropyToMnemonic,
+  mnemonicToEntropy,
   mnemonicToSeed,
   validateMnemonic as validateBip39Mnemonic,
 } from "@scure/bip39";
 import { wordlist as englishWordlist } from "@scure/bip39/wordlists/english.js";
 import { BIP32Factory, type BIP32Interface } from "bip32";
 import { payments, Psbt } from "bitcoinjs-lib";
+import { extractEntropy, wipe } from "./entropy";
 import { TXC_NETWORK, DERIVATION_PATHS, scriptKindOf, type DerivationKind } from "./network";
+
 
 const bip32 = BIP32Factory(ecc);
 
-function secureRandomBytes(length: number): Uint8Array {
-  const crypto = globalThis.crypto;
-  if (!crypto?.getRandomValues) {
-    throw new Error("Secure random generator unavailable on this device.");
-  }
-  return crypto.getRandomValues(new Uint8Array(length));
-}
+
+
 
 export type AddressKind = DerivationKind;
 
@@ -58,40 +56,46 @@ export interface UtxoInput {
   kind?: AddressKind;
 }
 
+/**
+ * Turn raw entropy into a mnemonic, verifying the result round-trips
+ * (checksum valid + decodes back to the exact same entropy) before it is
+ * ever shown to the user. Then wipe the entropy buffer.
+ */
+function entropyToVerifiedMnemonic(entropy: Uint8Array): string {
+  const phrase = entropyToMnemonic(entropy, englishWordlist);
+  if (!validateBip39Mnemonic(phrase, englishWordlist)) {
+    wipe(entropy);
+    throw new Error("Generated seed phrase failed its checksum. Please try again.");
+  }
+  const back = mnemonicToEntropy(phrase, englishWordlist);
+  let same = back.length === entropy.length;
+  for (let i = 0; i < entropy.length && same; i++) same = back[i] === entropy[i];
+  wipe(entropy, back);
+  if (!same) throw new Error("Generated seed phrase failed verification. Please try again.");
+  return phrase;
+}
+
 export function generateMnemonic(strengthBits: 128 | 256 = 128): string {
   if (strengthBits !== 128 && strengthBits !== 256) throw new TypeError("Invalid entropy strength");
-  return entropyToMnemonic(secureRandomBytes(strengthBits / 8), englishWordlist);
+  return entropyToVerifiedMnemonic(extractEntropy(strengthBits === 256 ? 32 : 16));
 }
 
 /**
  * Generate a mnemonic from user-supplied entropy (e.g. screen scribbles)
- * XOR'd with cryptographically secure randomness. If the user input is
- * predictable, the result is still as strong as `generateMnemonic`. If the
- * user input is genuinely unpredictable, the result is strictly stronger.
+ * folded into cryptographically secure randomness via an HMAC extractor.
+ * If the user input is predictable, the result is still exactly as strong as
+ * `generateMnemonic`. If it is unpredictable, the result is strictly stronger.
  */
 export function generateMnemonicFromUserEntropy(
   userBytes: Uint8Array,
   strengthBits: 128 | 256 = 256,
 ): string {
   if (strengthBits !== 128 && strengthBits !== 256) throw new TypeError("Invalid entropy strength");
-  const len = strengthBits / 8;
-  const secure = secureRandomBytes(len);
-  const mixed = new Uint8Array(len);
-  // Use a compact synchronous hash mixer without Node Buffer/bip39 dependencies.
-  // FNV-style diffusion is only for mixing user scribble bytes; the final entropy
-  // remains cryptographically secure because it is XOR'd with secure randomness.
-  let h = 0x811c9dc5;
-  for (const b of userBytes) {
-    h ^= b;
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  for (let i = 0; i < len; i++) {
-    h ^= i + userBytes.length;
-    h = Math.imul(h, 0x01000193) >>> 0;
-    mixed[i] = secure[i] ^ ((h >>> ((i % 4) * 8)) & 0xff);
-  }
-  return entropyToMnemonic(mixed, englishWordlist);
+  return entropyToVerifiedMnemonic(
+    extractEntropy(strengthBits === 256 ? 32 : 16, userBytes),
+  );
 }
+
 
 function hexToBytes(hex: string): Uint8Array {
   const clean = hex.trim();
