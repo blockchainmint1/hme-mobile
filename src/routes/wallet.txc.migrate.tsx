@@ -62,7 +62,7 @@ export const Route = createFileRoute("/wallet/txc/migrate")({
   component: MigratePage,
 });
 
-const TARGET_KIND: DerivationKind = "bip44";
+const TARGET_KIND = "bip44" as const;
 const DUST_SATS = 10_000;
 const VBYTES = {
   bip84: { input: 68, output: 31, overhead: 11 },
