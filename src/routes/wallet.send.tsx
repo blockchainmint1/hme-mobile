@@ -109,6 +109,36 @@ function estimateVsizeFor(
   return base.overhead + inputBytes + base.output * nOut + (withOmni ? OMNI_OP_RETURN_VBYTES : 0);
 }
 
+/** Change smaller than the dust threshold is non-standard on TXC — burn it to fee. */
+const CHANGE_MIN_SATS = OMNI_DUST_SATS;
+
+function kindFromPath(path: string): DerivationKind | null {
+  for (const [kind, prefix] of Object.entries(DERIVATION_PATHS)) {
+    if (path.startsWith(prefix + "/")) return kind as DerivationKind;
+  }
+  return null;
+}
+
+function scriptHexFor(pubkey: Uint8Array, kind: DerivationKind): string | undefined {
+  const script = scriptKindOf(kind);
+  if (script === "bip44") return undefined;
+  const inner = payments.p2wpkh({ pubkey, network: TXC_NETWORK });
+  const out =
+    script === "bip84"
+      ? inner.output
+      : payments.p2sh({ redeem: inner, network: TXC_NETWORK }).output;
+  if (!out) return undefined;
+  return Array.from(out, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Vsize of a one-input, one-output Omni send. */
+function omniVsize(kind: DerivationKind): number {
+  const v = VBYTES[scriptKindOf(kind)];
+  return v.overhead + v.input + v.output + OMNI_OP_RETURN_VBYTES;
+}
+
+
+
 type Stage =
   | { kind: "form" }
   | {
