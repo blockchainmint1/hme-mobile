@@ -199,15 +199,19 @@ function WalletHome() {
         return (b.status.block_time ?? 0) - (a.status.block_time ?? 0);
       });
     },
-    // TXC blocks are slow, so watch the mempool while the tile is open: poll
-    // every 15s while anything is unconfirmed, otherwise a lazy 60s so an
-    // inbound payment shows up as "Pending" without the user pulling refresh.
+    // TXC blocks are slow, so watch the mempool closely while the tile is
+    // open: 5s while anything is unconfirmed, 12s otherwise, plus an immediate
+    // refetch whenever the app comes back to the foreground. An inbound
+    // payment shows up as "Pending" within seconds without pulling refresh.
     refetchInterval: (q) => {
       if (activeChain !== "txc") return false;
       const data = q.state.data as MempoolTx[] | undefined;
-      return data?.some((t) => !t.status.confirmed) ? 15_000 : 60_000;
+      return data?.some((t) => !t.status.confirmed) ? 5_000 : 12_000;
     },
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
+
 
   // Unconfirmed activity also moves the balance (mempool UTXOs count), so
   // re-scan whenever the set of pending txids changes.
