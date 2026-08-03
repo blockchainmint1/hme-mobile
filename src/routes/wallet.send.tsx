@@ -46,6 +46,7 @@ import {
   parseTokenAmount,
   formatTokenAmount,
   type TxcTokenMeta,
+  isOmniCompatibleAddress,
 } from "@/lib/txc/tokens";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
 
@@ -250,7 +251,14 @@ function SendPage() {
 
     // ---- Omni token send ----
     if (isTokenSend && activeToken) {
+      if (!isOmniCompatibleAddress(cleanTo)) {
+        setError(
+          `${activeToken.symbol} can't be sent to a txc1… (segwit) address — the token layer only reads legacy addresses, so the coins would be lost in transit. Ask the recipient for their T… address.`,
+        );
+        return;
+      }
       let amountUnits: bigint;
+
       try {
         amountUnits = parseTokenAmount(amount, activeToken.divisible);
       } catch (err) {

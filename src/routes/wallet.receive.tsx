@@ -90,6 +90,13 @@ function ReceivePage() {
               <div className="text-xs text-muted-foreground text-center">
                 Address #{shown.index} · <span className="font-mono">{shown.path}</span>
               </div>
+              {/^txc1/i.test(address) && (
+                <div className="text-xs text-destructive text-center px-2">
+                  Plain TXC only. Tokens (TSD, POP…) can't be delivered to a txc1… address — share
+                  a legacy T… address for token payments.
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button
                   variant="secondary"

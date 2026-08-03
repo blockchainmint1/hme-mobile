@@ -208,6 +208,18 @@ export function formatTokenAmount(units: bigint | number | string, divisible: bo
 // ---------- Omni Simple Send payload ----------
 
 /**
+ * Omni Layer picks the *reference* (recipient) address from the transaction's
+ * outputs, and its parser only understands legacy P2PKH / P2SH scripts. A
+ * bech32 (txc1…) output is invisible to it: the TXC transaction confirms, the
+ * dust arrives, but the token transfer is never applied. So token sends must
+ * always target a `T…` address.
+ */
+export function isOmniCompatibleAddress(address: string): boolean {
+  return !/^txc1/i.test(address.trim());
+}
+
+/**
+
  * Build the raw OP_RETURN bytes for a Simple Send (excluding the OP_RETURN
  * opcode / length prefix — pass this to `payments.embed({ data: [bytes] })`).
  *
