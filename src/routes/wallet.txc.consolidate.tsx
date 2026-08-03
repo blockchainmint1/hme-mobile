@@ -335,8 +335,9 @@ function ConsolidatePage() {
           const twoOutVsize = omniVsize(h.kind, 2);
           let feeSats = Math.ceil(twoOutVsize * feeRate);
           let change = input.value - OMNI_DUST_SATS - feeSats;
-          if (change < DUST_LIMIT) {
-            // Not worth a change output — hand the remainder to the miners.
+          if (change < CHANGE_MIN_SATS) {
+            // A small change output would be rejected as dust — hand the
+            // remainder to the miners instead.
             feeSats = input.value - OMNI_DUST_SATS;
             change = 0;
           }
