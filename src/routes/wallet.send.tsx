@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { TXC_NETWORK } from "@/lib/txc/network";
-import { address as addrLib } from "bitcoinjs-lib";
+import { address as addrLib, payments } from "bitcoinjs-lib";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";
