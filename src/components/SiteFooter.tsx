@@ -51,7 +51,7 @@ export function SiteFooter() {
             onClick={() => openExternal("https://texitcoin.org/build")}
             className="hover:text-foreground"
           >
-            Build on TEXITcoin
+            Build
           </button>
           <button
             type="button"
