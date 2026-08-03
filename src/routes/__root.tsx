@@ -95,6 +95,37 @@ function NotFoundComponent() {
   );
 }
 
+/**
+ * A failed dynamic import ("Importing a module script failed", "Failed to
+ * fetch dynamically imported module") almost always means stale cached HTML is
+ * pointing at code chunks that no longer exist — typical after a deploy, or in
+ * a PWA/APK webview holding an old service-worker cache. Recover automatically
+ * by dumping caches and reloading once.
+ */
+function isStaleChunkError(message: string): boolean {
+  return /importing a module script failed|failed to fetch dynamically imported module|error loading dynamically imported module|module script failed|chunkloaderror/i.test(
+    message,
+  );
+}
+
+async function purgeCachesAndReload() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch {
+    // best effort — reload anyway
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.set("_r", Date.now().toString(36));
+  window.location.replace(url.toString());
+}
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
@@ -104,6 +135,21 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
   const message = error?.message || String(error);
   const stack = error?.stack || "";
+  const stale = isStaleChunkError(message);
+
+  useEffect(() => {
+    if (!stale) return;
+    // Only auto-recover once per session, so a genuinely broken build can't
+    // put the app into a reload loop.
+    try {
+      if (sessionStorage.getItem("hme:chunk-recovered")) return;
+      sessionStorage.setItem("hme:chunk-recovered", "1");
+    } catch {
+      return;
+    }
+    void purgeCachesAndReload();
+  }, [stale]);
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
