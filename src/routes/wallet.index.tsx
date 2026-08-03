@@ -688,19 +688,34 @@ function WalletHome() {
                             <p className="text-sm font-medium">
                               {incoming ? "Received" : "Sent"}
                               {meta ? ` ${meta.symbol}` : ""}
+                              {omniInvalid && (
+                                <span className="ml-2 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                                  not applied
+                                </span>
+                              )}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">
                               {pending ? (
                                 <span className="inline-flex items-center gap-1 text-amber-400">
                                   <Loader2 className="h-3 w-3 animate-spin" /> In mempool · unconfirmed
                                 </span>
+                              ) : omniInvalid ? (
+                                <span className="text-destructive">{omniInvalid}</span>
                               ) : (
                                 new Date((tx.status.block_time ?? 0) * 1000).toLocaleString()
                               )}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className={`text-sm font-semibold ${incoming ? "text-emerald-400" : ""}`}>
+                            <p
+                              className={`text-sm font-semibold ${
+                                omniInvalid
+                                  ? "text-muted-foreground line-through"
+                                  : incoming
+                                    ? "text-emerald-400"
+                                    : ""
+                              }`}
+                            >
                               {incoming ? "+" : "−"}
                               {meta && omni
                                 ? `${formatTokenAmount(omni.amount, meta.divisible)} ${meta.symbol}`
