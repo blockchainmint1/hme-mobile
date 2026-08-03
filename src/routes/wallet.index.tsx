@@ -27,7 +27,7 @@ import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chain
 import { useTokensForChain } from "@/lib/token-prefs";
 import { useEnabledTxcTokens, formatTokenAmount } from "@/lib/txc/tokens";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
-import { getTxcTokenBalancesForAddresses } from "@/lib/txc/tokens.functions";
+import { getTxcTokenBalancesForAddresses, getOmniTxValidity } from "@/lib/txc/tokens.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key, Loader2 } from "lucide-react";
@@ -244,6 +244,26 @@ function WalletHome() {
     resolveOmniToken(
       omniTokenList.find((t) => t.id === id) ?? { id, symbol: `#${id}`, divisible: true },
     );
+
+  // A confirmed TXC transaction can still carry an Omni transfer the node
+  // rejected (wrong sending address, insufficient token balance…). Ask the
+  // node so the history doesn't show a "sent" that never moved any tokens.
+  const fetchOmniValidity = useServerFn(getOmniTxValidity);
+  const confirmedOmniTxids = useMemo(() => {
+    const ids: string[] = [];
+    for (const tx of txs.data ?? []) {
+      if (!tx.status.confirmed) continue;
+      if (decodeOmniSend(tx)) ids.push(tx.txid);
+    }
+    return ids.slice(0, 50);
+  }, [txs.data]);
+  const omniValidity = useQuery({
+    queryKey: ["omni-validity", confirmedOmniTxids.join(",")],
+    enabled: confirmedOmniTxids.length > 0,
+    queryFn: () => fetchOmniValidity({ data: { txids: confirmedOmniTxids } }),
+    staleTime: 5 * 60_000,
+  });
+
 
 
   // ISK data — runs when ISK is enabled so the tile has a balance immediately.
@@ -636,6 +656,10 @@ function WalletHome() {
                     const meta = omni && omniMine ? omniMetaFor(omni.propertyId) : null;
                     const incoming = meta ? omniIncoming : net > 0;
                     const pending = !tx.status.confirmed;
+                    const omniInvalid =
+                      !!meta && omniValidity.data?.[tx.txid]?.valid === false
+                        ? omniValidity.data[tx.txid].reason ?? "Rejected by Omni Layer"
+                        : null;
                     return (
                       <li key={tx.txid}>
                         <button
@@ -664,19 +688,34 @@ function WalletHome() {
                             <p className="text-sm font-medium">
                               {incoming ? "Received" : "Sent"}
                               {meta ? ` ${meta.symbol}` : ""}
+                              {omniInvalid && (
+                                <span className="ml-2 rounded bg-destructive/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-destructive">
+                                  not applied
+                                </span>
+                              )}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">
                               {pending ? (
                                 <span className="inline-flex items-center gap-1 text-amber-400">
                                   <Loader2 className="h-3 w-3 animate-spin" /> In mempool · unconfirmed
                                 </span>
+                              ) : omniInvalid ? (
+                                <span className="text-destructive">{omniInvalid}</span>
                               ) : (
                                 new Date((tx.status.block_time ?? 0) * 1000).toLocaleString()
                               )}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className={`text-sm font-semibold ${incoming ? "text-emerald-400" : ""}`}>
+                            <p
+                              className={`text-sm font-semibold ${
+                                omniInvalid
+                                  ? "text-muted-foreground line-through"
+                                  : incoming
+                                    ? "text-emerald-400"
+                                    : ""
+                              }`}
+                            >
                               {incoming ? "+" : "−"}
                               {meta && omni
                                 ? `${formatTokenAmount(omni.amount, meta.divisible)} ${meta.symbol}`

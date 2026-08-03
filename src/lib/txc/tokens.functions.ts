@@ -269,3 +269,37 @@ export const getTxcTokenHistory = createServerFn({ method: "POST" })
     filtered.sort((a, b) => (b.blocktime ?? 0) - (a.blocktime ?? 0));
     return filtered.slice(0, count);
   });
+
+/**
+ * Omni validity check for specific transactions.
+ *
+ * A transaction can confirm on the TEXITcoin chain while Omni rejects the
+ * embedded token transfer (for example when the first input belongs to an
+ * address that doesn't hold the token). The coins move, the tokens don't —
+ * and a purely client-side OP_RETURN decode can't tell the difference. This
+ * asks the node for the verdict so the UI can show it.
+ */
+export const getOmniTxValidity = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) =>
+    z
+      .object({ txids: z.array(z.string().regex(/^[0-9a-fA-F]{64}$/)).min(1).max(50) })
+      .parse(raw),
+  )
+  .handler(async ({ data }) => {
+    const out: Record<string, { valid: boolean; reason?: string }> = {};
+    await Promise.all(
+      data.txids.map(async (txid) => {
+        try {
+          const tx = await rpc<{ valid?: boolean; invalidreason?: string }>(
+            "omni_gettransaction",
+            [txid],
+          );
+          if (tx.valid === false) out[txid] = { valid: false, reason: tx.invalidreason };
+          else out[txid] = { valid: true };
+        } catch {
+          // Not indexed yet / unknown → don't claim anything.
+        }
+      }),
+    );
+    return out;
+  });
