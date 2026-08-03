@@ -261,6 +261,20 @@ export function renameStoredWallet(newLabel: string): StoredWalletEnvelope | nul
   return next;
 }
 
+/**
+ * Change which derivation path this wallet treats as primary (the branch new
+ * receive addresses and change come from). Metadata only — the encrypted seed
+ * is untouched, and every other path stays in the background scan, so funds
+ * are never hidden by this switch.
+ */
+export function setStoredKind(kind: DerivationKind): StoredWalletEnvelope | null {
+  const env = loadEnvelope();
+  if (!env) return null;
+  const next: StoredWalletEnvelope = { ...env, kind, pathsV: 2 };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  return next;
+}
+
 export function hasWallet(): boolean {
   return loadEnvelope() !== null;
 }
