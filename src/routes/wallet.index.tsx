@@ -656,6 +656,10 @@ function WalletHome() {
                     const meta = omni && omniMine ? omniMetaFor(omni.propertyId) : null;
                     const incoming = meta ? omniIncoming : net > 0;
                     const pending = !tx.status.confirmed;
+                    const omniInvalid =
+                      !!meta && omniValidity.data?.[tx.txid]?.valid === false
+                        ? omniValidity.data[tx.txid].reason ?? "Rejected by Omni Layer"
+                        : null;
                     return (
                       <li key={tx.txid}>
                         <button
