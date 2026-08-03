@@ -8,7 +8,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { flushSync } from "react-dom";
 import type { BIP32Interface } from "bip32";
 import { rootFromSeed, seedFromMnemonic } from "./wallet";
-import { deleteWallet, renameStoredWallet, unlockWallet, type UnlockedWallet } from "./storage";
+import { deleteWallet, renameStoredWallet, setStoredKind, unlockWallet, type UnlockedWallet } from "./storage";
+import type { DerivationKind } from "./network";
 import { AUTO_LOCK_MS, clearSession, loadSession, saveSession, touchSession } from "./session-cache";
 import { clearWalletTraces } from "@/lib/query-persist";
 
@@ -21,6 +22,8 @@ interface WalletContextValue {
   forget: () => void;
   loadFromMemory: (w: UnlockedWallet) => Promise<void>;
   rename: (label: string) => void;
+  /** Switch the primary derivation branch (all paths stay scanned). */
+  setKind: (kind: DerivationKind) => void;
 }
 
 const Ctx = createContext<WalletContextValue | null>(null);
@@ -82,6 +85,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setUnlocked((prev) => {
       if (!prev) return prev;
       const next = { ...prev, label };
+      void saveSession(next);
+      return next;
+    });
+  }, []);
+
+  const setKind = useCallback((kind: DerivationKind) => {
+    setStoredKind(kind);
+    setUnlocked((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, kind };
       void saveSession(next);
       return next;
     });
@@ -173,8 +186,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
 
   const value = useMemo<WalletContextValue>(
-    () => ({ unlocked, root, unlock, lock, forget, loadFromMemory, rename }),
-    [unlocked, root, unlock, lock, forget, loadFromMemory, rename],
+    () => ({ unlocked, root, unlock, lock, forget, loadFromMemory, rename, setKind }),
+    [unlocked, root, unlock, lock, forget, loadFromMemory, rename, setKind],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
