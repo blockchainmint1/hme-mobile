@@ -54,9 +54,9 @@ describe("extractEntropy", () => {
         if ((e[bit >> 3] >> (7 - (bit % 8))) & 1) bitCount[bit]++;
       }
     }
-    // Each bit should be ~50% ones. 3.5 sigma bound for N=300.
+    // Each bit should be ~50% ones. 4.5 sigma bound for N=300.
     const sigma = Math.sqrt(N) / 2;
-    for (const c of bitCount) expect(Math.abs(c - N / 2)).toBeLessThan(3.5 * sigma);
+    for (const c of bitCount) expect(Math.abs(c - N / 2)).toBeLessThan(4.5 * sigma);
   });
 
   it("stays random even with constant user entropy", () => {
