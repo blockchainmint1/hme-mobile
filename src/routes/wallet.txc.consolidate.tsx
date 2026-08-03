@@ -177,14 +177,23 @@ function ConsolidatePage() {
 
   const feeRate = Math.max(fees.data?.halfHourFee ?? 10, Math.max(fees.data?.minimumFee ?? 10, 10));
 
-  // Destination = index 0 of the wallet's primary receive chain.
+  // Destination = index 0 of the wallet's primary receive chain — but the Omni
+  // layer can't read bech32 (txc1…) outputs, so a segwit index 0 would make
+  // every transfer confirm on-chain while never applying. Fall back to the
+  // first legacy address we own.
   const destination = useMemo(() => {
     if (!unlocked) return null;
     const primary = addressInfos.find(
       (a) => a.kind === unlocked.kind && a.change === 0 && a.index === 0,
     );
-    return primary?.address ?? account.data?.nextReceiveAddress ?? null;
+    const candidates = [
+      primary?.address,
+      ...addressInfos.filter((a) => a.change === 0).map((a) => a.address),
+      account.data?.nextReceiveAddress,
+    ].filter((a): a is string => Boolean(a));
+    return candidates.find(isOmniCompatibleAddress) ?? null;
   }, [addressInfos, unlocked, account.data]);
+
 
   const holders: Holder[] = useMemo(() => {
     if (!token || !perAddr.data || !destination) return [];
