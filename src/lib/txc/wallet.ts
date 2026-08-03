@@ -23,13 +23,8 @@ import { TXC_NETWORK, DERIVATION_PATHS, scriptKindOf, type DerivationKind } from
 
 const bip32 = BIP32Factory(ecc);
 
-function secureRandomBytes(length: number): Uint8Array {
-  const crypto = globalThis.crypto;
-  if (!crypto?.getRandomValues) {
-    throw new Error("Secure random generator unavailable on this device.");
-  }
-  return crypto.getRandomValues(new Uint8Array(length));
-}
+
+
 
 export type AddressKind = DerivationKind;
 
