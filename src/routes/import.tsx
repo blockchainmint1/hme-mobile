@@ -199,12 +199,24 @@ function ImportPage() {
   const [error, setError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
 
-  async function finish(kind: DerivationKind) {
+  /**
+   * The primary/receive branch is ALWAYS bip44 (m/44'/696969'/0', legacy T…):
+   * it's the only address type Omni tokens can use, and every other branch
+   * (including the old BlueWallet m/84'/0'/0' paths) is still scanned and
+   * spendable, so nothing is lost by defaulting here. Detection results are
+   * only used to reassure the user / drive the migrate sweep.
+   */
+  async function finish(_detected: DerivationKind) {
     const m = normalizeMnemonic(phrase);
     setBusy(true);
     setStatus("Saving wallet…");
     try {
-      const u = { mnemonic: m, passphrase, kind, label: "Imported wallet" };
+      const u = {
+        mnemonic: m,
+        passphrase,
+        kind: "bip44" as DerivationKind,
+        label: "Imported wallet",
+      };
       await saveWallet(u, password);
       await loadFromMemory(u);
       navigate({ to: "/wallet" });
