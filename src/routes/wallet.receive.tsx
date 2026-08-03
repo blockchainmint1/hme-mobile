@@ -173,7 +173,7 @@ function ReceivePage() {
               </div>
               <p className="text-[11px] text-muted-foreground text-center max-w-xs">
                 Rotation policy is in Settings. All addresses under{" "}
-                <span className="font-mono">{DERIVATION_PATHS[unlocked!.kind]}/0/i</span> belong to
+                <span className="font-mono">{DERIVATION_PATHS[activeKind]}/0/i</span> belong to
                 this wallet.
               </p>
             </>
