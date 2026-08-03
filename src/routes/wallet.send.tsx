@@ -5,8 +5,8 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
-import { buildAndSignTx } from "@/lib/txc/wallet";
-import { scriptKindOf, type DerivationKind } from "@/lib/txc/network";
+import { buildAndSignTx, type UtxoInput } from "@/lib/txc/wallet";
+import { scriptKindOf, DERIVATION_PATHS, type DerivationKind } from "@/lib/txc/network";
 import { broadcastTx, explorerTxUrl, getFeeEstimates, type FeeEstimates } from "@/lib/txc/mempool";
 import { formatTxc, txcToSats } from "@/lib/txc/units";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { TXC_NETWORK } from "@/lib/txc/network";
-import { address as addrLib } from "bitcoinjs-lib";
+import { address as addrLib, payments } from "bitcoinjs-lib";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";
@@ -109,6 +109,36 @@ function estimateVsizeFor(
   return base.overhead + inputBytes + base.output * nOut + (withOmni ? OMNI_OP_RETURN_VBYTES : 0);
 }
 
+/** Change smaller than the dust threshold is non-standard on TXC — burn it to fee. */
+const CHANGE_MIN_SATS = OMNI_DUST_SATS;
+
+function kindFromPath(path: string): DerivationKind | null {
+  for (const [kind, prefix] of Object.entries(DERIVATION_PATHS)) {
+    if (path.startsWith(prefix + "/")) return kind as DerivationKind;
+  }
+  return null;
+}
+
+function scriptHexFor(pubkey: Uint8Array, kind: DerivationKind): string | undefined {
+  const script = scriptKindOf(kind);
+  if (script === "bip44") return undefined;
+  const inner = payments.p2wpkh({ pubkey, network: TXC_NETWORK });
+  const out =
+    script === "bip84"
+      ? inner.output
+      : payments.p2sh({ redeem: inner, network: TXC_NETWORK }).output;
+  if (!out) return undefined;
+  return Array.from(out, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Vsize of a one-input, one-output Omni send. */
+function omniVsize(kind: DerivationKind): number {
+  const v = VBYTES[scriptKindOf(kind)];
+  return v.overhead + v.input + v.output + OMNI_OP_RETURN_VBYTES;
+}
+
+
+
 type Stage =
   | { kind: "form" }
   | {
@@ -118,8 +148,15 @@ type Stage =
       selected: number;
       /** Omni sender address (first input's address). Only set for token sends. */
       senderAddress?: string;
+      /**
+       * Set when the token holder address has no TXC of its own: we first
+       * broadcast a small funding transaction to it, then chain the Omni
+       * transfer onto that output.
+       */
+      fund?: { sats: number; feeSats: number; inputs: number };
     }
   | { kind: "sent"; txid: string };
+
 
 // "txc" or an Omni property id encoded as string.
 type Asset = "txc" | number;
@@ -188,6 +225,14 @@ function SendPage() {
     ],
     [account.data],
   );
+  /** Derived address metadata (key index + script kind), keyed by address. */
+  const addressInfos = useMemo(() => {
+    const list = [...(account.data?.external ?? []), ...(account.data?.internal ?? [])];
+    return list
+      .map((d) => ({ ...d, kind: kindFromPath(d.path) }))
+      .filter((d): d is typeof d & { kind: DerivationKind } => d.kind !== null);
+  }, [account.data]);
+
   const tokenBalances = useQuery({
     queryKey: [
       "txc-token-balances",
@@ -297,11 +342,45 @@ function SendPage() {
       const senderUtxos = sorted.filter((u) => u.address === senderAddress);
       const otherUtxos = sorted.filter((u) => u.address !== senderAddress);
       if (senderUtxos.length === 0) {
-        setError(
-          `Your ${activeToken.symbol} is at ${senderAddress}, but that address has no TXC to pay the network fee. Send a small amount of TXC (≈ ${formatTxc(OMNI_DUST_SATS * 2)}) to that address first, then retry.`,
-        );
+        // The holder address has no TXC of its own. Omni takes the sender from
+        // the first input, so we can't just pay the fee from another address —
+        // instead we fund this one first and chain the transfer onto it.
+        const info = addressInfos.find((a) => a.address === senderAddress);
+        if (!info) {
+          setError(
+            `Your ${activeToken.symbol} is at ${senderAddress}, but that address has no TXC to pay the network fee. Send a small amount of TXC to it first, then retry.`,
+          );
+          return;
+        }
+        const need = OMNI_DUST_SATS + Math.ceil(omniVsize(info.kind) * feeRate);
+        // Headroom so a fee bump between planning and broadcast can't strand it.
+        const fundSats = Math.ceil(need * 1.4);
+        const picked: typeof sorted = [];
+        let acc = 0;
+        let fundFee = 0;
+        for (const u of otherUtxos) {
+          picked.push(u);
+          acc += u.value;
+          fundFee = Math.ceil(estimateVsizeFor(unlocked.kind, picked, 2) * feeRate);
+          if (acc >= fundSats + fundFee) break;
+        }
+        if (acc < fundSats + fundFee) {
+          setError(
+            `Not enough TXC to cover the network fee. Need ~${formatTxc(fundSats + fundFee)}, have ${formatTxc(acc)}.`,
+          );
+          return;
+        }
+        setStage({
+          kind: "review",
+          vsize: omniVsize(info.kind),
+          feeSats: fundSats - OMNI_DUST_SATS,
+          selected: picked.length,
+          senderAddress,
+          fund: { sats: fundSats, feeSats: fundFee, inputs: picked.length },
+        });
         return;
       }
+
 
       // Sender-owned UTXOs first (largest first), then top up from other own
       // addresses if needed for fee. Change goes back to the sender address so
@@ -406,6 +485,43 @@ function SendPage() {
       }
       const sorted = [...liveUtxos].sort((a, b) => b.value - a.value);
 
+      // Holder address has no TXC: broadcast a small funding tx to it first,
+      // then chain the Omni transfer onto that fresh output so the token
+      // layer still sees the holder as the sender.
+      let chainedInput: UtxoInput | null = null;
+      if (isTokenSend && stage.fund && stage.senderAddress) {
+        const info = addressInfos.find((a) => a.address === stage.senderAddress);
+        if (!info) throw new Error("Couldn't locate the sending address key.");
+        const fundInputs = sorted
+          .filter((u) => u.address !== stage.senderAddress)
+          .slice(0, stage.fund.inputs);
+        const acc = fundInputs.reduce((s, u) => s + u.value, 0);
+        let fundFee = stage.fund.feeSats;
+        // A dust-sized change output would be non-standard — absorb it.
+        if (acc - stage.fund.sats - fundFee < CHANGE_MIN_SATS) fundFee = acc - stage.fund.sats;
+        if (fundFee <= 0) throw new Error("Not enough TXC to cover the network fee.");
+        const fundTx = buildAndSignTx({
+          root,
+          kind: unlocked.kind,
+          inputs: fundInputs,
+          outputs: [{ address: stage.senderAddress, valueSats: stage.fund.sats }],
+          changeAddress: account.data.nextChangeAddress,
+          changeIndex: account.data.nextChangeIndex,
+          feeSats: fundFee,
+        });
+        const fundTxid = await broadcastTx(fundTx.hex);
+        chainedInput = {
+          txid: fundTxid,
+          vout: 0,
+          value: stage.fund.sats,
+          change: info.change,
+          index: info.index,
+          kind: info.kind,
+          witnessScriptHex: scriptHexFor(info.pubkey, info.kind),
+          nonWitnessUtxoHex: scriptKindOf(info.kind) === "bip44" ? fundTx.hex : undefined,
+        };
+      }
+
       // For token sends, reproduce the exact ordering used at review time so
       // the first input's address is the Omni sender.
       const ordered =
@@ -415,7 +531,9 @@ function SendPage() {
               ...sorted.filter((u) => u.address !== stage.senderAddress),
             ]
           : sorted;
-      const picked = ordered.slice(0, stage.selected);
+      const picked = chainedInput ? [chainedInput] : ordered.slice(0, stage.selected);
+
+
 
       let built;
       if (isTokenSend && activeToken) {
@@ -705,6 +823,16 @@ function SendPage() {
                 ({stage.vsize} vB × {feeRate} sat/vB)
               </span>
             </Row>
+            {stage.fund && (
+              <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
+                That address holds your tokens but no TXC, so this sends two
+                transactions: first {formatTxc(stage.fund.sats)} (+{" "}
+                {formatTxc(stage.fund.feeSats)} fee) from your other coins to{" "}
+                <span className="font-mono break-all">{stage.senderAddress}</span>, then the
+                token transfer itself. Both are automatic.
+              </div>
+            )}
+
             {!isTokenSend && (
               <Row label="Total">{formatTxc(reviewedOutSats + stage.feeSats)}</Row>
             )}
