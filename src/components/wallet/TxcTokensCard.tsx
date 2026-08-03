@@ -58,7 +58,7 @@ export function TxcTokensCard() {
                   htmlFor={`txc-tok-${t.id}`}
                   className="text-sm block truncate"
                 >
-                  {t.symbol}
+                  {t.name || t.symbol}
                   {isCustom(t) && (
                     <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground">
                       Custom
@@ -66,7 +66,7 @@ export function TxcTokensCard() {
                   )}
                 </Label>
                 <p className="text-[11px] text-muted-foreground truncate">
-                  {t.name ?? "Omni token"} · #{t.id} ·{" "}
+                  {t.name ? t.symbol : "Omni token"} · #{t.id} ·{" "}
                   {t.divisible ? "divisible" : "indivisible"}
                 </p>
               </div>
