@@ -5,7 +5,7 @@
 export const APP_VERSION = "0.1.202608021152";
 
 export const APK_URL =
-  "https://txc.mypinata.cloud/ipfs/Qmba3rAp1PdxtLz9FoKmDXzEk87jJSaHfhHNYLXgCJGpBH?filename=hme-wallet-0.1.202608021152-release.apk";
+  "https://txc.mypinata.cloud/ipfs/QmQpbDV5oYmh4qr2LhMkjQWq4BrTdinKmfJK1UNdrjygPt?filename=hme-wallet-0.1.202608030734-release.apk";
 
 /**
  * Web update check: the deployed index.html references hashed asset URLs.
