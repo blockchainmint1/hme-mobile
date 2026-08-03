@@ -1233,8 +1233,10 @@ function TxcTokens({
 
       <ul className="space-y-2">
 
-        {visible.map(({ token: t, units }) => {
+        {visible.map(({ token: t, units, pending }) => {
           const amtStr = formatTokenAmount(units, t.divisible);
+          const pendingStr =
+            pending > 0n ? formatTokenAmount(pending, t.divisible) : null;
           const inner = (
             <>
               <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-amber-500/15 text-amber-300">
@@ -1254,10 +1256,18 @@ function TxcTokens({
                       ? maskAmount(amtStr)
                       : amtStr}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {balances.isError && !balances.data ? "unavailable" : "—"}
-                </p>
+                {pendingStr ? (
+                  <p className="text-xs text-amber-400 inline-flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />+
+                    {hidden ? maskAmount(pendingStr) : pendingStr} pending
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    {balances.isError && !balances.data ? "unavailable" : "—"}
+                  </p>
+                )}
               </div>
+
               {(!readOnly || sendFromWifId) && (
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               )}
