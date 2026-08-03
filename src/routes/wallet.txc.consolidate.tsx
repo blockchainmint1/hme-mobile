@@ -31,6 +31,7 @@ import {
   buildSimpleSendPayload,
   formatTokenAmount,
   type TxcTokenMeta,
+  isOmniCompatibleAddress,
 } from "@/lib/txc/tokens";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { getTxcTokenBalancesPerAddress } from "@/lib/txc/tokens.functions";

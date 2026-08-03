@@ -46,6 +46,7 @@ import {
   parseTokenAmount,
   formatTokenAmount,
   type TxcTokenMeta,
+  isOmniCompatibleAddress,
 } from "@/lib/txc/tokens";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
 
