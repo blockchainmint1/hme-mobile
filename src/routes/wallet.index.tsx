@@ -291,6 +291,20 @@ function WalletHome() {
     staleTime: 5 * 60_000,
   });
 
+  // Keep token-holding addresses stocked with a small TXC reserve in the
+  // background, so an in-person token payment is a single broadcast instead of
+  // funding-then-sending while a cashier waits.
+  useTokenHolderTopUp({
+    root: root ?? null,
+    walletKind: unlocked?.kind ?? null,
+    snapshot: account.data,
+    tokens: enabledTxcTokens,
+    enabled: !!root && !!unlocked && activeChain === "txc",
+    onFunded: () => void account.refetch(),
+  });
+
+
+
 
 
   // ISK data — runs when ISK is enabled so the tile has a balance immediately.
