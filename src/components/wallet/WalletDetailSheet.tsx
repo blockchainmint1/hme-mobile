@@ -21,6 +21,7 @@ import { ALL_DERIVATION_KINDS, DERIVATION_PATHS } from "@/lib/txc/network";
 import { ISK_DERIVATION_PATHS, ISK_DEFAULT_KIND } from "@/lib/isk/network";
 import { LTC_DERIVATION_PATHS, LTC_DEFAULT_KIND } from "@/lib/ltc/network";
 import { DOGE_DERIVATION_PATHS, DOGE_DEFAULT_KIND } from "@/lib/doge/network";
+import { TRON_DERIVATION_PATH } from "@/lib/tron/network";
 
 type Common = {
   open: boolean;
