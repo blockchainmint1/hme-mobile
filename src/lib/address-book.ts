@@ -8,8 +8,17 @@ import { TXC_NETWORK } from "./txc/network";
 import { ISK_NETWORK } from "./isk/network";
 import { LTC_NETWORK } from "./ltc/network";
 import { DOGE_NETWORK } from "./doge/network";
+import { isValidTronAddress } from "./tron/address";
 
-export type ContactChain = "txc" | "isk" | "ltc" | "doge" | "eth" | "base" | "bsc";
+export type ContactChain =
+  | "txc"
+  | "isk"
+  | "ltc"
+  | "doge"
+  | "tron"
+  | "eth"
+  | "base"
+  | "bsc";
 
 export interface Contact {
   id: string;
@@ -24,6 +33,7 @@ export const CHAIN_LABELS: Record<ContactChain, string> = {
   isk: "IskanderCoin (ISK)",
   ltc: "Litecoin (LTC)",
   doge: "Dogecoin (DOGE)",
+  tron: "Tron (TRX / TRC-20)",
   eth: "Ethereum (ETH)",
   base: "Base",
   bsc: "BNB Smart Chain",
