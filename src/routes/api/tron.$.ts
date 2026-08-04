@@ -1,7 +1,7 @@
 /**
  * Same-origin proxy for TronGrid.
  *
- * Keeps the TRON_PRO_API_KEY server-side (the free public endpoint rate-limits
+ * Keeps the TRON_API key server-side (the free public endpoint rate-limits
  * hard), satisfies the app's narrow CSP `connect-src`, and lets the Capacitor
  * shell forward /api/* through the server-fn bridge like every other chain.
  *
@@ -67,7 +67,7 @@ function isAllowedCaller(request: Request): boolean {
 async function forward(request: Request, path: string, search: string): Promise<Response> {
   if (!allowedPath(path)) return new Response("Forbidden path", { status: 403 });
 
-  const key = process.env.TRON_PRO_API_KEY ?? process.env.TRONGRID_API_KEY;
+  const key = process.env.TRON_API ?? process.env.TRON_PRO_API_KEY ?? process.env.TRONGRID_API_KEY;
   const method = request.method === "POST" ? "POST" : "GET";
   const body = method === "POST" ? await request.text() : undefined;
 
