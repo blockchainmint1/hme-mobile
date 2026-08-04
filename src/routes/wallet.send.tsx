@@ -595,7 +595,9 @@ function SendPage() {
         });
       }
 
-
+      setProgress(
+        isTokenSend && activeToken ? `Sending ${activeToken.symbol}…` : "Sending TXC…",
+      );
       const txid = await broadcastTx(built.hex);
       hapticSuccess();
       void qc.invalidateQueries({ queryKey: ["account"] });
@@ -615,6 +617,7 @@ function SendPage() {
 
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
