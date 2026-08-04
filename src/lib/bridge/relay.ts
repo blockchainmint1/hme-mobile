@@ -15,14 +15,15 @@ export const RELAY_TRON_CHAIN_ID = 728126428;
 
 export interface BridgeSource {
   symbol: string;
+  name: string;
   /** Base58 TRC-20 contract on Tron. */
   contract: string;
   decimals: number;
 }
 
 export const BRIDGE_SOURCES: BridgeSource[] = [
-  { symbol: "USDT", contract: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", decimals: 6 },
-  { symbol: "USDC", contract: "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8", decimals: 6 },
+  { symbol: "USDT", name: "Tether USD", contract: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", decimals: 6 },
+  { symbol: "USDC", name: "USD Coin", contract: "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8", decimals: 6 },
 ];
 
 export interface BridgeDestination {

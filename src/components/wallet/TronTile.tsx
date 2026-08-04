@@ -5,8 +5,9 @@
  */
 import { useMemo } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowDownLeft, ArrowUpRight, RefreshCw } from "lucide-react";
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useHideBalances, maskAmount } from "@/lib/hide-balances";
 import { formatFiat } from "@/lib/txc/units";
