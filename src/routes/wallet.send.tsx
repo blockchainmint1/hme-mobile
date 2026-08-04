@@ -524,9 +524,11 @@ function SendPage() {
 
       // Holder address has no TXC: broadcast a small funding tx to it first,
       // then chain the Omni transfer onto that fresh output so the token
-      // layer still sees the holder as the sender.
+      // layer still sees the holder as the sender. The background top-up keeps
+      // this off the critical path in normal use — it's the first-send fallback.
       let chainedInput: UtxoInput | null = null;
       if (isTokenSend && stage.fund && stage.senderAddress) {
+        setProgress("Funding address…");
         const info = addressInfos.find((a) => a.address === stage.senderAddress);
         if (!info) throw new Error("Couldn't locate the sending address key.");
         const fundInputs = sorted
@@ -559,16 +561,8 @@ function SendPage() {
         };
       }
 
-      // For token sends, reproduce the exact ordering used at review time so
-      // the first input's address is the Omni sender.
-      const ordered =
-        isTokenSend && stage.senderAddress
-          ? [
-              ...sorted.filter((u) => u.address === stage.senderAddress),
-              ...sorted.filter((u) => u.address !== stage.senderAddress),
-            ]
-          : sorted;
       const picked = chainedInput ? [chainedInput] : ordered.slice(0, stage.selected);
+
 
 
 
