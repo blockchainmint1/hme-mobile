@@ -159,7 +159,13 @@ function TronBridge() {
     const q = quote.data;
     if (!tron || !q) return;
     try {
+      // Defense in depth: never sign an identical Relay contract call twice,
+      // even if a stale/native client receives a malformed duplicate quote.
+      const sentCalls = new Set<string>();
       for (const step of q.steps) {
+        const callKey = `${step.contractHex.toLowerCase()}:${step.data.toLowerCase()}:${step.callValue}`;
+        if (sentCalls.has(callKey)) continue;
+        sentCalls.add(callKey);
         if (step.id === "approve") {
           const spender = approveSpender(step.data);
           if (spender) {

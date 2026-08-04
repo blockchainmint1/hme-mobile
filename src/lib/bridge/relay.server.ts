@@ -93,6 +93,7 @@ export async function fetchBridgeQuote(args: QuoteArgs): Promise<BridgeQuote> {
 
   const json = JSON.parse(text) as RelayQuoteResponse;
   const steps: BridgeStep[] = [];
+  const seenCalls = new Set<string>();
   let requestId = "";
 
   for (const s of json.steps ?? []) {
@@ -100,12 +101,19 @@ export async function fetchBridgeQuote(args: QuoteArgs): Promise<BridgeQuote> {
     for (const item of s.items ?? []) {
       const p = item.data?.parameter;
       if (item.data?.type !== "TriggerSmartContract" || !p?.contract_address || !p.data) continue;
+      // Relay can repeat the same incomplete item in more than one step. Each
+      // item is a transaction, so executing duplicates would move the user's
+      // tokens twice. Keep only unique on-chain calls in the returned quote.
+      const callValue = p.call_value ?? 0;
+      const callKey = `${p.contract_address.toLowerCase()}:${p.data.toLowerCase()}:${callValue}`;
+      if (seenCalls.has(callKey)) continue;
+      seenCalls.add(callKey);
       steps.push({
         id: s.id ?? "step",
         description: s.description ?? s.action ?? "Confirm transaction",
         contractHex: p.contract_address,
         data: p.data,
-        callValue: p.call_value ?? 0,
+        callValue,
       });
     }
   }
