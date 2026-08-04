@@ -203,8 +203,9 @@ function WalletLayout() {
   if (!unlocked) return null;
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="border-b border-border/60 bg-card/40 backdrop-blur supports-[backdrop-filter]:bg-card/30 sticky top-0 z-20">
+    <div className="min-h-[100dvh] flex flex-col">
+      <header className="border-b border-border/60 bg-card/40 backdrop-blur supports-[backdrop-filter]:bg-card/30 sticky top-[env(safe-area-inset-top)] z-20">
+
         <div className="mx-auto max-w-3xl px-4 py-3 flex items-center justify-between gap-2">
           <button
             onClick={() => setShowPortfolio((v) => !v)}

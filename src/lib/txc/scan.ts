@@ -14,7 +14,7 @@ import { ALL_DERIVATION_KINDS, scriptKindOf } from "./network";
 import {
   getAddressStats,
   getAddressUtxos,
-  getTxHex,
+  getTxHexCached,
   type MempoolUtxo,
 } from "./mempool";
 
@@ -89,6 +89,19 @@ function writeHint(root: BIP32Interface, kind: AddressKind, extUsed: number, int
   }
 }
 
+/** How many address lookups we allow in flight at once. */
+const BATCH = 8;
+
+async function isUsed(address: string): Promise<boolean> {
+  try {
+    const stats = await getAddressStats(address);
+    return stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0;
+  } catch {
+    // Network error — treat as unused to avoid infinite loops; UI surfaces the error.
+    return false;
+  }
+}
+
 async function scanChain(
   root: BIP32Interface,
   kind: AddressKind,
@@ -98,24 +111,23 @@ async function scanChain(
   let firstUnused = 0;
   let gap = 0;
   let i = 0;
-  // Keep deriving until we hit GAP_LIMIT consecutive unused addresses.
+  // Keep deriving until we hit GAP_LIMIT consecutive unused addresses, but
+  // probe a whole batch of indices concurrently on each pass.
   while (gap < GAP_LIMIT) {
-    const d = deriveAddress(root, kind, change, i);
-    all.push(d);
-    let used = false;
-    try {
-      const stats = await getAddressStats(d.address);
-      used = stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0;
-    } catch {
-      // Network error — treat as unused to avoid infinite loops; UI will surface the error.
+    const batch = Array.from({ length: BATCH }, (_, n) =>
+      deriveAddress(root, kind, change, i + n),
+    );
+    const used = await Promise.all(batch.map((d) => isUsed(d.address)));
+    for (let n = 0; n < batch.length && gap < GAP_LIMIT; n++) {
+      all.push(batch[n]);
+      if (used[n]) {
+        firstUnused = i + n + 1;
+        gap = 0;
+      } else {
+        gap++;
+      }
     }
-    if (used) {
-      firstUnused = i + 1;
-      gap = 0;
-    } else {
-      gap++;
-    }
-    i++;
+    i += BATCH;
   }
   return { all, firstUnusedIndex: firstUnused };
 }
@@ -137,21 +149,22 @@ async function scanChainFast(
   let limit = knownUsed + FAST_FRONTIER;
   let i = 0;
   while (i < limit) {
-    const d = deriveAddress(root, kind, change, i);
-    all.push(d);
-    try {
-      const stats = await getAddressStats(d.address);
-      if (stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0) {
-        firstUnused = i + 1;
-        limit = Math.max(limit, i + 1 + FAST_FRONTIER);
+    const count = Math.min(BATCH, limit - i);
+    const batch = Array.from({ length: count }, (_, n) =>
+      deriveAddress(root, kind, change, i + n),
+    );
+    const used = await Promise.all(batch.map((d) => isUsed(d.address)));
+    for (let n = 0; n < batch.length; n++) {
+      all.push(batch[n]);
+      if (used[n]) {
+        firstUnused = i + n + 1;
+        limit = Math.max(limit, i + n + 1 + FAST_FRONTIER);
       }
-    } catch {
-      // treat unreachable as unused for this pass
     }
     if (limit - knownUsed > GAP_LIMIT) {
       return { all, firstUnusedIndex: firstUnused, overflowed: true };
     }
-    i++;
+    i += count;
   }
   return { all, firstUnusedIndex: firstUnused, overflowed: false };
 }
@@ -192,42 +205,67 @@ async function scanSingleKind(
   let balance = 0;
 
   const collect = async (addrs: DerivedAddress[]) => {
-    for (const d of addrs) {
-      let raw: MempoolUtxo[] = [];
-      try {
-        raw = await getAddressUtxos(d.address);
-      } catch {
-        continue;
-      }
-      for (const u of raw) {
-        balance += u.value;
-        const utxo: AccountUtxo = {
-          address: d.address,
-          txid: u.txid,
-          vout: u.vout,
-          value: u.value,
-          change: d.change,
-          index: d.index,
-          kind,
-        };
-        // For legacy inputs we need the previous full tx hex; for segwit we
-        // only need the scriptPubKey, which we'll fill below.
-        if (scriptKind === "bip44") {
+    // Fetch every address's UTXO set concurrently (bounded), then resolve any
+    // legacy prev-tx hex in parallel from the cache-backed fetcher.
+    const perAddress: { d: DerivedAddress; raw: MempoolUtxo[] }[] = [];
+    for (let i = 0; i < addrs.length; i += BATCH) {
+      const slice = addrs.slice(i, i + BATCH);
+      const results = await Promise.all(
+        slice.map(async (d) => {
           try {
-            utxo.nonWitnessUtxoHex = await getTxHex(u.txid);
+            return { d, raw: await getAddressUtxos(d.address) };
           } catch {
-            // skip this UTXO — cannot sign without prevtx
-            balance -= u.value;
-            continue;
+            return { d, raw: [] as MempoolUtxo[] };
           }
-        }
-        utxos.push(utxo);
+        }),
+      );
+      perAddress.push(...results);
+    }
+
+    const pending: { utxo: AccountUtxo; value: number }[] = [];
+    for (const { d, raw } of perAddress) {
+      for (const u of raw) {
+        pending.push({
+          value: u.value,
+          utxo: {
+            address: d.address,
+            txid: u.txid,
+            vout: u.vout,
+            value: u.value,
+            change: d.change,
+            index: d.index,
+            kind,
+          },
+        });
       }
+    }
+
+    // For legacy inputs we need the previous full tx hex; for segwit we only
+    // need the scriptPubKey, which we fill in below.
+    if (scriptKind === "bip44") {
+      for (let i = 0; i < pending.length; i += BATCH) {
+        const slice = pending.slice(i, i + BATCH);
+        await Promise.all(
+          slice.map(async (p) => {
+            try {
+              p.utxo.nonWitnessUtxoHex = await getTxHexCached(p.utxo.txid);
+            } catch {
+              p.utxo.nonWitnessUtxoHex = undefined;
+            }
+          }),
+        );
+      }
+    }
+
+    for (const p of pending) {
+      // Skip UTXOs we couldn't fetch a prev-tx for — they aren't signable.
+      if (scriptKind === "bip44" && !p.utxo.nonWitnessUtxoHex) continue;
+      balance += p.value;
+      utxos.push(p.utxo);
     }
   };
 
-  await collect(usedExt);
-  await collect(usedInt);
+  await Promise.all([collect(usedExt), collect(usedInt)]);
 
   // For segwit inputs we need scriptPubKey for each UTXO's address.
   // mempool.space exposes it on the tx; cheapest is to re-derive from address type.

@@ -21,6 +21,7 @@ import { ALL_DERIVATION_KINDS, DERIVATION_PATHS } from "@/lib/txc/network";
 import { ISK_DERIVATION_PATHS, ISK_DEFAULT_KIND } from "@/lib/isk/network";
 import { LTC_DERIVATION_PATHS, LTC_DEFAULT_KIND } from "@/lib/ltc/network";
 import { DOGE_DERIVATION_PATHS, DOGE_DEFAULT_KIND } from "@/lib/doge/network";
+import { TRON_DERIVATION_PATH } from "@/lib/tron/network";
 
 type Common = {
   open: boolean;
@@ -43,6 +44,13 @@ export type WalletDetailProps =
       txCount: number | null;
     })
   | (Common & {
+      kind: "tron";
+      address: string | null;
+      balanceText: string;
+      fiatText: string | null;
+      txCount: number | null;
+    })
+  | (Common & {
       kind: "evm";
       chainId: EvmChainId;
       address: string | null;
@@ -62,6 +70,8 @@ export function WalletDetailSheet(props: WalletDetailProps) {
             <TxcDetails {...props} />
           ) : props.kind === "evm" ? (
             <EvmDetails {...props} />
+          ) : props.kind === "tron" ? (
+            <TronDetails {...props} />
           ) : (
             <BtcForkDetails {...props} />
           )}
@@ -360,6 +370,21 @@ function EvmDetails(
     </>
   );
 
+}
+
+function TronDetails(props: Extract<WalletDetailProps, { kind: "tron" }>) {
+  return (
+    <>
+      <RenamableName chain="tron" />
+      <BalanceRow balance={props.balanceText} fiat={props.fiatText} />
+      <Field label="Chain" value={CHAIN_META.tron.name} />
+      <Field label="Native asset" value="TRX" />
+      <Field label="Address type" value="Base58Check (T…)" />
+      <Field label="Derivation path" value={TRON_DERIVATION_PATH} mono />
+      {props.address && <Field label="Address" value={props.address} mono copy />}
+      {props.txCount != null && <Field label="Transactions" value={String(props.txCount)} />}
+    </>
+  );
 }
 
 /** Reusable global toggle for use in Settings. */

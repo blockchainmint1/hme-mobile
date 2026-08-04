@@ -51,13 +51,13 @@ export function SiteFooter() {
             onClick={() => openExternal("https://texitcoin.org/build")}
             className="hover:text-foreground"
           >
-            Build on TEXITcoin
+            Build
           </button>
           <button
             type="button"
             onClick={() =>
               openExternal(
-                "https://txc.mypinata.cloud/ipfs/Qmba3rAp1PdxtLz9FoKmDXzEk87jJSaHfhHNYLXgCJGpBH?filename=hme-wallet-0.1.202608021152-release.apk",
+                "https://txc.mypinata.cloud/ipfs/QmQpbDV5oYmh4qr2LhMkjQWq4BrTdinKmfJK1UNdrjygPt?filename=hme-wallet-0.1.202608030734-release.apk",
               )
             }
             className="hover:text-foreground"

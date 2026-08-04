@@ -75,7 +75,7 @@ const NATIVE_NAV_FALLBACK_SCRIPT = `(function(){if(window.__HME_NATIVE_NAV_FALLB
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
@@ -152,7 +152,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
       <div className="max-w-md w-full text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           {stale ? "Updating the app…" : "This page didn't load"}
@@ -217,7 +217,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "HME Wallet" },
+      { name: "apple-mobile-web-app-title", content: "honest.money" },
       { name: "format-detection", content: "telephone=no" },
       { title: "HME Wallet — TEXITcoin & EVM multi-chain wallet" },
       {
@@ -225,7 +225,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "HME Wallet — a self-custodial multi-chain wallet for TEXITcoin (TXC), Ethereum, Base, and BSC. Part of the Honest Money ecosystem.",
       },
-      { name: "theme-color", content: "#0b0f14" },
+      { name: "theme-color", content: "#ffffff" },
       { property: "og:title", content: "HME Wallet" },
       {
         property: "og:description",
@@ -270,7 +270,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body className="min-h-screen bg-background text-foreground antialiased">
+      <body className="min-h-[100dvh] bg-background text-foreground antialiased">
         {children}
         <script dangerouslySetInnerHTML={{ __html: NATIVE_NAV_FALLBACK_SCRIPT }} />
         <Scripts />
@@ -403,6 +403,14 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <WalletProvider>
+          {/* Opaque status-bar scrim. Without this, scrolled content renders
+              underneath the iOS clock/battery (App Review Guideline 4 rejection
+              on iPhone 17 Pro Max). Fixed to the viewport so it never scrolls
+              away; zero height on devices with no top inset. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-x-0 top-0 z-50 h-[env(safe-area-inset-top)] bg-background"
+          />
           {/* Mobile-only frame: on phones it fills the screen; on larger screens
               we center a phone-width column so the app always feels like a mobile app. */}
           <div data-wallet-frame className="min-h-[100dvh] w-full bg-muted/40 sm:py-6">
@@ -410,19 +418,21 @@ function RootComponent() {
               data-wallet-frame
               className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:min-h-[calc(100dvh-3rem)] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-border overflow-hidden"
             >
+              <div className="pt-[env(safe-area-inset-top)]" />
               {offline && (
                 <div className="bg-amber-500/15 text-amber-300 text-xs text-center py-1.5 px-3 border-b border-amber-500/30">
                   You&apos;re offline — balances and prices may be out of date.
                 </div>
               )}
-              <div className="flex-1 pt-[env(safe-area-inset-top)]">
+              <div className="flex-1">
                 <Outlet />
               </div>
-              <div className="pb-[env(safe-area-inset-bottom)]">
+              <div className="pb-[max(env(safe-area-inset-bottom),0.75rem)]">
                 <SiteFooter />
               </div>
             </div>
           </div>
+
           <Toaster richColors closeButton position="top-center" />
         </WalletProvider>
       </ThemeProvider>

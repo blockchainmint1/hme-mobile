@@ -1,4 +1,6 @@
+import type { BIP32Interface } from "bip32";
 import { isLegacyCoinTypeKind, type DerivationKind } from "./network";
+import { rootFromSeed, seedFromMnemonic } from "./wallet";
 /**
  * Encrypted wallet storage for the TEXITcoin web wallet.
  *
@@ -168,6 +170,37 @@ export async function createKeyOnlyWallet(
     label,
     mode: "keyonly",
     anchor: b64encode(anchorBytes),
+  };
+  await saveWallet(unlocked, password);
+  return unlocked;
+}
+
+/**
+ * Upgrade a key-only wallet to a seed-phrase HD wallet.
+ *
+ * All imported WIFs are decrypted with the old anchor root and re-encrypted
+ * with the new seed-derived root, so they stay usable. The new wallet keeps
+ * the same password and defaults to the standard TXC legacy (T…) path.
+ */
+export async function upgradeKeyOnlyToSeed(
+  mnemonic: string,
+  passphrase: string,
+  password: string,
+  oldRoot: BIP32Interface,
+): Promise<UnlockedWallet> {
+  if (typeof window === "undefined") throw new Error("upgradeKeyOnlyToSeed requires a browser");
+  const seed = await seedFromMnemonic(mnemonic, passphrase);
+  const newRoot = rootFromSeed(seed);
+
+  const { reencryptAllWifs } = await import("@/lib/wif/store");
+  await reencryptAllWifs(oldRoot, newRoot);
+
+  const unlocked: UnlockedWallet = {
+    mnemonic,
+    passphrase,
+    kind: "bip44",
+    label: "Main wallet",
+    mode: "seed",
   };
   await saveWallet(unlocked, password);
   return unlocked;
