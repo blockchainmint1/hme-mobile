@@ -722,8 +722,8 @@ function WalletHome() {
                 <ul className="space-y-2">
                   {txs.data!.slice(0, 50).map((tx) => {
                     const inSum = tx.vin
-                      .filter((v) => v.prevout.scriptpubkey_address && ownAddresses.has(v.prevout.scriptpubkey_address))
-                      .reduce((s, v) => s + v.prevout.value, 0);
+                      .filter((v) => v.prevout?.scriptpubkey_address && ownAddresses.has(v.prevout?.scriptpubkey_address))
+                      .reduce((s, v) => s + (v.prevout?.value ?? 0), 0);
                     const outToOwn = tx.vout
                       .filter((v) => v.scriptpubkey_address && ownAddresses.has(v.scriptpubkey_address))
                       .reduce((s, v) => s + v.value, 0);
@@ -1565,10 +1565,10 @@ function BtcForkActivity({
             const inSum = tx.vin
               .filter(
                 (vv) =>
-                  vv.prevout.scriptpubkey_address &&
-                  ownAddresses.has(vv.prevout.scriptpubkey_address),
+                  vv.prevout?.scriptpubkey_address &&
+                  ownAddresses.has(vv.prevout?.scriptpubkey_address),
               )
-              .reduce((s, vv) => s + vv.prevout.value, 0);
+              .reduce((s, vv) => s + (vv.prevout?.value ?? 0), 0);
             const outToOwn = tx.vout
               .filter(
                 (vv) =>
@@ -2145,8 +2145,8 @@ function WatchOnlyActivity({
         <ul className="space-y-2">
           {txs!.slice(0, 50).map((tx) => {
             const inSum = tx.vin
-              .filter((v) => v.prevout.scriptpubkey_address === own)
-              .reduce((s, v) => s + v.prevout.value, 0);
+              .filter((v) => v.prevout?.scriptpubkey_address === own)
+              .reduce((s, v) => s + (v.prevout?.value ?? 0), 0);
             const outToOwn = tx.vout
               .filter((v) => v.scriptpubkey_address === own)
               .reduce((s, v) => s + v.value, 0);
@@ -2425,8 +2425,8 @@ function WifActivity({
         <ul className="space-y-2">
           {txs!.slice(0, 50).map((tx) => {
             const inSum = tx.vin
-              .filter((v) => v.prevout.scriptpubkey_address === own)
-              .reduce((s, v) => s + v.prevout.value, 0);
+              .filter((v) => v.prevout?.scriptpubkey_address === own)
+              .reduce((s, v) => s + (v.prevout?.value ?? 0), 0);
             const outToOwn = tx.vout
               .filter((v) => v.scriptpubkey_address === own)
               .reduce((s, v) => s + v.value, 0);
