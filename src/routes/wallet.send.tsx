@@ -899,7 +899,7 @@ function SendPage() {
                 <AlertDialogTrigger asChild>
                   <Button className="flex-1" disabled={busy}>
                     {busy
-                      ? "Broadcasting..."
+                      ? progress ?? "Sending…"
                       : `Send ${isTokenSend && activeToken ? activeToken.symbol : "TXC"}`}
                   </Button>
                 </AlertDialogTrigger>
