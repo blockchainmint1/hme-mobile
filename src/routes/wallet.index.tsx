@@ -31,6 +31,7 @@ import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chain
 import { useTokensForChain } from "@/lib/token-prefs";
 import { useEnabledTxcTokens, formatTokenAmount } from "@/lib/txc/tokens";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
+import { useTokenHolderTopUp } from "@/lib/txc/topup";
 import { getTxcTokenBalancesForAddresses, getOmniTxValidity } from "@/lib/txc/tokens.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
