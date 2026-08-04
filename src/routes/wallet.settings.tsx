@@ -11,6 +11,7 @@ import { FeaturesCard } from "@/components/wallet/FeaturesCard";
 import { SecurityCheckupCard } from "@/components/wallet/SecurityCheckupCard";
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { HideBalancesToggle } from "@/components/wallet/WalletDetailSheet";
+import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
