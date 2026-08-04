@@ -79,6 +79,9 @@ export function validateAddress(chain: ContactChain, addr: string): string | nul
       return "Not a valid Dogecoin address.";
     }
   }
+  if (chain === "tron") {
+    return isValidTronAddress(a) ? null : "Not a valid Tron address.";
+  }
   return isAddress(a) ? null : "Not a valid EVM address.";
 }
 
