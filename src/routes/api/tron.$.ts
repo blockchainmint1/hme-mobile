@@ -67,7 +67,7 @@ function isAllowedCaller(request: Request): boolean {
 async function forward(request: Request, path: string, search: string): Promise<Response> {
   if (!allowedPath(path)) return new Response("Forbidden path", { status: 403 });
 
-  const key = process.env.TRON_PRO_API_KEY ?? process.env.TRONGRID_API_KEY;
+  const key = process.env.TRON_API ?? process.env.TRON_PRO_API_KEY ?? process.env.TRONGRID_API_KEY;
   const method = request.method === "POST" ? "POST" : "GET";
   const body = method === "POST" ? await request.text() : undefined;
 
