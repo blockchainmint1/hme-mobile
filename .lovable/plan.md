@@ -1,81 +1,85 @@
-Two features to land before the next release. Both are additive — nothing existing changes for users who don't opt in.
+# Make TXC / Omni token sends near-instant at the register
 
-## 1. Encrypted Google Drive backup
+Today a TSD send at a merchant terminal can take 10-30+ seconds. None of that is
+the TEXITcoin network — it's work the wallet does before and between broadcasts.
+Every one of those safeguards was added to fix a real bug, so the plan keeps the
+protection but pays for it in the background instead of at the point of sale.
 
-Model after Bitcoin.com Wallet: user links Google, we push an encrypted blob of their seed/wallet metadata, they can list past backups and restore on a fresh install by signing back into Google.
+## Where the time actually goes
 
-**Flow**
-- Settings → "Cloud backup" card
-  - Not linked → "Connect Google Drive"
-  - Linked → email shown, list of backups (timestamp + device name + size), "Back up now", "Disconnect"
-- On new install, `/import` gets a third option "Restore from Google Drive" alongside "Enter seed" / "Scan QR"
+```text
+tap Send
+  |-- biometric confirm                      ~1s
+  |-- FULL account re-scan (6 paths)         5-20s   <-- worst offender
+  |     address stats, one HTTP call at a time
+  |     UTXO fetch, one address at a time
+  |     prev-tx hex for every legacy input, one at a time
+  |-- broadcast funding tx (holder has no TXC)  1-3s <-- second offender
+  |-- build + sign + broadcast Omni tx          1-3s
+```
 
-**Encryption**
-- We NEVER upload a raw seed. The blob is `AES-GCM(scrypt(password + email-salt), payload)` where `payload = { mnemonic, walletMeta, watchOnly, contacts, chainPrefs, featurePrefs, exportedAt, deviceName }`.
-- Password is required at backup and at restore time (independent of biometric unlock). Users are told: "Google can't read this. If you forget this password AND lose your device, the backup is useless."
-- Blob stored in the Drive **appDataFolder** (hidden, private per app, quota-free up to 10GB, revoked when user disconnects). Filename: `hme-wallet-<fingerprint>-<isoDate>.enc`.
+## Fix 1 — replace the pre-broadcast full re-scan with a spent-check
 
-**OAuth**
-- Web/browser: Google Identity Services (GIS) token client with scope `https://www.googleapis.com/auth/drive.appdata`. Uses the existing HME publishable OAuth client id.
-- Native (iOS/Android): `@capacitor-community/generic-oauth2` (in-app browser, PKCE). Same scope, iOS client id via `nectar://` redirect.
-- We store only the refresh-capable access token in SecureStorage (native) / sessionStorage (web).
+The re-scan exists to catch `inputs-missingorspent` / `txn-mempool-conflict`
+from coins spent elsewhere. It answers that question by rebuilding the whole
+account when all it needs to know is "are these 1-3 specific coins still
+unspent?"
 
-**Secrets/config needed from the user**
-- `GOOGLE_OAUTH_WEB_CLIENT_ID` (public, ok in code)
-- `GOOGLE_OAUTH_IOS_CLIENT_ID` (public, ok in code)
-- I'll walk you through creating both in Google Cloud Console → OAuth consent screen + Credentials once we're ready.
+Replace it with a parallel `GET /tx/{txid}/outspend/{vout}` for exactly the
+inputs being spent. Same guarantee, 1-3 concurrent calls instead of 40+, and
+it stays a hard block: if any input is spent, we bounce back to the form with
+the existing message.
 
-**Files added**
-- `src/lib/backup/drive.ts` — GIS token + Drive REST (list/upload/download in `appDataFolder`).
-- `src/lib/backup/crypto.ts` — scrypt + AES-GCM encrypt/decrypt.
-- `src/lib/backup/payload.ts` — canonical payload shape + migrator.
-- `src/components/wallet/CloudBackupCard.tsx` — settings UI.
-- `src/routes/wallet.restore-drive.tsx` — restore picker, invoked from `/import`.
+## Fix 2 — never need a funding transaction at checkout
 
-## 2. Iskander Coin (ISK) support
+Omni takes the sender from the first input, so a token-holding address with no
+TXC forces us to broadcast a funding tx and chain onto it. Instead of removing
+that (it's correct), make it never fire in the shop:
 
-ISK is a Bitcoin-style fork identical in structure to TXC — just different network bytes, HRP, SLIP-44, and mempool host. Ported straight from the ISK Web Wallet project.
+- After every token send we already return TXC change to the holder address.
+  Extend that: keep a target reserve on any address holding an enabled token.
+- Add a background "top-up" check on wallet load and after each refresh: if a
+  token-holding address is below the reserve, fund it quietly then, while the
+  user isn't waiting on a cashier.
+- Keep the existing at-send funding path as the fallback for the first-ever
+  send from a freshly received holder address.
 
-**ISK network params** (from that project)
-- P2PKH `0x2d` → addresses start with `K…`
-- P2SH `0x2c`
-- WIF `0xad`
-- bech32 HRP `isk` → native segwit `isk1q…`
-- SLIP-44 coin type `969696` → derivation `m/84'/969696'/0'/0/…`
-- Explorer/REST: `https://mempool.iskandercoin.com`
+## Fix 3 — make the scan itself fast (helps every screen)
 
-**Architecture**
-Refactor TXC's chain code to be reusable across UTXO chains, then instantiate for both TXC and ISK. Concretely:
-- `src/lib/utxo/chain-registry.ts` — `UtxoChain` interface (id, network, coinType, derivation paths, mempool base, dust, fee, uri schemes, price feed).
-- `src/lib/utxo/mempool.ts` — parameterized version of `src/lib/txc/mempool.ts`; takes a base URL.
-- `src/lib/utxo/wallet.ts` — parameterized version of `src/lib/txc/wallet.ts`; takes a `UtxoChain`.
-- Register two chains: `txc` (existing params) and `isk` (ISK params).
-- The old `src/lib/txc/*` files stay as thin wrappers that call the parameterized versions with the TXC config — this avoids touching every existing import site.
+- Parallelize the address walks. `scanChainFast` and `collect` currently
+  `await` one address at a time; batch them (concurrency ~8).
+- Cache `getTxHex` prev-tx hex. It is immutable per txid, so cache it in
+  IndexedDB/localStorage and never re-fetch. Legacy (T…) wallets pay this cost
+  on every single refresh today.
+- Cache derived scripts per address instead of recomputing.
 
-**Wallet integration**
-- Both chains share the ONE HD seed the user already has (no separate seed, no separate password).
-- `chain-prefs.ts` — flip `isk` off `soon` and default it enabled=true after import.
-- New routes: `wallet.isk.tsx` (dashboard tile), `wallet.isk.send.tsx`, `wallet.isk.receive.tsx`. Copies of the TXC route with chain id swapped.
-- `wallet.index.tsx` tile carousel gets an ISK tile with its own balance / activity list.
-- Price feed: add ISK to the CMC price server function if the ticker is listed, otherwise show balance in ISK only (no fiat) with a "price unavailable" note. Please confirm the CMC / CoinGecko id for ISK.
-- QR + URI parser: extend `parseWalletUri` to recognize `iskandercoin:` and `isk:` schemes.
-- Deep-rescan and watch-only screens gain a chain selector (TXC / ISK).
+## Fix 4 — warm the send screen
 
-**Not in this scope**
-- ZCU stays as `soon`. It's an EVM L2 — different plumbing.
-- No Play Store / iOS binary rebuild in this PR; you'll run `bun run ios:reset` and Xcode archive after we ship.
+When the send form is open with a valid address and amount, pre-fetch the fee
+estimate and pre-validate the selected coins so the tap on "Send" only has to
+sign and broadcast.
 
-## Order of implementation
+## Fix 5 — make the wait legible
 
-1. Extract UTXO chain registry (no behavior change to TXC).
-2. Wire in ISK chain, routes, tiles, price.
-3. Backup crypto + payload.
-4. Google OAuth (web first, then native).
-5. Drive REST + settings card + restore route.
-6. Polish + verify TXC still behaves identically.
+Replace the single "Broadcasting…" label with the real step: "Checking coins…"
+→ "Funding address…" → "Sending TSD…" → done. Even when it is fast, the
+cashier and customer can see it moving.
 
-## Confirmations needed before I start
+## Expected result
 
-- **CMC / CoinGecko id for ISK** so I can wire live price? Or leave ISK price as `—` for launch?
-- Confirm the Google OAuth strategy (`drive.appdata` scope + AES-GCM + user password) is the shape you want. If you'd rather store the encrypted blob in your own Cloud storage instead of Google Drive, say the word — plumbing is different.
-- Any objection to shipping ISK tile enabled-by-default for everyone on their next app open? (Current behavior for non-TXC chains is opt-in.)
+Typical in-person TSD payment drops to roughly: biometric + ~1 concurrent
+spent-check round trip + one broadcast — about 1-2 seconds, with the funding tx
+gone from the critical path entirely.
+
+## Technical notes
+
+- `src/lib/txc/mempool.ts`: add `getOutspend(txid, vout)` and a cached
+  `getTxHexCached`.
+- `src/routes/wallet.send.tsx`: swap `account.refetch()` in `send()` for the
+  targeted outspend check; add staged progress labels.
+- `src/lib/txc/scan.ts`: bounded-concurrency batching in `scanChainFast`,
+  `scanChain`, and `collect`; use the cached prev-tx hex.
+- New `src/lib/txc/topup.ts`: reserve policy + background top-up for
+  token-holding addresses, invoked from the wallet dashboard refresh.
+- No change to fee flooring (10 sat/vB), dust rules, or the bech32 block for
+  Omni destinations.
