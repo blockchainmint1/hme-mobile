@@ -7,7 +7,13 @@ import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
 import { buildAndSignTx, type UtxoInput } from "@/lib/txc/wallet";
 import { scriptKindOf, DERIVATION_PATHS, type DerivationKind } from "@/lib/txc/network";
-import { broadcastTx, explorerTxUrl, getFeeEstimates, type FeeEstimates } from "@/lib/txc/mempool";
+import {
+  broadcastTx,
+  explorerTxUrl,
+  getFeeEstimates,
+  getOutspend,
+  type FeeEstimates,
+} from "@/lib/txc/mempool";
 import { formatTxc, txcToSats } from "@/lib/txc/units";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
