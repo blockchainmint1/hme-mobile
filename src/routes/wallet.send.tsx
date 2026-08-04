@@ -479,6 +479,47 @@ function SendPage() {
       setProgress("Checking coins…");
       const sorted = [...utxos].sort((a, b) => b.value - a.value);
 
+      // For token sends, reproduce the exact ordering used at review time so
+      // the first input's address is the Omni sender.
+      const ordered =
+        isTokenSend && stage.senderAddress
+          ? [
+              ...sorted.filter((u) => u.address === stage.senderAddress),
+              ...sorted.filter((u) => u.address !== stage.senderAddress),
+            ]
+          : sorted;
+
+      const willSpend =
+        isTokenSend && stage.fund && stage.senderAddress
+          ? sorted
+              .filter((u) => u.address !== stage.senderAddress)
+              .slice(0, stage.fund.inputs)
+          : ordered.slice(0, stage.selected);
+
+      const spendStates = await Promise.all(
+        willSpend.map(async (u) => {
+          try {
+            return (await getOutspend(u.txid, u.vout)).spent;
+          } catch {
+            // Explorer hiccup — don't block the payment on it; the node is the
+            // final authority and a genuine double-spend still gets rejected.
+            return false;
+          }
+        }),
+      );
+      if (spendStates.some(Boolean)) {
+        void account.refetch();
+        setStage({ kind: "form" });
+        setError(
+          "Some of the coins you were spending were just used elsewhere — the amounts have been refreshed, please review and send again.",
+        );
+        setBusy(false);
+        setProgress(null);
+        return;
+      }
+
+
+
 
 
       // Holder address has no TXC: broadcast a small funding tx to it first,
