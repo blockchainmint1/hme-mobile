@@ -836,14 +836,17 @@ function WalletHome() {
               onRefresh={() => dogeAccount.refetch()}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
+          {activeChain === "tron" && !activeWatch && !activeWif && (
+            <TronActivity address={tronAddress} />
+          )}
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
             <EvmActivity
               chainId={activeChain as EvmChainId}
               address={evmAddress}
               onOpen={(t) => setDetail({ kind: "evm", chain: activeChain as EvmChainId, transfer: t })}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
