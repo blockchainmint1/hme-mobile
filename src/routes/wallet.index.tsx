@@ -555,7 +555,23 @@ function WalletHome() {
                       }}
                     />
                   )}
-                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && slot.chain !== "ltc" && slot.chain !== "doge" && (
+                  {slot.kind === "chain" && slot.chain === "tron" && (
+                    <TronTile
+                      address={tronAddress}
+                      label={getChainLabel("tron")}
+                      balanceSun={tron.balance.data ?? 0}
+                      loading={tron.balance.isLoading}
+                      priceUsd={tron.price.data?.usd ?? null}
+                      tokenRows={tronTokenRows}
+                      refreshing={tron.balance.isFetching}
+                      onRefresh={() => void tron.refetch()}
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setTileOpen("tron");
+                      }}
+                    />
+                  )}
+                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && slot.chain !== "ltc" && slot.chain !== "doge" && slot.chain !== "tron" && (
                     <EvmTile
                       chainId={slot.chain as EvmChainId}
                       address={evmAddress}
