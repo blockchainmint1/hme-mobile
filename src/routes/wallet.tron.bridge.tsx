@@ -184,6 +184,7 @@ function TronBridge() {
           step.data,
           { feeLimitSun: 150_000_000, callValue: step.callValue },
         );
+        setTronTxLabel(txid, step.id === "approve" ? "bridge-approval" : "bridge-deposit");
         setBusy("Waiting for Tron to confirm…");
         await waitForTronTx(txid);
         if (step.id !== "approve") setOriginTxid(txid);
