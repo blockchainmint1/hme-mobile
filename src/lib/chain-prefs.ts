@@ -113,6 +113,7 @@ const DEFAULT_ENABLED: Record<ChainId, boolean> = {
   isk: false,
   ltc: false,
   doge: false,
+  tron: false,
   zcu: false,
 };
 
