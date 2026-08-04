@@ -3,7 +3,7 @@
  * so it gets its own small set of components instead of reusing BtcForkTile
  * or EvmTile.
  */
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -16,6 +16,11 @@ import { TRC20_TOKENS, explorerTxUrl } from "@/lib/tron/network";
 import { formatTokenAmount, formatTrxCompact, sunToTrx } from "@/lib/tron/units";
 import { getTrxBalance, getTrc20Balance, getTronHistory, type TronTransfer } from "@/lib/tron/api";
 import { getTronPriceUsd } from "@/lib/tron/price.functions";
+import {
+  getTronTxLabel,
+  subscribeTronTxLabels,
+  TRON_TX_LABEL_TEXT,
+} from "@/lib/tron/tx-labels";
 
 /** Balance + price queries for the Tron account. */
 export function useTronData(address: string | null, enabled: boolean) {
@@ -210,9 +215,17 @@ export function TronActivity({ address }: { address: string | null }) {
 
 function TronRow({ tx, address }: { tx: TronTransfer; address: string | null }) {
   const [hidden] = useHideBalances();
+  const label = useSyncExternalStore(
+    subscribeTronTxLabels,
+    () => getTronTxLabel(tx.txid),
+    () => null,
+  );
   const incoming = !!address && tx.to === address;
   const amount = formatTokenAmount(tx.value, tx.decimals, 6);
   const when = tx.timestamp ? new Date(tx.timestamp).toLocaleString() : "";
+  const title = label
+    ? `${TRON_TX_LABEL_TEXT[label]} · ${tx.symbol}`
+    : `${incoming ? "Received" : "Sent"} ${tx.symbol}`;
   return (
     <li>
       <a
@@ -234,12 +247,14 @@ function TronRow({ tx, address }: { tx: TronTransfer; address: string | null }) 
             )}
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-medium">
-              {incoming ? "Received" : "Sent"} {tx.symbol}
+            <p className="text-sm font-medium">{title}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {label === "bridge-approval" ? "Permission only — no funds moved · " : ""}
+              {when}
             </p>
-            <p className="text-xs text-muted-foreground truncate">{when}</p>
           </div>
         </div>
+
         <div className="text-right">
           <p className={`text-sm font-semibold ${incoming ? "text-emerald-500" : ""}`}>
             {hidden ? maskAmount(amount) : `${incoming ? "+" : "-"}${amount}`}

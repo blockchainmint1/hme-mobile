@@ -39,6 +39,7 @@ import {
   sendRawContractCall,
   waitForTronTx,
 } from "@/lib/tron/api";
+import { setTronTxLabel } from "@/lib/tron/tx-labels";
 import { deriveEvmAccount, EVM_CHAINS } from "@/lib/chains/evm";
 import {
   BRIDGE_DESTINATIONS,
@@ -183,6 +184,7 @@ function TronBridge() {
           step.data,
           { feeLimitSun: 150_000_000, callValue: step.callValue },
         );
+        setTronTxLabel(txid, step.id === "approve" ? "bridge-approval" : "bridge-deposit");
         setBusy("Waiting for Tron to confirm…");
         await waitForTronTx(txid);
         if (step.id !== "approve") setOriginTxid(txid);
