@@ -137,8 +137,21 @@ export async function getTronHistory(address: string): Promise<TronTransfer[]> {
     getTrxTransfers(address).catch(() => [] as TronTransfer[]),
     getTrc20Transfers(address).catch(() => [] as TronTransfer[]),
   ]);
-  return [...trx, ...trc20].sort((a, b) => b.timestamp - a.timestamp);
+  // TronGrid emits one row per Transfer event, so a contract call that emits
+  // several (bridges, routers, fee splits) shows up multiple times for the
+  // same txid. Collapse to one row per txid + direction + asset.
+  const seen = new Set<string>();
+  const merged: TronTransfer[] = [];
+  for (const t of [...trx, ...trc20]) {
+    const direction = t.to === address ? "in" : t.from === address ? "out" : "other";
+    const key = `${t.txid}:${direction}:${t.symbol}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(t);
+  }
+  return merged.sort((a, b) => b.timestamp - a.timestamp);
 }
+
 
 /** Chain resources — tells us whether a TRC-20 send will burn TRX for energy. */
 export async function getAccountResources(address: string): Promise<{
