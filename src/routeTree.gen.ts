@@ -37,6 +37,7 @@ import { Route as WalletEvmChainRouteImport } from './routes/wallet.evm.$chain'
 import { Route as WalletDogeSwapRouteImport } from './routes/wallet.doge.swap'
 import { Route as WalletDogeSendRouteImport } from './routes/wallet.doge.send'
 import { Route as WalletDogeReceiveRouteImport } from './routes/wallet.doge.receive'
+import { Route as ApiTronSplatRouteImport } from './routes/api/tron.$'
 import { Route as ApiEvmChainRouteImport } from './routes/api/evm.$chain'
 import { Route as WalletWifIdSendRouteImport } from './routes/wallet.wif.$id.send'
 import { Route as WalletWifIdReceiveRouteImport } from './routes/wallet.wif.$id.receive'
@@ -186,6 +187,11 @@ const WalletDogeReceiveRoute = WalletDogeReceiveRouteImport.update({
   path: '/doge/receive',
   getParentRoute: () => WalletRoute,
 } as any)
+const ApiTronSplatRoute = ApiTronSplatRouteImport.update({
+  id: '/api/tron/$',
+  path: '/api/tron/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEvmChainRoute = ApiEvmChainRouteImport.update({
   id: '/api/evm/$chain',
   path: '/api/evm/$chain',
@@ -246,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/tron/$': typeof ApiTronSplatRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/doge/swap': typeof WalletDogeSwapRoute
@@ -283,6 +290,7 @@ export interface FileRoutesByTo {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/tron/$': typeof ApiTronSplatRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/doge/swap': typeof WalletDogeSwapRoute
@@ -322,6 +330,7 @@ export interface FileRoutesById {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/tron/$': typeof ApiTronSplatRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/doge/swap': typeof WalletDogeSwapRoute
@@ -362,6 +371,7 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/api/tron/$'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
     | '/wallet/doge/swap'
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet'
     | '/api/evm/$chain'
+    | '/api/tron/$'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
     | '/wallet/doge/swap'
@@ -437,6 +448,7 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/api/tron/$'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
     | '/wallet/doge/swap'
@@ -468,6 +480,7 @@ export interface RootRouteChildren {
   LegalTermsRoute: typeof LegalTermsRoute
   PayInvoiceIdRoute: typeof PayInvoiceIdRoute
   ApiEvmChainRoute: typeof ApiEvmChainRoute
+  ApiTronSplatRoute: typeof ApiTronSplatRoute
   ApiNectarPayInvoiceIdRoute: typeof ApiNectarPayInvoiceIdRoute
   ApiUtxoCoinSplatRoute: typeof ApiUtxoCoinSplatRoute
 }
@@ -670,6 +683,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalletDogeReceiveRouteImport
       parentRoute: typeof WalletRoute
     }
+    '/api/tron/$': {
+      id: '/api/tron/$'
+      path: '/api/tron/$'
+      fullPath: '/api/tron/$'
+      preLoaderRoute: typeof ApiTronSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/evm/$chain': {
       id: '/api/evm/$chain'
       path: '/api/evm/$chain'
@@ -807,6 +827,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalTermsRoute: LegalTermsRoute,
   PayInvoiceIdRoute: PayInvoiceIdRoute,
   ApiEvmChainRoute: ApiEvmChainRoute,
+  ApiTronSplatRoute: ApiTronSplatRoute,
   ApiNectarPayInvoiceIdRoute: ApiNectarPayInvoiceIdRoute,
   ApiUtxoCoinSplatRoute: ApiUtxoCoinSplatRoute,
 }

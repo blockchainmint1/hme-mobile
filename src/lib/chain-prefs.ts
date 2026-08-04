@@ -6,7 +6,7 @@ import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import { isKeyOnlyWallet } from "@/lib/txc/storage";
 
 
-export type ChainId = "txc" | EvmChainId | "isk" | "ltc" | "doge" | "zcu";
+export type ChainId = "txc" | EvmChainId | "isk" | "ltc" | "doge" | "tron" | "zcu";
 
 export interface ChainMeta {
   id: ChainId;
