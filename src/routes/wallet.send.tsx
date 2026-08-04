@@ -176,6 +176,9 @@ function SendPage() {
     enabled: !!root && !!unlocked,
     queryFn: () => scanAccount(root!, unlocked!.kind),
     staleTime: 30_000,
+    // Warm the coin set while the user is still typing the amount, so the tap
+    // on Send only has to verify, sign and broadcast.
+    refetchOnMount: "always",
   });
 
   const fees = useQuery<FeeEstimates>({
