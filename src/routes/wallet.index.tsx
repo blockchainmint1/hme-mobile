@@ -952,7 +952,22 @@ function WalletHome() {
           txCount={dogeTxs.data?.length ?? null}
         />
       )}
-      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen !== "ltc" && tileOpen !== "doge" && tileOpen in EVM_CHAINS && (
+      {tileOpen === "tron" && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="tron"
+          address={tronAddress}
+          balanceText={formatTrx(tron.balance.data ?? 0)}
+          fiatText={
+            tron.price.data?.usd != null
+              ? formatFiat(sunToTrx(tron.balance.data ?? 0) * tron.price.data.usd)
+              : null
+          }
+          txCount={null}
+        />
+      )}
+      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen !== "ltc" && tileOpen !== "doge" && tileOpen !== "tron" && tileOpen in EVM_CHAINS && (
         <WalletDetailSheet
           open
           onClose={() => setTileOpen(null)}
