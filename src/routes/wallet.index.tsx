@@ -31,6 +31,7 @@ import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chain
 import { useTokensForChain } from "@/lib/token-prefs";
 import { useEnabledTxcTokens, formatTokenAmount } from "@/lib/txc/tokens";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
+import { useTokenHolderTopUp } from "@/lib/txc/topup";
 import { getTxcTokenBalancesForAddresses, getOmniTxValidity } from "@/lib/txc/tokens.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -290,6 +291,20 @@ function WalletHome() {
     queryFn: () => fetchOmniValidity({ data: { txids: confirmedOmniTxids } }),
     staleTime: 5 * 60_000,
   });
+
+  // Keep token-holding addresses stocked with a small TXC reserve in the
+  // background, so an in-person token payment is a single broadcast instead of
+  // funding-then-sending while a cashier waits.
+  useTokenHolderTopUp({
+    root: root ?? null,
+    walletKind: unlocked?.kind ?? null,
+    snapshot: account.data,
+    tokens: enabledTxcTokens,
+    enabled: !!root && !!unlocked && activeChain === "txc",
+    onFunded: () => void account.refetch(),
+  });
+
+
 
 
 

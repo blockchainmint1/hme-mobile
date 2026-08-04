@@ -63,6 +63,54 @@ export function getTxHex(txid: string): Promise<string> {
   return getText(`/tx/${txid}/hex`);
 }
 
+/**
+ * Raw transaction hex is immutable once a txid exists, so it never needs to be
+ * re-fetched. Legacy (bip44) inputs require the full previous transaction to
+ * sign, and on a busy T… wallet that was one HTTP round trip per UTXO on every
+ * single refresh. Cache it in memory + localStorage.
+ */
+const TXHEX_PREFIX = "hme.txhex.";
+const TXHEX_MAX_BYTES = 40_000; // don't persist giant consolidation txs
+const txHexMemo = new Map<string, string>();
+
+export async function getTxHexCached(txid: string): Promise<string> {
+  const memo = txHexMemo.get(txid);
+  if (memo) return memo;
+  if (typeof localStorage !== "undefined") {
+    try {
+      const stored = localStorage.getItem(TXHEX_PREFIX + txid);
+      if (stored) {
+        txHexMemo.set(txid, stored);
+        return stored;
+      }
+    } catch {
+      // storage disabled — fall through to network
+    }
+  }
+  const hex = await getTxHex(txid);
+  txHexMemo.set(txid, hex);
+  if (typeof localStorage !== "undefined" && hex.length <= TXHEX_MAX_BYTES) {
+    try {
+      localStorage.setItem(TXHEX_PREFIX + txid, hex);
+    } catch {
+      // quota — memory cache still helps for this session
+    }
+  }
+  return hex;
+}
+
+export interface Outspend {
+  spent: boolean;
+  txid?: string;
+  vin?: number;
+  status?: { confirmed: boolean; block_height?: number };
+}
+
+/** Is this specific output still unspent (including by anything in the mempool)? */
+export function getOutspend(txid: string, vout: number): Promise<Outspend> {
+  return getJson<Outspend>(`/tx/${txid}/outspend/${vout}`);
+}
+
 export interface FeeEstimates {
   fastestFee: number;
   halfHourFee: number;

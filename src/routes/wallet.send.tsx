@@ -7,7 +7,13 @@ import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
 import { buildAndSignTx, type UtxoInput } from "@/lib/txc/wallet";
 import { scriptKindOf, DERIVATION_PATHS, type DerivationKind } from "@/lib/txc/network";
-import { broadcastTx, explorerTxUrl, getFeeEstimates, type FeeEstimates } from "@/lib/txc/mempool";
+import {
+  broadcastTx,
+  explorerTxUrl,
+  getFeeEstimates,
+  getOutspend,
+  type FeeEstimates,
+} from "@/lib/txc/mempool";
 import { formatTxc, txcToSats } from "@/lib/txc/units";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -170,6 +176,9 @@ function SendPage() {
     enabled: !!root && !!unlocked,
     queryFn: () => scanAccount(root!, unlocked!.kind),
     staleTime: 30_000,
+    // Warm the coin set while the user is still typing the amount, so the tap
+    // on Send only has to verify, sign and broadcast.
+    refetchOnMount: "always",
   });
 
   const fees = useQuery<FeeEstimates>({
@@ -197,6 +206,8 @@ function SendPage() {
   const [stage, setStage] = useState<Stage>({ kind: "form" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Human-readable step shown on the send button while a payment is in flight. */
+  const [progress, setProgress] = useState<string | null>(null);
 
   const activeToken: TxcTokenMeta | null =
     typeof asset === "number" ? tokens.find((t) => t.id === asset) ?? null : null;
@@ -468,40 +479,67 @@ function SendPage() {
     setBusy(true);
     setError(null);
     try {
-      // Re-scan right before signing: a cached UTXO set can contain outputs
-      // that were already spent (another device, an earlier send, or a
-      // mempool tx), which the node rejects with `inputs-missingorspent`.
+      // A cached UTXO set can contain outputs that were already spent (another
+      // device, an earlier send, a mempool tx), which the node rejects with
+      // `inputs-missingorspent` / `txn-mempool-conflict`.
       //
-      // Only *disappearing* outputs invalidate the review. New incoming funds
-      // (very common on a wallet that's receiving) don't affect the coins we
-      // already selected, so we ignore additions and keep the reviewed
-      // selection instead of bouncing the user back to the form.
-      const key = (u: { txid: string; vout: number }) => `${u.txid}:${u.vout}`;
-      const reviewedKeys = new Set(utxos.map(key));
-      const refreshed = await account.refetch();
-      const liveUtxos = refreshed.data?.utxos ?? [];
-      const liveKeys = new Set(liveUtxos.map(key));
-      const spentAway = [...reviewedKeys].some((k) => !liveKeys.has(k));
-      if (spentAway) {
+      // We used to re-scan the whole account here, which cost dozens of
+      // sequential HTTP calls and made in-person payments painfully slow. All
+      // we actually need to know is whether the handful of coins we're about
+      // to spend are still unspent — so ask exactly that, concurrently.
+      setProgress("Checking coins…");
+      const sorted = [...utxos].sort((a, b) => b.value - a.value);
+
+      // For token sends, reproduce the exact ordering used at review time so
+      // the first input's address is the Omni sender.
+      const ordered =
+        isTokenSend && stage.senderAddress
+          ? [
+              ...sorted.filter((u) => u.address === stage.senderAddress),
+              ...sorted.filter((u) => u.address !== stage.senderAddress),
+            ]
+          : sorted;
+
+      const willSpend =
+        isTokenSend && stage.fund && stage.senderAddress
+          ? sorted
+              .filter((u) => u.address !== stage.senderAddress)
+              .slice(0, stage.fund.inputs)
+          : ordered.slice(0, stage.selected);
+
+      const spendStates = await Promise.all(
+        willSpend.map(async (u) => {
+          try {
+            return (await getOutspend(u.txid, u.vout)).spent;
+          } catch {
+            // Explorer hiccup — don't block the payment on it; the node is the
+            // final authority and a genuine double-spend still gets rejected.
+            return false;
+          }
+        }),
+      );
+      if (spendStates.some(Boolean)) {
+        void account.refetch();
         setStage({ kind: "form" });
         setError(
           "Some of the coins you were spending were just used elsewhere — the amounts have been refreshed, please review and send again.",
         );
         setBusy(false);
+        setProgress(null);
         return;
       }
-      // Restrict to the coins that existed at review time so fee/amount math
-      // stays exactly as reviewed.
-      const sorted = liveUtxos
-        .filter((u) => reviewedKeys.has(key(u)))
-        .sort((a, b) => b.value - a.value);
+
+
+
 
 
       // Holder address has no TXC: broadcast a small funding tx to it first,
       // then chain the Omni transfer onto that fresh output so the token
-      // layer still sees the holder as the sender.
+      // layer still sees the holder as the sender. The background top-up keeps
+      // this off the critical path in normal use — it's the first-send fallback.
       let chainedInput: UtxoInput | null = null;
       if (isTokenSend && stage.fund && stage.senderAddress) {
+        setProgress("Funding address…");
         const info = addressInfos.find((a) => a.address === stage.senderAddress);
         if (!info) throw new Error("Couldn't locate the sending address key.");
         const fundInputs = sorted
@@ -534,16 +572,8 @@ function SendPage() {
         };
       }
 
-      // For token sends, reproduce the exact ordering used at review time so
-      // the first input's address is the Omni sender.
-      const ordered =
-        isTokenSend && stage.senderAddress
-          ? [
-              ...sorted.filter((u) => u.address === stage.senderAddress),
-              ...sorted.filter((u) => u.address !== stage.senderAddress),
-            ]
-          : sorted;
       const picked = chainedInput ? [chainedInput] : ordered.slice(0, stage.selected);
+
 
 
 
@@ -576,7 +606,9 @@ function SendPage() {
         });
       }
 
-
+      setProgress(
+        isTokenSend && activeToken ? `Sending ${activeToken.symbol}…` : "Sending TXC…",
+      );
       const txid = await broadcastTx(built.hex);
       hapticSuccess();
       void qc.invalidateQueries({ queryKey: ["account"] });
@@ -596,6 +628,7 @@ function SendPage() {
 
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   }
 
@@ -869,7 +902,7 @@ function SendPage() {
                 <AlertDialogTrigger asChild>
                   <Button className="flex-1" disabled={busy}>
                     {busy
-                      ? "Broadcasting..."
+                      ? progress ?? "Sending…"
                       : `Send ${isTokenSend && activeToken ? activeToken.symbol : "TXC"}`}
                   </Button>
                 </AlertDialogTrigger>
