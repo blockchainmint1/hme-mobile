@@ -3,7 +3,7 @@
  * so it gets its own small set of components instead of reusing BtcForkTile
  * or EvmTile.
  */
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
