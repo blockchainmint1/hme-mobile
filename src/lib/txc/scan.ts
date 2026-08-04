@@ -89,6 +89,19 @@ function writeHint(root: BIP32Interface, kind: AddressKind, extUsed: number, int
   }
 }
 
+/** How many address lookups we allow in flight at once. */
+const BATCH = 8;
+
+async function isUsed(address: string): Promise<boolean> {
+  try {
+    const stats = await getAddressStats(address);
+    return stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0;
+  } catch {
+    // Network error — treat as unused to avoid infinite loops; UI surfaces the error.
+    return false;
+  }
+}
+
 async function scanChain(
   root: BIP32Interface,
   kind: AddressKind,
@@ -98,24 +111,23 @@ async function scanChain(
   let firstUnused = 0;
   let gap = 0;
   let i = 0;
-  // Keep deriving until we hit GAP_LIMIT consecutive unused addresses.
+  // Keep deriving until we hit GAP_LIMIT consecutive unused addresses, but
+  // probe a whole batch of indices concurrently on each pass.
   while (gap < GAP_LIMIT) {
-    const d = deriveAddress(root, kind, change, i);
-    all.push(d);
-    let used = false;
-    try {
-      const stats = await getAddressStats(d.address);
-      used = stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0;
-    } catch {
-      // Network error — treat as unused to avoid infinite loops; UI will surface the error.
+    const batch = Array.from({ length: BATCH }, (_, n) =>
+      deriveAddress(root, kind, change, i + n),
+    );
+    const used = await Promise.all(batch.map((d) => isUsed(d.address)));
+    for (let n = 0; n < batch.length && gap < GAP_LIMIT; n++) {
+      all.push(batch[n]);
+      if (used[n]) {
+        firstUnused = i + n + 1;
+        gap = 0;
+      } else {
+        gap++;
+      }
     }
-    if (used) {
-      firstUnused = i + 1;
-      gap = 0;
-    } else {
-      gap++;
-    }
-    i++;
+    i += BATCH;
   }
   return { all, firstUnusedIndex: firstUnused };
 }
@@ -137,21 +149,22 @@ async function scanChainFast(
   let limit = knownUsed + FAST_FRONTIER;
   let i = 0;
   while (i < limit) {
-    const d = deriveAddress(root, kind, change, i);
-    all.push(d);
-    try {
-      const stats = await getAddressStats(d.address);
-      if (stats.chain_stats.tx_count > 0 || stats.mempool_stats.tx_count > 0) {
-        firstUnused = i + 1;
-        limit = Math.max(limit, i + 1 + FAST_FRONTIER);
+    const count = Math.min(BATCH, limit - i);
+    const batch = Array.from({ length: count }, (_, n) =>
+      deriveAddress(root, kind, change, i + n),
+    );
+    const used = await Promise.all(batch.map((d) => isUsed(d.address)));
+    for (let n = 0; n < batch.length; n++) {
+      all.push(batch[n]);
+      if (used[n]) {
+        firstUnused = i + n + 1;
+        limit = Math.max(limit, i + n + 1 + FAST_FRONTIER);
       }
-    } catch {
-      // treat unreachable as unused for this pass
     }
     if (limit - knownUsed > GAP_LIMIT) {
       return { all, firstUnusedIndex: firstUnused, overflowed: true };
     }
-    i++;
+    i += count;
   }
   return { all, firstUnusedIndex: firstUnused, overflowed: false };
 }
