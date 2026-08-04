@@ -83,9 +83,16 @@ export function fromHexAddress(hex: string): string {
   return encodeBase58Address(bytes);
 }
 
-/** ABI-encode an address as a 32-byte word (no 0x prefix). */
+/**
+ * ABI-encode an address as a 32-byte word (no 0x prefix). Accepts base58
+ * ("T…"), Tron hex ("41…") or bare/0x 20-byte hex — Relay hands us hex.
+ */
 export function padAddressParam(address: string): string {
-  return toHexAddress(address).slice(2).padStart(64, "0");
+  const a = address.trim();
+  const hex = a.startsWith("0x") ? a.slice(2) : a;
+  if (/^41[0-9a-fA-F]{40}$/.test(hex)) return hex.slice(2).toLowerCase().padStart(64, "0");
+  if (/^[0-9a-fA-F]{40}$/.test(hex)) return hex.toLowerCase().padStart(64, "0");
+  return toHexAddress(a).slice(2).padStart(64, "0");
 }
 
 /** ABI-encode a uint256 as a 32-byte word (no 0x prefix). */
