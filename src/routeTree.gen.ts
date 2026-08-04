@@ -28,6 +28,7 @@ import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
 import { Route as WalletTxcMigrateRouteImport } from './routes/wallet.txc.migrate'
 import { Route as WalletTxcConsolidateRouteImport } from './routes/wallet.txc.consolidate'
+import { Route as WalletTronSendRouteImport } from './routes/wallet.tron.send'
 import { Route as WalletTronReceiveRouteImport } from './routes/wallet.tron.receive'
 import { Route as WalletLtcSwapRouteImport } from './routes/wallet.ltc.swap'
 import { Route as WalletLtcSendRouteImport } from './routes/wallet.ltc.send'
@@ -141,6 +142,11 @@ const WalletTxcMigrateRoute = WalletTxcMigrateRouteImport.update({
 const WalletTxcConsolidateRoute = WalletTxcConsolidateRouteImport.update({
   id: '/txc/consolidate',
   path: '/txc/consolidate',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletTronSendRoute = WalletTronSendRouteImport.update({
+  id: '/tron/send',
+  path: '/tron/send',
   getParentRoute: () => WalletRoute,
 } as any)
 const WalletTronReceiveRoute = WalletTronReceiveRouteImport.update({
@@ -269,6 +275,7 @@ export interface FileRoutesByFullPath {
   '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
+  '/wallet/tron/send': typeof WalletTronSendRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
   '/wallet/txc/migrate': typeof WalletTxcMigrateRoute
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
@@ -308,6 +315,7 @@ export interface FileRoutesByTo {
   '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
+  '/wallet/tron/send': typeof WalletTronSendRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
   '/wallet/txc/migrate': typeof WalletTxcMigrateRoute
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
@@ -349,6 +357,7 @@ export interface FileRoutesById {
   '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
+  '/wallet/tron/send': typeof WalletTronSendRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
   '/wallet/txc/migrate': typeof WalletTxcMigrateRoute
   '/api/nectar/pay/$invoiceId': typeof ApiNectarPayInvoiceIdRoute
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
     | '/wallet/ltc/send'
     | '/wallet/ltc/swap'
     | '/wallet/tron/receive'
+    | '/wallet/tron/send'
     | '/wallet/txc/consolidate'
     | '/wallet/txc/migrate'
     | '/api/nectar/pay/$invoiceId'
@@ -430,6 +440,7 @@ export interface FileRouteTypes {
     | '/wallet/ltc/send'
     | '/wallet/ltc/swap'
     | '/wallet/tron/receive'
+    | '/wallet/tron/send'
     | '/wallet/txc/consolidate'
     | '/wallet/txc/migrate'
     | '/api/nectar/pay/$invoiceId'
@@ -470,6 +481,7 @@ export interface FileRouteTypes {
     | '/wallet/ltc/send'
     | '/wallet/ltc/swap'
     | '/wallet/tron/receive'
+    | '/wallet/tron/send'
     | '/wallet/txc/consolidate'
     | '/wallet/txc/migrate'
     | '/api/nectar/pay/$invoiceId'
@@ -630,6 +642,13 @@ declare module '@tanstack/react-router' {
       path: '/txc/consolidate'
       fullPath: '/wallet/txc/consolidate'
       preLoaderRoute: typeof WalletTxcConsolidateRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/tron/send': {
+      id: '/wallet/tron/send'
+      path: '/tron/send'
+      fullPath: '/wallet/tron/send'
+      preLoaderRoute: typeof WalletTronSendRouteImport
       parentRoute: typeof WalletRoute
     }
     '/wallet/tron/receive': {
@@ -803,6 +822,7 @@ interface WalletRouteChildren {
   WalletLtcSendRoute: typeof WalletLtcSendRoute
   WalletLtcSwapRoute: typeof WalletLtcSwapRoute
   WalletTronReceiveRoute: typeof WalletTronReceiveRoute
+  WalletTronSendRoute: typeof WalletTronSendRoute
   WalletTxcConsolidateRoute: typeof WalletTxcConsolidateRoute
   WalletTxcMigrateRoute: typeof WalletTxcMigrateRoute
   WalletWifIdReceiveRoute: typeof WalletWifIdReceiveRoute
@@ -828,6 +848,7 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletLtcSendRoute: WalletLtcSendRoute,
   WalletLtcSwapRoute: WalletLtcSwapRoute,
   WalletTronReceiveRoute: WalletTronReceiveRoute,
+  WalletTronSendRoute: WalletTronSendRoute,
   WalletTxcConsolidateRoute: WalletTxcConsolidateRoute,
   WalletTxcMigrateRoute: WalletTxcMigrateRoute,
   WalletWifIdReceiveRoute: WalletWifIdReceiveRoute,
