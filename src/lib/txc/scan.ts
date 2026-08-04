@@ -14,7 +14,7 @@ import { ALL_DERIVATION_KINDS, scriptKindOf } from "./network";
 import {
   getAddressStats,
   getAddressUtxos,
-  getTxHex,
+  getTxHexCached,
   type MempoolUtxo,
 } from "./mempool";
 
