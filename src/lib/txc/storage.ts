@@ -1,4 +1,6 @@
+import type { BIP32Interface } from "bip32";
 import { isLegacyCoinTypeKind, type DerivationKind } from "./network";
+import { rootFromSeed, seedFromMnemonic } from "./wallet";
 /**
  * Encrypted wallet storage for the TEXITcoin web wallet.
  *
