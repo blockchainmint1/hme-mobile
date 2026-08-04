@@ -394,6 +394,16 @@ function WalletHome() {
     ...(dogeAccount.data?.internal.map((a) => a.address) ?? []),
   ]);
 
+  // TRON data
+  const tronEnabled = enabled.includes("tron");
+  const tronAddress = useMemo(() => (root ? deriveTronAccount(root).address : null), [root]);
+  const tron = useTronData(tronAddress, !!unlocked && tronEnabled);
+  const tronTokenRows = TRC20_TOKENS.map((t, i) => ({
+    symbol: t.symbol,
+    decimals: t.decimals,
+    amount: tron.tokens[i]?.data ?? 0n,
+  }));
+
   // EVM data (only for enabled EVM chains)
   const evmEnabled = enabled.filter((c) => c in EVM_CHAINS) as EvmChainId[];
   const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
