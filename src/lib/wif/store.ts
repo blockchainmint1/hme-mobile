@@ -146,6 +146,37 @@ export async function revealWif(entry: WifWalletEntry, root: BIP32Interface): Pr
   return new TextDecoder().decode(pt);
 }
 
+/**
+ * Re-encrypt every stored WIF with a new wrapping key. Used when a key-only
+ * wallet is upgraded to a seed-phrase wallet: the old anchor root decrypts the
+ * WIFs, then the new seed-derived root re-encrypts them.
+ */
+export async function reencryptAllWifs(
+  oldRoot: BIP32Interface,
+  newRoot: BIP32Interface,
+): Promise<void> {
+  const list = listWifWallets();
+  if (list.length === 0) return;
+
+  const plaintexts: { entry: WifWalletEntry; wif: string }[] = [];
+  for (const entry of list) {
+    const wif = await revealWif(entry, oldRoot);
+    plaintexts.push({ entry, wif });
+  }
+
+  const { key, fp } = await wrapKeyFromRoot(newRoot);
+  const next: WifWalletEntry[] = [];
+  for (const { entry, wif } of plaintexts) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const pt = new TextEncoder().encode(wif);
+    const ct = new Uint8Array(
+      await crypto.subtle.encrypt({ name: "AES-GCM", iv: toAB(iv) }, key, toAB(pt)),
+    );
+    next.push({ ...entry, ct: b64enc(ct), iv: b64enc(iv), fp });
+  }
+  persist(next);
+}
+
 export function renameWifWallet(id: string, label: string) {
   persist(listWifWallets().map((w) => (w.id === id ? { ...w, label: label.trim() || w.label } : w)));
 }
