@@ -371,6 +371,21 @@ function EvmDetails(
 
 }
 
+function TronDetails(props: Extract<WalletDetailProps, { kind: "tron" }>) {
+  return (
+    <>
+      <RenamableName chain="tron" />
+      <BalanceRow balance={props.balanceText} fiat={props.fiatText} />
+      <Field label="Chain" value={CHAIN_META.tron.name} />
+      <Field label="Native asset" value="TRX" />
+      <Field label="Address type" value="Base58Check (T…)" />
+      <Field label="Derivation path" value={TRON_DERIVATION_PATH} mono />
+      {props.address && <Field label="Address" value={props.address} mono copy />}
+      {props.txCount != null && <Field label="Transactions" value={String(props.txCount)} />}
+    </>
+  );
+}
+
 /** Reusable global toggle for use in Settings. */
 export function HideBalancesToggle() {
   const [hidden, setHidden] = useHideBalances();
