@@ -16,6 +16,11 @@ import { TRC20_TOKENS, explorerTxUrl } from "@/lib/tron/network";
 import { formatTokenAmount, formatTrxCompact, sunToTrx } from "@/lib/tron/units";
 import { getTrxBalance, getTrc20Balance, getTronHistory, type TronTransfer } from "@/lib/tron/api";
 import { getTronPriceUsd } from "@/lib/tron/price.functions";
+import {
+  getTronTxLabel,
+  subscribeTronTxLabels,
+  TRON_TX_LABEL_TEXT,
+} from "@/lib/tron/tx-labels";
 
 /** Balance + price queries for the Tron account. */
 export function useTronData(address: string | null, enabled: boolean) {
