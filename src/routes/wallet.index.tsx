@@ -19,6 +19,10 @@ import { DOGE_DEFAULT_KIND } from "@/lib/doge/network";
 import { formatDoge, formatDogeCompact, satsToDoge } from "@/lib/doge/units";
 import { getDogePriceUsd } from "@/lib/doge/price.functions";
 import { getAddressTxs as getDogeAddressTxs, type MempoolTx as DogeMempoolTx } from "@/lib/doge/mempool";
+import { deriveTronAccount } from "@/lib/tron/address";
+import { TRC20_TOKENS } from "@/lib/tron/network";
+import { formatTrx, sunToTrx } from "@/lib/tron/units";
+import { TronActivity, TronTile, useTronData } from "@/components/wallet/TronTile";
 import { formatTxc, formatTxcCompact, formatFiat, satsToTxc, compactNumberString } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
@@ -394,6 +398,16 @@ function WalletHome() {
     ...(dogeAccount.data?.internal.map((a) => a.address) ?? []),
   ]);
 
+  // TRON data
+  const tronEnabled = enabled.includes("tron");
+  const tronAddress = useMemo(() => (root ? deriveTronAccount(root).address : null), [root]);
+  const tron = useTronData(tronAddress, !!unlocked && tronEnabled);
+  const tronTokenRows = TRC20_TOKENS.map((t, i) => ({
+    symbol: t.symbol,
+    decimals: t.decimals,
+    amount: tron.tokens[i]?.data ?? 0n,
+  }));
+
   // EVM data (only for enabled EVM chains)
   const evmEnabled = enabled.filter((c) => c in EVM_CHAINS) as EvmChainId[];
   const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
@@ -541,7 +555,23 @@ function WalletHome() {
                       }}
                     />
                   )}
-                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && slot.chain !== "ltc" && slot.chain !== "doge" && (
+                  {slot.kind === "chain" && slot.chain === "tron" && (
+                    <TronTile
+                      address={tronAddress}
+                      label={getChainLabel("tron")}
+                      balanceSun={tron.balance.data ?? 0}
+                      loading={tron.balance.isLoading}
+                      priceUsd={tron.price.data?.usd ?? null}
+                      tokenRows={tronTokenRows}
+                      refreshing={tron.balance.isFetching}
+                      onRefresh={() => void tron.refetch()}
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setTileOpen("tron");
+                      }}
+                    />
+                  )}
+                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && slot.chain !== "ltc" && slot.chain !== "doge" && slot.chain !== "tron" && (
                     <EvmTile
                       chainId={slot.chain as EvmChainId}
                       address={evmAddress}
@@ -806,14 +836,17 @@ function WalletHome() {
               onRefresh={() => dogeAccount.refetch()}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
+          {activeChain === "tron" && !activeWatch && !activeWif && (
+            <TronActivity address={tronAddress} />
+          )}
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
             <EvmActivity
               chainId={activeChain as EvmChainId}
               address={evmAddress}
               onOpen={(t) => setDetail({ kind: "evm", chain: activeChain as EvmChainId, transfer: t })}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
@@ -919,7 +952,22 @@ function WalletHome() {
           txCount={dogeTxs.data?.length ?? null}
         />
       )}
-      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen !== "ltc" && tileOpen !== "doge" && tileOpen in EVM_CHAINS && (
+      {tileOpen === "tron" && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="tron"
+          address={tronAddress}
+          balanceText={formatTrx(tron.balance.data ?? 0)}
+          fiatText={
+            tron.price.data?.usd != null
+              ? formatFiat(sunToTrx(tron.balance.data ?? 0) * tron.price.data.usd)
+              : null
+          }
+          txCount={null}
+        />
+      )}
+      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen !== "ltc" && tileOpen !== "doge" && tileOpen !== "tron" && tileOpen in EVM_CHAINS && (
         <WalletDetailSheet
           open
           onClose={() => setTileOpen(null)}
@@ -1005,6 +1053,22 @@ function BottomActions({ chain }: { chain: ChainId }) {
         </Button>
         <Button asChild size="lg" className="flex-1">
           <Link to="/wallet/doge/send">
+            <Send className="h-4 w-4 mr-2" /> Send
+          </Link>
+        </Button>
+      </>
+    );
+  }
+  if (chain === "tron") {
+    return (
+      <>
+        <Button asChild size="lg" variant="outline" className="flex-1">
+          <Link to="/wallet/tron/receive">
+            <QrCode className="h-4 w-4 mr-2" /> Receive
+          </Link>
+        </Button>
+        <Button asChild size="lg" className="flex-1">
+          <Link to="/wallet/tron/send">
             <Send className="h-4 w-4 mr-2" /> Send
           </Link>
         </Button>
