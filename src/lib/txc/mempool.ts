@@ -20,7 +20,7 @@ export interface MempoolTx {
   vin: {
     txid: string;
     vout: number;
-    prevout: { scriptpubkey: string; scriptpubkey_address?: string; value: number };
+    prevout: { scriptpubkey: string; scriptpubkey_address?: string; value: number } | null;
   }[];
   vout: { scriptpubkey: string; scriptpubkey_address?: string; value: number }[];
   status: { confirmed: boolean; block_height?: number; block_time?: number };
