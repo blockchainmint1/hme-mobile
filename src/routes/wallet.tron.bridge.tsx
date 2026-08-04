@@ -39,6 +39,7 @@ import {
   sendRawContractCall,
   waitForTronTx,
 } from "@/lib/tron/api";
+import { setTronTxLabel } from "@/lib/tron/tx-labels";
 import { deriveEvmAccount, EVM_CHAINS } from "@/lib/chains/evm";
 import {
   BRIDGE_DESTINATIONS,
