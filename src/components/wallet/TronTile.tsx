@@ -95,19 +95,30 @@ export function TronTile({
     >
       <div className="flex items-center justify-between">
         <p className="text-sm opacity-80 truncate">{label}</p>
-        <span
-          role="button"
-          tabIndex={0}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRefresh();
-          }}
-          className="opacity-80 hover:opacity-100"
-          aria-label="Refresh"
-        >
-          <RefreshCw className={`h-4 w-4 ${refreshing || loading ? "animate-spin" : ""}`} />
-        </span>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/wallet/tron/bridge"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 px-2.5 py-1 text-[11px] font-medium"
+            aria-label="Bridge off Tron"
+          >
+            <ArrowLeftRight className="h-3 w-3" /> Bridge
+          </Link>
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRefresh();
+            }}
+            className="opacity-80 hover:opacity-100"
+            aria-label="Refresh"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing || loading ? "animate-spin" : ""}`} />
+          </span>
+        </div>
       </div>
+
 
       <p className="mt-3 text-[10px] uppercase tracking-widest opacity-70">Native</p>
       <p className="mt-0.5 text-4xl font-bold tracking-tight">
