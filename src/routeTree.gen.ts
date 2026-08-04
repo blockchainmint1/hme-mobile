@@ -30,6 +30,7 @@ import { Route as WalletTxcMigrateRouteImport } from './routes/wallet.txc.migrat
 import { Route as WalletTxcConsolidateRouteImport } from './routes/wallet.txc.consolidate'
 import { Route as WalletTronSendRouteImport } from './routes/wallet.tron.send'
 import { Route as WalletTronReceiveRouteImport } from './routes/wallet.tron.receive'
+import { Route as WalletTronBridgeRouteImport } from './routes/wallet.tron.bridge'
 import { Route as WalletLtcSwapRouteImport } from './routes/wallet.ltc.swap'
 import { Route as WalletLtcSendRouteImport } from './routes/wallet.ltc.send'
 import { Route as WalletLtcReceiveRouteImport } from './routes/wallet.ltc.receive'
@@ -154,6 +155,11 @@ const WalletTronReceiveRoute = WalletTronReceiveRouteImport.update({
   path: '/tron/receive',
   getParentRoute: () => WalletRoute,
 } as any)
+const WalletTronBridgeRoute = WalletTronBridgeRouteImport.update({
+  id: '/tron/bridge',
+  path: '/tron/bridge',
+  getParentRoute: () => WalletRoute,
+} as any)
 const WalletLtcSwapRoute = WalletLtcSwapRouteImport.update({
   id: '/ltc/swap',
   path: '/ltc/swap',
@@ -274,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
   '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
+  '/wallet/tron/bridge': typeof WalletTronBridgeRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
   '/wallet/tron/send': typeof WalletTronSendRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByTo {
   '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
   '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
+  '/wallet/tron/bridge': typeof WalletTronBridgeRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
   '/wallet/tron/send': typeof WalletTronSendRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
@@ -356,6 +364,7 @@ export interface FileRoutesById {
   '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
   '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
+  '/wallet/tron/bridge': typeof WalletTronBridgeRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
   '/wallet/tron/send': typeof WalletTronSendRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
@@ -399,6 +408,7 @@ export interface FileRouteTypes {
     | '/wallet/ltc/receive'
     | '/wallet/ltc/send'
     | '/wallet/ltc/swap'
+    | '/wallet/tron/bridge'
     | '/wallet/tron/receive'
     | '/wallet/tron/send'
     | '/wallet/txc/consolidate'
@@ -439,6 +449,7 @@ export interface FileRouteTypes {
     | '/wallet/ltc/receive'
     | '/wallet/ltc/send'
     | '/wallet/ltc/swap'
+    | '/wallet/tron/bridge'
     | '/wallet/tron/receive'
     | '/wallet/tron/send'
     | '/wallet/txc/consolidate'
@@ -480,6 +491,7 @@ export interface FileRouteTypes {
     | '/wallet/ltc/receive'
     | '/wallet/ltc/send'
     | '/wallet/ltc/swap'
+    | '/wallet/tron/bridge'
     | '/wallet/tron/receive'
     | '/wallet/tron/send'
     | '/wallet/txc/consolidate'
@@ -658,6 +670,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalletTronReceiveRouteImport
       parentRoute: typeof WalletRoute
     }
+    '/wallet/tron/bridge': {
+      id: '/wallet/tron/bridge'
+      path: '/tron/bridge'
+      fullPath: '/wallet/tron/bridge'
+      preLoaderRoute: typeof WalletTronBridgeRouteImport
+      parentRoute: typeof WalletRoute
+    }
     '/wallet/ltc/swap': {
       id: '/wallet/ltc/swap'
       path: '/ltc/swap'
@@ -821,6 +840,7 @@ interface WalletRouteChildren {
   WalletLtcReceiveRoute: typeof WalletLtcReceiveRoute
   WalletLtcSendRoute: typeof WalletLtcSendRoute
   WalletLtcSwapRoute: typeof WalletLtcSwapRoute
+  WalletTronBridgeRoute: typeof WalletTronBridgeRoute
   WalletTronReceiveRoute: typeof WalletTronReceiveRoute
   WalletTronSendRoute: typeof WalletTronSendRoute
   WalletTxcConsolidateRoute: typeof WalletTxcConsolidateRoute
@@ -847,6 +867,7 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletLtcReceiveRoute: WalletLtcReceiveRoute,
   WalletLtcSendRoute: WalletLtcSendRoute,
   WalletLtcSwapRoute: WalletLtcSwapRoute,
+  WalletTronBridgeRoute: WalletTronBridgeRoute,
   WalletTronReceiveRoute: WalletTronReceiveRoute,
   WalletTronSendRoute: WalletTronSendRoute,
   WalletTxcConsolidateRoute: WalletTxcConsolidateRoute,
@@ -876,13 +897,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

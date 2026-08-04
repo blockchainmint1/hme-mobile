@@ -261,5 +261,82 @@ export async function sendTrc20(
   return broadcast(tx, signTxId(tx.txID, privateKey));
 }
 
+/**
+ * ERC-20 style allowance read, used by the bridge to skip a redundant
+ * approval (each approval burns Tron energy, so it's worth checking).
+ */
+export async function getTrc20Allowance(
+  contract: string,
+  owner: string,
+  spender: string,
+): Promise<bigint> {
+  const data = await post<{ constant_result?: string[] }>("wallet/triggerconstantcontract", {
+    owner_address: owner,
+    contract_address: contract,
+    function_selector: "allowance(address,address)",
+    parameter: padAddressParam(owner) + padAddressParam(spender),
+    visible: true,
+  });
+  const hex = data.constant_result?.[0];
+  if (!hex) return 0n;
+  return BigInt(`0x${hex}`);
+}
+
+/**
+ * Build, sign and broadcast an arbitrary contract call from pre-encoded
+ * calldata (what Relay hands us for the bridge steps). Returns the txid.
+ */
+export async function sendRawContractCall(
+  privateKey: Uint8Array,
+  from: string,
+  contract: string,
+  data: string,
+  opts: { feeLimitSun?: number; callValue?: number } = {},
+): Promise<string> {
+  const contractBase58 = contract.startsWith("41") ? fromHexAddress(contract) : contract;
+  const res = await post<{ transaction?: UnsignedTx; result?: { message?: string } }>(
+    "wallet/triggersmartcontract",
+    {
+      owner_address: from,
+      contract_address: contractBase58,
+      data: data.startsWith("0x") ? data.slice(2) : data,
+      fee_limit: opts.feeLimitSun ?? TRC20_FEE_LIMIT_SUN,
+      call_value: opts.callValue ?? 0,
+      visible: true,
+    },
+  );
+  const tx = res.transaction;
+  if (!tx?.txID) {
+    throw new Error(decodeNodeMessage(res.result?.message) ?? "Tron node rejected the call");
+  }
+  return broadcast(tx, signTxId(tx.txID, privateKey));
+}
+
+/** Poll until a Tron tx is included in a block. Throws if it reverted. */
+export async function waitForTronTx(txid: string, timeoutMs = 90_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const info = await post<{
+        id?: string;
+        receipt?: { result?: string };
+        resMessage?: string;
+      }>("wallet/gettransactioninfobyid", { value: txid });
+      if (info.id) {
+        const result = info.receipt?.result;
+        if (result && result !== "SUCCESS") {
+          throw new Error(decodeNodeMessage(info.resMessage) ?? `Transaction ${result}`);
+        }
+        return;
+      }
+    } catch (err) {
+      if (err instanceof Error && /Transaction |revert/i.test(err.message)) throw err;
+    }
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  throw new Error("Timed out waiting for Tron confirmation");
+}
+
 /** Exposed for callers that need the hex form (debugging / explorers). */
 export { toHexAddress };
+
