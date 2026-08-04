@@ -203,6 +203,8 @@ function SendPage() {
   const [stage, setStage] = useState<Stage>({ kind: "form" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Human-readable step shown on the send button while a payment is in flight. */
+  const [progress, setProgress] = useState<string | null>(null);
 
   const activeToken: TxcTokenMeta | null =
     typeof asset === "number" ? tokens.find((t) => t.id === asset) ?? null : null;
