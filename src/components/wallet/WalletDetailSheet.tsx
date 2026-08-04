@@ -43,6 +43,13 @@ export type WalletDetailProps =
       txCount: number | null;
     })
   | (Common & {
+      kind: "tron";
+      address: string | null;
+      balanceText: string;
+      fiatText: string | null;
+      txCount: number | null;
+    })
+  | (Common & {
       kind: "evm";
       chainId: EvmChainId;
       address: string | null;
@@ -62,6 +69,8 @@ export function WalletDetailSheet(props: WalletDetailProps) {
             <TxcDetails {...props} />
           ) : props.kind === "evm" ? (
             <EvmDetails {...props} />
+          ) : props.kind === "tron" ? (
+            <TronDetails {...props} />
           ) : (
             <BtcForkDetails {...props} />
           )}
