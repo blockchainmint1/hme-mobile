@@ -205,42 +205,67 @@ async function scanSingleKind(
   let balance = 0;
 
   const collect = async (addrs: DerivedAddress[]) => {
-    for (const d of addrs) {
-      let raw: MempoolUtxo[] = [];
-      try {
-        raw = await getAddressUtxos(d.address);
-      } catch {
-        continue;
-      }
-      for (const u of raw) {
-        balance += u.value;
-        const utxo: AccountUtxo = {
-          address: d.address,
-          txid: u.txid,
-          vout: u.vout,
-          value: u.value,
-          change: d.change,
-          index: d.index,
-          kind,
-        };
-        // For legacy inputs we need the previous full tx hex; for segwit we
-        // only need the scriptPubKey, which we'll fill below.
-        if (scriptKind === "bip44") {
+    // Fetch every address's UTXO set concurrently (bounded), then resolve any
+    // legacy prev-tx hex in parallel from the cache-backed fetcher.
+    const perAddress: { d: DerivedAddress; raw: MempoolUtxo[] }[] = [];
+    for (let i = 0; i < addrs.length; i += BATCH) {
+      const slice = addrs.slice(i, i + BATCH);
+      const results = await Promise.all(
+        slice.map(async (d) => {
           try {
-            utxo.nonWitnessUtxoHex = await getTxHex(u.txid);
+            return { d, raw: await getAddressUtxos(d.address) };
           } catch {
-            // skip this UTXO — cannot sign without prevtx
-            balance -= u.value;
-            continue;
+            return { d, raw: [] as MempoolUtxo[] };
           }
-        }
-        utxos.push(utxo);
+        }),
+      );
+      perAddress.push(...results);
+    }
+
+    const pending: { utxo: AccountUtxo; value: number }[] = [];
+    for (const { d, raw } of perAddress) {
+      for (const u of raw) {
+        pending.push({
+          value: u.value,
+          utxo: {
+            address: d.address,
+            txid: u.txid,
+            vout: u.vout,
+            value: u.value,
+            change: d.change,
+            index: d.index,
+            kind,
+          },
+        });
       }
+    }
+
+    // For legacy inputs we need the previous full tx hex; for segwit we only
+    // need the scriptPubKey, which we fill in below.
+    if (scriptKind === "bip44") {
+      for (let i = 0; i < pending.length; i += BATCH) {
+        const slice = pending.slice(i, i + BATCH);
+        await Promise.all(
+          slice.map(async (p) => {
+            try {
+              p.utxo.nonWitnessUtxoHex = await getTxHexCached(p.utxo.txid);
+            } catch {
+              p.utxo.nonWitnessUtxoHex = undefined;
+            }
+          }),
+        );
+      }
+    }
+
+    for (const p of pending) {
+      // Skip UTXOs we couldn't fetch a prev-tx for — they aren't signable.
+      if (scriptKind === "bip44" && !p.utxo.nonWitnessUtxoHex) continue;
+      balance += p.value;
+      utxos.push(p.utxo);
     }
   };
 
-  await collect(usedExt);
-  await collect(usedInt);
+  await Promise.all([collect(usedExt), collect(usedInt)]);
 
   // For segwit inputs we need scriptPubKey for each UTXO's address.
   // mempool.space exposes it on the tx; cheapest is to re-derive from address type.
