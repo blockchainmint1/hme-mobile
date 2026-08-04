@@ -1,7 +1,7 @@
 /**
  * Same-origin proxy for TronGrid.
  *
- * Keeps the TRON_PRO_API_KEY server-side (the free public endpoint rate-limits
+ * Keeps the TRON_API key server-side (the free public endpoint rate-limits
  * hard), satisfies the app's narrow CSP `connect-src`, and lets the Capacitor
  * shell forward /api/* through the server-fn bridge like every other chain.
  *
