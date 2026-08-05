@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@/lib/txc/wallet-context";
+import { clearReservations } from "@/lib/txc/spent-outpoints";
 
 export function DeepRescanCard() {
   const { root, unlocked } = useWallet();
@@ -28,6 +29,9 @@ export function DeepRescanCard() {
         const k = localStorage.key(i);
         if (k?.startsWith(prefix)) localStorage.removeItem(k);
       }
+      // Also drop any locally set-aside coins so a dropped transaction can't
+      // keep funds out of circulation.
+      clearReservations();
       await qc.invalidateQueries({ queryKey: ["account"] });
       await qc.invalidateQueries({ queryKey: ["txs"] });
       setMsg("Rescan started — balance and history will refresh in a moment.");
@@ -45,7 +49,8 @@ export function DeepRescanCard() {
         <CardDescription>
           Normal refreshes only check the addresses you're actively using. Run a
           deep rescan if a balance ever looks wrong or you've restored an older
-          backup that used many addresses.
+          backup that used many addresses. It also releases any coins the wallet
+          set aside for a transaction that never confirmed.
         </CardDescription>
       </CardHeader>
       <CardContent>
