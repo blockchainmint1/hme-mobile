@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key, Loader2 } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
+import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { usePendingTxs, removePendingTx } from "@/lib/pending-tx";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { decodeOmniSend } from "@/lib/txc/omni-decode";
@@ -1457,7 +1458,8 @@ function BtcForkTile({
   onOpenDetails: () => void;
 }) {
   const [hidden] = useHideBalances();
-  const [utxoSwapEnabled] = useFeature("utxoSwap");
+  const [utxoSwapPref] = useFeature("utxoSwap");
+  const utxoSwapEnabled = utxoSwapPref && useExchangeFeaturesAllowed();
   const v = BTC_FORK_VARIANTS[variant];
   const balanceUsd = priceUsd ? v.toCoin(balanceSats) * priceUsd : null;
   const balText = loading ? "..." : v.formatCompact(balanceSats);
@@ -1642,7 +1644,8 @@ function EvmTile({
 }) {
   const [hidden] = useHideBalances();
   const [refreshing, setRefreshing] = useState(false);
-  const [swapEnabled] = useFeature("evmSwap");
+  const [evmSwapPref] = useFeature("evmSwap");
+  const swapEnabled = evmSwapPref && useExchangeFeaturesAllowed();
 
 
   const meta = EVM_CHAINS[chainId];
