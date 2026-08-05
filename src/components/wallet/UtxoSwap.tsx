@@ -49,6 +49,12 @@ type Stage =
   | { kind: "sent"; txid: string; quote: ThorQuote; dest: StableDestination };
 
 export function UtxoSwap({ coin }: { coin: UtxoSwapCoin }) {
+  const exchangeAllowed = useExchangeFeaturesAllowed();
+  if (!exchangeAllowed) return <ExchangeUnavailable title="Swap" />;
+  return <UtxoSwapInner coin={coin} />;
+}
+
+function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
   const cfg = UTXO_SWAP_COINS[coin];
   const navigate = useNavigate();
   const qc = useQueryClient();
