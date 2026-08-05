@@ -8,24 +8,28 @@
 export function friendlyBroadcastError(raw: unknown): string {
   const msg = raw instanceof Error ? raw.message : String(raw ?? "");
   const lower = msg.toLowerCase();
+  // Keep the node's own words on the end — without them a repeat failure is
+  // impossible to diagnose from a screenshot.
+  const detail = msg ? ` (node said: ${msg.slice(0, 160)})` : "";
 
   if (lower.includes("txn-mempool-conflict") || lower.includes("mempool-conflict")) {
-    return "This transaction would spend coins that are already committed to a pending transaction. Wait ~30 seconds for balances to refresh, then try again. If it keeps happening, the previous send may need to confirm first.";
+    return `Those coins are already committed to a transaction that hasn't confirmed yet. They've been set aside — pull to refresh and send again.${detail}`;
   }
   if (lower.includes("txn-already-in-mempool") || lower.includes("already in block chain")) {
     return "This transaction has already been broadcast — no action needed. Balances will update once it confirms.";
   }
   if (lower.includes("min relay fee not met") || lower.includes("min fee not met")) {
-    return "The fee is too low for the network to relay this transaction. Bump the fee tier and try again.";
+    return `The fee is too low for the network to relay this transaction. Bump the fee tier and try again.${detail}`;
   }
   if (lower.includes("dust")) {
-    return "Amount is below the network's dust threshold. Increase the amount and try again.";
+    return `One of the outputs is below TEXITcoin's dust threshold. Increase the amount and try again.${detail}`;
   }
   if (lower.includes("bad-txns-inputs-missingorspent")) {
-    return "One of the inputs was already spent. Refresh your balance and try again.";
+    return `One of the inputs was already spent. It's been set aside — refresh your balance and try again.${detail}`;
   }
   return msg || "Send failed";
 }
+
 
 /**
  * Upstream explorers sometimes answer with a full HTML page (Cloudflare block,
