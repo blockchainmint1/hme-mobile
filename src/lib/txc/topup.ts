@@ -16,14 +16,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import type { BIP32Interface } from "bip32";
 import type { AccountSnapshot } from "./scan";
-import { buildAndSignTx } from "./wallet";
+import { buildAndSignTx, DUST_SATS } from "./wallet";
 import { broadcastTx, getFeeEstimates } from "./mempool";
 import { scriptKindOf, DERIVATION_PATHS, type DerivationKind } from "./network";
+import { filterReserved, reserveOutpoints } from "./spent-outpoints";
 import { getTxcTokenBalancesPerAddress } from "./tokens.functions";
 import type { TxcTokenMeta } from "./tokens";
 
 /** Omni reference-output dust, matching the send screen. */
-const OMNI_DUST_SATS = 10_000;
+const OMNI_DUST_SATS = DUST_SATS;
+
 /** Rough vbytes for a 1-in / 2-out Omni send, per script type. */
 const OMNI_VBYTES: Record<"bip84" | "bip49" | "bip44", number> = {
   bip84: 11 + 68 + 31 * 2 + 31,
@@ -32,10 +34,39 @@ const OMNI_VBYTES: Record<"bip84" | "bip49" | "bip44", number> = {
 };
 /** Extra headroom so a fee bump between top-up and payment can't strand it. */
 const HEADROOM = 2;
-/** Don't re-attempt a top-up for the same address more often than this. */
-const RETRY_MS = 10 * 60_000;
+/**
+ * Don't re-attempt a top-up for the same address more often than this. The
+ * record is persisted: an in-memory map reset on every app launch, which meant
+ * re-opening the wallet fired another funding transaction spending the same
+ * coins — the source of "mempool conflict" errors hours after doing nothing.
+ */
+const RETRY_MS = 60 * 60_000;
+const ATTEMPT_KEY = "hme.txc.topup-attempts.v1";
 
-const attempted = new Map<string, number>();
+function readAttempts(): Record<string, number> {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(ATTEMPT_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeAttempts(map: Record<string, number>): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    const now = Date.now();
+    for (const [k, ts] of Object.entries(map)) {
+      if (typeof ts !== "number" || now - ts > 24 * 3_600_000) delete map[k];
+    }
+    localStorage.setItem(ATTEMPT_KEY, JSON.stringify(map));
+  } catch {
+    /* best-effort */
+  }
+}
+
 
 function kindFromPath(path: string): DerivationKind | null {
   for (const [kind, prefix] of Object.entries(DERIVATION_PATHS)) {
@@ -78,6 +109,7 @@ export async function topUpTokenHolders(params: TopUpParams): Promise<string | n
   }
 
   const now = Date.now();
+  const attempted = readAttempts();
   const outputs: { address: string; valueSats: number }[] = [];
   for (const addr of holders) {
     const info = infos.find((i) => i.address === addr);
@@ -85,15 +117,17 @@ export async function topUpTokenHolders(params: TopUpParams): Promise<string | n
     const have = balanceByAddress.get(addr) ?? 0;
     const reserve = reserveSatsFor(info.kind, feeRate);
     if (have >= reserve) continue;
-    const last = attempted.get(addr) ?? 0;
+    const last = attempted[addr] ?? 0;
     if (now - last < RETRY_MS) continue;
-    outputs.push({ address: addr, valueSats: reserve - have });
+    // Never emit a sub-dust output — the node rejects the whole transaction.
+    outputs.push({ address: addr, valueSats: Math.max(reserve - have, DUST_SATS) });
   }
   if (outputs.length === 0) return null;
 
-  // Fund from coins that don't belong to the holder addresses themselves.
+  // Fund from coins that don't belong to the holder addresses themselves, and
+  // never from coins a transaction we already broadcast is spending.
   const holderSet = new Set(outputs.map((o) => o.address));
-  const spendable = snapshot.utxos
+  const spendable = filterReserved(snapshot.utxos)
     .filter((u) => !holderSet.has(u.address))
     .sort((a, b) => b.value - a.value);
   if (spendable.length === 0) return null;
@@ -110,12 +144,13 @@ export async function topUpTokenHolders(params: TopUpParams): Promise<string | n
     acc += u.value;
     const vsize = 11 + perInput * inputs.length + perOutput * (outputs.length + 1);
     feeSats = Math.ceil(vsize * feeRate);
-    if (acc >= needed + feeSats + OMNI_DUST_SATS) break;
+    if (acc >= needed + feeSats + DUST_SATS) break;
   }
   // Not enough spare TXC — stay silent, the send screen's fallback still works.
-  if (acc < needed + feeSats + OMNI_DUST_SATS) return null;
+  if (acc < needed + feeSats + DUST_SATS) return null;
 
-  for (const o of outputs) attempted.set(o.address, now);
+  for (const o of outputs) attempted[o.address] = now;
+  writeAttempts(attempted);
 
   const tx = buildAndSignTx({
     root,
@@ -126,7 +161,12 @@ export async function topUpTokenHolders(params: TopUpParams): Promise<string | n
     changeIndex,
     feeSats,
   });
-  return broadcastTx(tx.hex);
+  const txid = await broadcastTx(tx.hex);
+  // Remember which coins this consumed so a payment seconds later can't pick
+  // the same ones and get bounced with `txn-mempool-conflict`.
+  reserveOutpoints(inputs.map((u) => ({ txid: u.txid, vout: u.vout })));
+  return txid;
+
 }
 
 export interface UseTokenHolderTopUpArgs {

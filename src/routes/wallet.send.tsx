@@ -5,7 +5,8 @@ import { useMemo, useState } from "react";
 import { z } from "zod";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
-import { buildAndSignTx, type UtxoInput } from "@/lib/txc/wallet";
+import { buildAndSignTx, DUST_SATS, type UtxoInput } from "@/lib/txc/wallet";
+import { filterReserved, reserveOutpoints } from "@/lib/txc/spent-outpoints";
 import { scriptKindOf, DERIVATION_PATHS, type DerivationKind } from "@/lib/txc/network";
 import {
   broadcastTx,
@@ -93,7 +94,7 @@ const VBYTES = {
 // OP_RETURN with Omni payload (20 bytes data) ≈ 30 vbytes on the wire.
 const OMNI_OP_RETURN_VBYTES = 31;
 // TXC dust threshold used for the Omni reference output. Matches CryptoPOP.
-const OMNI_DUST_SATS = 10_000;
+const OMNI_DUST_SATS = DUST_SATS;
 
 /**
  * Inputs can come from different derivation branches (SLIP-0044 696969' and
@@ -223,7 +224,13 @@ function SendPage() {
     }
   }
 
-  const utxos = account.data?.utxos ?? [];
+  // Never offer coins that a transaction this device already broadcast is
+  // spending (an earlier payment, or the background token-holder top-up) —
+  // picking them again is what the node rejects as `txn-mempool-conflict`.
+  const utxos = useMemo(
+    () => filterReserved(account.data?.utxos ?? []),
+    [account.data],
+  );
   const totalAvailable = utxos.reduce((s, u) => s + u.value, 0);
   const amountSats = useMemo(() => txcToSats(amount || "0"), [amount]);
 
@@ -434,7 +441,7 @@ function SendPage() {
       const vsize = estimateVsizeFor(unlocked.kind, sorted, 1);
       const feeSats = Math.ceil(vsize * feeRate);
       const outSats = totalAvailable - feeSats;
-      if (outSats <= 546) {
+      if (outSats <= DUST_SATS) {
         setError("Not enough to cover the network fee.");
         return;
       }
@@ -442,8 +449,10 @@ function SendPage() {
       return;
     }
 
-    if (amountSats <= 546) {
-      setError("Amount is below dust limit.");
+    if (amountSats <= DUST_SATS) {
+      setError(
+        `Amount is below TEXITcoin's dust limit (${formatTxc(DUST_SATS)}). Send a bit more.`,
+      );
       return;
     }
 
@@ -478,6 +487,8 @@ function SendPage() {
     if (!ok) return;
     setBusy(true);
     setError(null);
+    /** Coins this attempt touched — reserved if the node rejects a conflict. */
+    let attemptedInputs: { txid: string; vout: number }[] = [];
     try {
       // A cached UTXO set can contain outputs that were already spent (another
       // device, an earlier send, a mempool tx), which the node rejects with
@@ -507,6 +518,8 @@ function SendPage() {
               .slice(0, stage.fund.inputs)
           : ordered.slice(0, stage.selected);
 
+      attemptedInputs = willSpend.map((u) => ({ txid: u.txid, vout: u.vout }));
+
       const spendStates = await Promise.all(
         willSpend.map(async (u) => {
           try {
@@ -519,6 +532,11 @@ function SendPage() {
         }),
       );
       if (spendStates.some(Boolean)) {
+        reserveOutpoints(
+          willSpend
+            .filter((_, i) => spendStates[i])
+            .map((u) => ({ txid: u.txid, vout: u.vout })),
+        );
         void account.refetch();
         setStage({ kind: "form" });
         setError(
@@ -560,6 +578,7 @@ function SendPage() {
           feeSats: fundFee,
         });
         const fundTxid = await broadcastTx(fundTx.hex);
+        reserveOutpoints(fundInputs.map((u) => ({ txid: u.txid, vout: u.vout })));
         chainedInput = {
           txid: fundTxid,
           vout: 0,
@@ -610,6 +629,7 @@ function SendPage() {
         isTokenSend && activeToken ? `Sending ${activeToken.symbol}…` : "Sending TXC…",
       );
       const txid = await broadcastTx(built.hex);
+      reserveOutpoints(picked.map((u) => ({ txid: u.txid, vout: u.vout })));
       hapticSuccess();
       void qc.invalidateQueries({ queryKey: ["account"] });
       void qc.invalidateQueries({ queryKey: ["txs"] });
@@ -618,8 +638,10 @@ function SendPage() {
       hapticError();
       const msg = String((err as Error)?.message ?? err).toLowerCase();
       if (msg.includes("missingorspent") || msg.includes("mempool-conflict")) {
-        // Stale inputs — pull a fresh UTXO set and send the user back to the
-        // form so the next attempt is built from current data.
+        // The node is authoritative: these coins are unusable right now. Set
+        // them aside so the next attempt builds from a different set instead
+        // of hitting the exact same rejection over and over.
+        reserveOutpoints(attemptedInputs);
         void account.refetch();
         void qc.invalidateQueries({ queryKey: ["txs"] });
         setStage({ kind: "form" });
@@ -811,7 +833,7 @@ function SendPage() {
                         {t === "fastestFee" ? "Fast" : t === "halfHourFee" ? "Medium" : "Slow"}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {fees.data?.[t] ?? "—"} sat/vB
+                        {fees.data ? Math.max(fees.data[t], minFloor) : "—"} sat/vB
                       </div>
                     </button>
                   ))}

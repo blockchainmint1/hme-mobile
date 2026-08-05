@@ -20,6 +20,7 @@ import { ArrowLeft, ArrowRightLeft, Check, Copy, ExternalLink, Pickaxe } from "l
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount, type AccountUtxo } from "@/lib/txc/scan";
 import { buildAndSignTx, deriveAddress } from "@/lib/txc/wallet";
+import { reserveOutpoints } from "@/lib/txc/spent-outpoints";
 import {
   DERIVATION_PATHS,
   scriptKindOf,
@@ -186,6 +187,7 @@ function MigratePage() {
         feeSats,
       });
       const id = await broadcastTx(built.hex);
+      reserveOutpoints(inputs.map((u) => ({ txid: u.txid, vout: u.vout })));
       setTxid(id);
       hapticSuccess();
       await qc.invalidateQueries({ queryKey: ["account"] });

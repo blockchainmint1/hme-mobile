@@ -14,9 +14,17 @@ import { ALL_DERIVATION_KINDS, scriptKindOf } from "./network";
 import {
   getAddressStats,
   getAddressUtxos,
+  getOutspend,
   getTxHexCached,
   type MempoolUtxo,
 } from "./mempool";
+import {
+  outpointKey,
+  releaseOutpoints,
+  reservedEntries,
+  VERIFY_AFTER_MS,
+} from "./spent-outpoints";
+
 
 const GAP_LIMIT = 20;
 // Fast-refresh frontier: after we've done at least one deep scan and know
@@ -388,5 +396,55 @@ export async function scanAccount(
     branches.push({ kind: e.kind, balanceSats: e.snap.balanceSats, usedAddresses: used });
   }
 
-  return { ...primary, external, internal, balanceSats, utxos, branches };
+  // Coins consumed by a transaction this device already broadcast can still
+  // show up as unspent for a while. Spending them again is what produces
+  // `txn-mempool-conflict`, so drop them here — after giving the node a
+  // chance to tell us the reservation is obsolete.
+  const spendable = await withoutReservedCoins(utxos);
+  const spendableBalance = spendable.reduce((s, u) => s + u.value, 0);
+
+  return {
+    ...primary,
+    external,
+    internal,
+    balanceSats: spendableBalance,
+    utxos: spendable,
+    branches,
+  };
 }
+
+/**
+ * Remove locally-reserved outpoints from a UTXO set. Reservations older than
+ * VERIFY_AFTER_MS are checked against the node first: if the coin is genuinely
+ * still unspent (our transaction was dropped, never relayed, or replaced) the
+ * reservation is released so the money isn't stranded.
+ */
+async function withoutReservedCoins(utxos: AccountUtxo[]): Promise<AccountUtxo[]> {
+  const entries = reservedEntries();
+  if (Object.keys(entries).length === 0) return utxos;
+
+  const now = Date.now();
+  const stale = utxos.filter((u) => {
+    const ts = entries[outpointKey(u.txid, u.vout)];
+    return ts !== undefined && now - ts > VERIFY_AFTER_MS;
+  });
+
+  if (stale.length > 0) {
+    const release: string[] = [];
+    await Promise.all(
+      stale.map(async (u) => {
+        try {
+          const out = await getOutspend(u.txid, u.vout);
+          if (!out.spent) release.push(outpointKey(u.txid, u.vout));
+        } catch {
+          // Explorer hiccup — keep the reservation, it expires on its own.
+        }
+      }),
+    );
+    releaseOutpoints(release);
+  }
+
+  const live = reservedEntries();
+  return utxos.filter((u) => !(outpointKey(u.txid, u.vout) in live));
+}
+
