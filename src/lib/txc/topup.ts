@@ -34,10 +34,39 @@ const OMNI_VBYTES: Record<"bip84" | "bip49" | "bip44", number> = {
 };
 /** Extra headroom so a fee bump between top-up and payment can't strand it. */
 const HEADROOM = 2;
-/** Don't re-attempt a top-up for the same address more often than this. */
-const RETRY_MS = 10 * 60_000;
+/**
+ * Don't re-attempt a top-up for the same address more often than this. The
+ * record is persisted: an in-memory map reset on every app launch, which meant
+ * re-opening the wallet fired another funding transaction spending the same
+ * coins — the source of "mempool conflict" errors hours after doing nothing.
+ */
+const RETRY_MS = 60 * 60_000;
+const ATTEMPT_KEY = "hme.txc.topup-attempts.v1";
 
-const attempted = new Map<string, number>();
+function readAttempts(): Record<string, number> {
+  if (typeof localStorage === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(ATTEMPT_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeAttempts(map: Record<string, number>): void {
+  if (typeof localStorage === "undefined") return;
+  try {
+    const now = Date.now();
+    for (const [k, ts] of Object.entries(map)) {
+      if (typeof ts !== "number" || now - ts > 24 * 3_600_000) delete map[k];
+    }
+    localStorage.setItem(ATTEMPT_KEY, JSON.stringify(map));
+  } catch {
+    /* best-effort */
+  }
+}
+
 
 function kindFromPath(path: string): DerivationKind | null {
   for (const [kind, prefix] of Object.entries(DERIVATION_PATHS)) {
