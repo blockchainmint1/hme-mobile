@@ -113,9 +113,16 @@ for (const route of staticSpaRoutes) {
 for (const outputDir of outputDirs) {
   if (outputDir !== publicDir) {
     await mkdir(dirname(outputDir), { recursive: true });
+    // Purge hashed assets first: `cp --force` overwrites but never deletes, so
+    // a stale mirror (e.g. ios/App/App/public from an earlier build) can keep
+    // old chunk files around while index.html points at new hashes — or worse,
+    // keep an old index.html pointing at hashes that no longer exist. That
+    // ships a native app whose CSS and JS 404, rendering raw unstyled HTML.
+    await rm(resolve(outputDir, "assets"), { recursive: true, force: true });
     await cp(publicDir, outputDir, { recursive: true, force: true });
   }
 }
+
 
 for (const outputDir of outputDirs) {
   await mkdir(outputDir, { recursive: true });
