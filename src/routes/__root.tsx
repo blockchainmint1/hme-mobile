@@ -416,7 +416,7 @@ function RootComponent() {
           <div data-wallet-frame className="min-h-[100dvh] w-full bg-muted/40 sm:py-6">
             <div
               data-wallet-frame
-              className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:min-h-[calc(100dvh-3rem)] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-border overflow-hidden"
+              className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:min-h-[calc(100dvh-3rem)] sm:max-w-[520px] md:max-w-[600px] lg:max-w-[680px] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-border overflow-hidden"
             >
               <div className="pt-[env(safe-area-inset-top)]" />
               {offline && (

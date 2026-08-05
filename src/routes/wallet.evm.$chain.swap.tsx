@@ -43,6 +43,8 @@ import {
 import { useTokensForChain } from "@/lib/token-prefs";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";
 import { getSwapQuote, NATIVE_TOKEN_ADDRESS, type SwapQuote } from "@/lib/chains/swap.functions";
+import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
+import { ExchangeUnavailable } from "@/components/wallet/ExchangeUnavailable";
 
 type AssetKind =
   | { kind: "native" }
@@ -62,11 +64,17 @@ function assetAddress(a: AssetKind): string {
 }
 
 export const Route = createFileRoute("/wallet/evm/$chain/swap")({
-  component: EvmSwap,
+  component: EvmSwapGate,
   beforeLoad: ({ params }) => {
     if (!(params.chain in EVM_CHAINS)) throw notFound();
   },
 });
+
+function EvmSwapGate() {
+  const exchangeAllowed = useExchangeFeaturesAllowed();
+  if (!exchangeAllowed) return <ExchangeUnavailable title="Swap" />;
+  return <EvmSwap />;
+}
 
 function EvmSwap() {
   const { chain } = useParams({ from: "/wallet/evm/$chain/swap" });
