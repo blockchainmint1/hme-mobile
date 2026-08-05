@@ -87,10 +87,14 @@ stream {
 }
 ```
 
-Issue the cert with a SAN covering both names:
+Issue one cert with SANs covering all three names — every name the app may dial must
+present a valid cert, or the TLS handshake fails before any JSON-RPC happens:
 
 ```bash
-certbot certonly --nginx -d electrum1.texitcoin.org -d electrum2.texitcoin.org
+certbot certonly --nginx \
+  -d electrum1.texitcoin.org \
+  -d electrum2.texitcoin.org \
+  -d electrum3.texitcoin.org
 ```
 
 If :443 on that host is already taken by the mempool web vhost, give electrs its own IP
@@ -105,16 +109,31 @@ frontend tls443
   tcp-request content accept if { req_ssl_hello_type 1 }
   use_backend electrs if { req_ssl_sni -i electrum1.texitcoin.org }
   use_backend electrs if { req_ssl_sni -i electrum2.texitcoin.org }
+  use_backend electrs if { req_ssl_sni -i electrum3.texitcoin.org }
   default_backend mempool_web
 ```
 
 ### Verify
 
+Check every name before terminating anything:
+
 ```bash
-echo '{"id":1,"method":"server.version","params":["probe","1.4"]}' \
-  | openssl s_client -quiet -connect electrum1.texitcoin.org:443
+for h in electrum1 electrum2 electrum3; do
+  echo "== $h"
+  echo '{"id":1,"method":"server.version","params":["probe","1.4"]}' \
+    | openssl s_client -quiet -connect $h.texitcoin.org:443 -servername $h.texitcoin.org
+done
 # expect: {"jsonrpc":"2.0","result":["electrs/...","1.4"],"id":1}
 ```
+
+Also confirm the index is current, so users don't see stale balances:
+
+```bash
+echo '{"id":1,"method":"blockchain.headers.subscribe","params":[]}' \
+  | openssl s_client -quiet -connect electrum1.texitcoin.org:443
+# the returned height must match https://mempool.texitcoin.org/api/blocks/tip/height
+```
+
 
 Then confirm from the legacy app: balance loads, history loads, and a 1-TXC send
 broadcasts.
