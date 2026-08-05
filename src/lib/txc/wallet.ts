@@ -180,7 +180,16 @@ export function deriveAddresses(
   return out;
 }
 
+/**
+ * TXC dust threshold. The node's minimum relay fee sits 10x above Bitcoin's,
+ * and its dust rule scales with it, so a 546-sat output that would be fine on
+ * Bitcoin is rejected here. 10,000 sat is the value CryptoPOP uses for Omni
+ * reference outputs and is comfortably above the node's limit.
+ */
+export const DUST_SATS = 10_000;
+
 /** Build, sign and serialize a TEXITcoin transaction. Returns raw hex ready to broadcast. */
+
 export function buildAndSignTx(args: {
   root: BIP32Interface;
   kind: AddressKind;
