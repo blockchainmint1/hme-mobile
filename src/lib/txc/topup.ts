@@ -109,6 +109,7 @@ export async function topUpTokenHolders(params: TopUpParams): Promise<string | n
   }
 
   const now = Date.now();
+  const attempted = readAttempts();
   const outputs: { address: string; valueSats: number }[] = [];
   for (const addr of holders) {
     const info = infos.find((i) => i.address === addr);
@@ -116,15 +117,17 @@ export async function topUpTokenHolders(params: TopUpParams): Promise<string | n
     const have = balanceByAddress.get(addr) ?? 0;
     const reserve = reserveSatsFor(info.kind, feeRate);
     if (have >= reserve) continue;
-    const last = attempted.get(addr) ?? 0;
+    const last = attempted[addr] ?? 0;
     if (now - last < RETRY_MS) continue;
-    outputs.push({ address: addr, valueSats: reserve - have });
+    // Never emit a sub-dust output — the node rejects the whole transaction.
+    outputs.push({ address: addr, valueSats: Math.max(reserve - have, DUST_SATS) });
   }
   if (outputs.length === 0) return null;
 
-  // Fund from coins that don't belong to the holder addresses themselves.
+  // Fund from coins that don't belong to the holder addresses themselves, and
+  // never from coins a transaction we already broadcast is spending.
   const holderSet = new Set(outputs.map((o) => o.address));
-  const spendable = snapshot.utxos
+  const spendable = filterReserved(snapshot.utxos)
     .filter((u) => !holderSet.has(u.address))
     .sort((a, b) => b.value - a.value);
   if (spendable.length === 0) return null;
@@ -141,12 +144,13 @@ export async function topUpTokenHolders(params: TopUpParams): Promise<string | n
     acc += u.value;
     const vsize = 11 + perInput * inputs.length + perOutput * (outputs.length + 1);
     feeSats = Math.ceil(vsize * feeRate);
-    if (acc >= needed + feeSats + OMNI_DUST_SATS) break;
+    if (acc >= needed + feeSats + DUST_SATS) break;
   }
   // Not enough spare TXC — stay silent, the send screen's fallback still works.
-  if (acc < needed + feeSats + OMNI_DUST_SATS) return null;
+  if (acc < needed + feeSats + DUST_SATS) return null;
 
-  for (const o of outputs) attempted.set(o.address, now);
+  for (const o of outputs) attempted[o.address] = now;
+  writeAttempts(attempted);
 
   const tx = buildAndSignTx({
     root,
@@ -157,7 +161,12 @@ export async function topUpTokenHolders(params: TopUpParams): Promise<string | n
     changeIndex,
     feeSats,
   });
-  return broadcastTx(tx.hex);
+  const txid = await broadcastTx(tx.hex);
+  // Remember which coins this consumed so a payment seconds later can't pick
+  // the same ones and get bounced with `txn-mempool-conflict`.
+  reserveOutpoints(inputs.map((u) => ({ txid: u.txid, vout: u.vout })));
+  return txid;
+
 }
 
 export interface UseTokenHolderTopUpArgs {
