@@ -16,14 +16,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import type { BIP32Interface } from "bip32";
 import type { AccountSnapshot } from "./scan";
-import { buildAndSignTx } from "./wallet";
+import { buildAndSignTx, DUST_SATS } from "./wallet";
 import { broadcastTx, getFeeEstimates } from "./mempool";
 import { scriptKindOf, DERIVATION_PATHS, type DerivationKind } from "./network";
+import { filterReserved, reserveOutpoints } from "./spent-outpoints";
 import { getTxcTokenBalancesPerAddress } from "./tokens.functions";
 import type { TxcTokenMeta } from "./tokens";
 
 /** Omni reference-output dust, matching the send screen. */
-const OMNI_DUST_SATS = 10_000;
+const OMNI_DUST_SATS = DUST_SATS;
+
 /** Rough vbytes for a 1-in / 2-out Omni send, per script type. */
 const OMNI_VBYTES: Record<"bip84" | "bip49" | "bip44", number> = {
   bip84: 11 + 68 + 31 * 2 + 31,
