@@ -1459,7 +1459,8 @@ function BtcForkTile({
 }) {
   const [hidden] = useHideBalances();
   const [utxoSwapPref] = useFeature("utxoSwap");
-  const utxoSwapEnabled = utxoSwapPref && useExchangeFeaturesAllowed();
+  const exchangeAllowed = useExchangeFeaturesAllowed();
+  const utxoSwapEnabled = utxoSwapPref && exchangeAllowed;
   const v = BTC_FORK_VARIANTS[variant];
   const balanceUsd = priceUsd ? v.toCoin(balanceSats) * priceUsd : null;
   const balText = loading ? "..." : v.formatCompact(balanceSats);
@@ -1645,7 +1646,8 @@ function EvmTile({
   const [hidden] = useHideBalances();
   const [refreshing, setRefreshing] = useState(false);
   const [evmSwapPref] = useFeature("evmSwap");
-  const swapEnabled = evmSwapPref && useExchangeFeaturesAllowed();
+  const exchangeAllowed = useExchangeFeaturesAllowed();
+  const swapEnabled = evmSwapPref && exchangeAllowed;
 
 
   const meta = EVM_CHAINS[chainId];
