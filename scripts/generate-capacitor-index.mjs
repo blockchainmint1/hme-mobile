@@ -140,6 +140,32 @@ for (const outputDir of outputDirs) {
   }
 }
 
+// Fail loudly if any generated shell references an asset that is not present
+// in that output directory. Without this the native app silently boots as
+// unstyled, non-interactive HTML because every /assets/* request 404s.
+const missing = [];
+for (const outputDir of outputDirs) {
+  for (const [route, html] of routeHtml) {
+    const refs = new Set(
+      [...html.matchAll(/(?:href|src)="(\/assets\/[^"]+)"/g)].map((m) => m[1]),
+    );
+    if (!refs.size) missing.push(`${outputDir}/${route || ""} references no /assets/* files`);
+    for (const ref of refs) {
+      if (!existsSync(resolve(outputDir, ref.slice(1)))) {
+        missing.push(`${outputDir}${ref} (referenced by /${route})`);
+      }
+    }
+  }
+}
+if (missing.length) {
+  throw new Error(
+    `Native bundle is inconsistent — missing assets:\n  ${missing.slice(0, 20).join("\n  ")}\n` +
+      `Run a clean build: rm -rf dist ios/App/App/public && bun run build (or build:ios).`,
+  );
+}
+
+
+
 if (iosExists) {
   try {
     const capacitorConfigModule = await import(pathToFileURL(resolve(root, "capacitor.config.ts")).href + `?t=${Date.now()}`);
