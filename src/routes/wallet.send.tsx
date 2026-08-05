@@ -487,6 +487,8 @@ function SendPage() {
     if (!ok) return;
     setBusy(true);
     setError(null);
+    /** Coins this attempt touched — reserved if the node rejects a conflict. */
+    let attemptedInputs: { txid: string; vout: number }[] = [];
     try {
       // A cached UTXO set can contain outputs that were already spent (another
       // device, an earlier send, a mempool tx), which the node rejects with
@@ -516,6 +518,8 @@ function SendPage() {
               .slice(0, stage.fund.inputs)
           : ordered.slice(0, stage.selected);
 
+      attemptedInputs = willSpend.map((u) => ({ txid: u.txid, vout: u.vout }));
+
       const spendStates = await Promise.all(
         willSpend.map(async (u) => {
           try {
@@ -528,6 +532,11 @@ function SendPage() {
         }),
       );
       if (spendStates.some(Boolean)) {
+        reserveOutpoints(
+          willSpend
+            .filter((_, i) => spendStates[i])
+            .map((u) => ({ txid: u.txid, vout: u.vout })),
+        );
         void account.refetch();
         setStage({ kind: "form" });
         setError(
@@ -629,8 +638,10 @@ function SendPage() {
       hapticError();
       const msg = String((err as Error)?.message ?? err).toLowerCase();
       if (msg.includes("missingorspent") || msg.includes("mempool-conflict")) {
-        // Stale inputs — pull a fresh UTXO set and send the user back to the
-        // form so the next attempt is built from current data.
+        // The node is authoritative: these coins are unusable right now. Set
+        // them aside so the next attempt builds from a different set instead
+        // of hitting the exact same rejection over and over.
+        reserveOutpoints(attemptedInputs);
         void account.refetch();
         void qc.invalidateQueries({ queryKey: ["txs"] });
         setStage({ kind: "form" });
