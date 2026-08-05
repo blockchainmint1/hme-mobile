@@ -14,9 +14,17 @@ import { ALL_DERIVATION_KINDS, scriptKindOf } from "./network";
 import {
   getAddressStats,
   getAddressUtxos,
+  getOutspend,
   getTxHexCached,
   type MempoolUtxo,
 } from "./mempool";
+import {
+  outpointKey,
+  releaseOutpoints,
+  reservedEntries,
+  VERIFY_AFTER_MS,
+} from "./spent-outpoints";
+
 
 const GAP_LIMIT = 20;
 // Fast-refresh frontier: after we've done at least one deep scan and know
