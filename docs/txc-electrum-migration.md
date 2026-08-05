@@ -36,24 +36,42 @@ no way in to inspect them.
 Either way the old app is dead for balances, history and broadcast, while the new HME
 wallet (Esplora/mempool REST) is unaffected.
 
-## Forward path — retire all three EC2 boxes
+## Which host actually does the work
+
+`mempool.texitcoin.org` (185.158.133.1) is **Cloudflare**, not a server we control —
+responses carry `server: cloudflare` and a `cf-ray` header. It is the web frontend and
+CDN in front of the real backend.
+
+The real backend is `api.mempool.texitcoin.org` → **98.85.45.100**, which is the
+`txc_mempool_api` EC2 instance (`i-09da90d763cd1df7e`, m7i.xlarge, us-east-1a). Both
+answer `/api/blocks/tip/height` with the same height (335850 at time of writing), and
+50001 is closed from outside there — electrs is bound to localhost exactly as expected.
+
+**So all electrs/nginx work happens on the `txc_mempool_api` box, not on Cloudflare.**
+
+Two consequences:
+
+- **The electrum DNS records must point at 98.85.45.100 directly, DNS-only (grey cloud).**
+  Cloudflare's proxy cannot carry the Electrum protocol — it is a raw TLS socket, not
+  HTTP, and TCP proxying requires Spectrum (enterprise). An orange-clouded record will
+  fail the handshake.
+- This consolidates onto AWS rather than leaving it. We still delete three m5.large
+  instances; the surviving box is one you already run, monitor and pay for.
+
+## Forward path — retire all three ElectrumX boxes
 
 The legacy client does not care *what* answers on those hostnames, only that something
 speaks Electrum over TLS with a valid cert for the name it dialled. So one electrs on the
-mempool host can replace all three ElectrumX instances.
+`txc_mempool_api` host can replace all three ElectrumX instances.
 
-The mempool.texitcoin.org stack already runs **electrs** (mempool's backend requires it),
-bound to localhost — 50001 is not reachable from outside. The fix is exposure + DNS, not
-new infrastructure:
-
-1. **Expose electrs over TLS** on the mempool host with an nginx `stream` block on :443
-   of a dedicated IP/interface (or :50002 plus a :443 alias).
+1. **Expose electrs over TLS** on `txc_mempool_api` with an nginx `stream` block on :443
+   (and :50002). Open those ports in that instance's security group.
 2. **Verify electrs is fully indexed first.** The boxes are already dark, so there is no
    worse-than-now state — but pointing users at a half-synced server turns "network error"
    into "wrong balance", which is far more alarming.
-3. **Repoint DNS** for `electrum1`, `electrum2` **and** `electrum3` to 185.158.133.1. All
-   three names on one host is fine: the client treats them as independent peers. Old
-   installs pick this up on next launch with zero user action.
+3. **Repoint DNS** for `electrum1`, `electrum2` **and** `electrum3` to 98.85.45.100,
+   DNS-only. All three names on one host is fine: the client treats them as independent
+   peers. Old installs pick this up on next launch with zero user action.
 4. **Terminate** `i-07b536febd8b8fd84`, `i-025df3921ac7c391c`, `i-0dea407c4eb600c0b` and
    release any associated elastic IPs. Three m5.large ≈ $210/month recovered.
 
@@ -61,6 +79,110 @@ new infrastructure:
 
 Until DNS propagates, any user can unblock themselves in the legacy app:
 Settings → Network → Electrum server → enter the working host/port → Save.
+
+## Copy/paste: AWS CLI
+
+Region is `us-east-1` for everything below. Run with credentials that can read EC2.
+
+### 1. Confirm what you are about to touch
+
+```bash
+export AWS_DEFAULT_REGION=us-east-1
+export ELECTRUM_IDS="i-07b536febd8b8fd84 i-025df3921ac7c391c i-0dea407c4eb600c0b"
+
+aws ec2 describe-instances --instance-ids $ELECTRUM_IDS \
+  --query 'Reservations[].Instances[].{ID:InstanceId,Name:Tags[?Key==`Name`]|[0].Value,State:State.Name,IP:PublicIpAddress,Type:InstanceType}' \
+  --output table
+```
+
+### 2. Check for elastic IPs (must be released separately or they keep billing)
+
+```bash
+aws ec2 describe-addresses \
+  --query 'Addresses[].{IP:PublicIp,AllocID:AllocationId,Instance:InstanceId}' \
+  --output table
+```
+
+### 3. Open Electrum ports on the api box
+
+```bash
+export API_ID=i-09da90d763cd1df7e
+API_SG=$(aws ec2 describe-instances --instance-ids $API_ID \
+  --query 'Reservations[0].Instances[0].SecurityGroups[0].GroupId' --output text)
+echo "api sg: $API_SG"
+
+aws ec2 authorize-security-group-ingress --group-id "$API_SG" \
+  --ip-permissions \
+    'IpProtocol=tcp,FromPort=50002,ToPort=50002,IpRanges=[{CidrIp=0.0.0.0/0,Description="electrum ssl"}]'
+```
+
+443 is almost certainly already open on that box; check before adding it:
+
+```bash
+aws ec2 describe-security-group-rules --filters Name=group-id,Values=$API_SG \
+  --query 'SecurityGroupRules[?!IsEgress].{Port:FromPort,CIDR:CidrIpv4,Desc:Description}' \
+  --output table
+```
+
+### 4. Snapshot the ElectrumX boxes before deleting (cheap insurance)
+
+```bash
+for id in $ELECTRUM_IDS; do
+  aws ec2 create-image --instance-id "$id" \
+    --name "electrumx-retire-$id-$(date +%Y%m%d)" \
+    --description "pre-termination backup" --no-reboot
+done
+```
+
+Wait for `State: available` before step 5:
+
+```bash
+aws ec2 describe-images --owners self \
+  --filters "Name=name,Values=electrumx-retire-*" \
+  --query 'Images[].{Name:Name,State:State}' --output table
+```
+
+### 5. Terminate — only after DNS is flipped and verified
+
+```bash
+# guard against accidental termination first
+aws ec2 modify-instance-attribute --instance-id i-07b536febd8b8fd84 --no-disable-api-termination
+aws ec2 modify-instance-attribute --instance-id i-025df3921ac7c391c --no-disable-api-termination
+aws ec2 modify-instance-attribute --instance-id i-0dea407c4eb600c0b --no-disable-api-termination
+
+aws ec2 terminate-instances --instance-ids $ELECTRUM_IDS \
+  --query 'TerminatingInstances[].{ID:InstanceId,From:PreviousState.Name,To:CurrentState.Name}' \
+  --output table
+```
+
+Release any elastic IPs found in step 2:
+
+```bash
+aws ec2 release-address --allocation-id <eipalloc-xxxxxxxx>
+```
+
+### 6. Confirm the spend is gone
+
+```bash
+aws ec2 describe-instances --instance-ids $ELECTRUM_IDS \
+  --query 'Reservations[].Instances[].{ID:InstanceId,State:State.Name}' --output table
+# all three should read: terminated
+```
+
+### If you cannot SSH in (ssh-vpn-sg)
+
+SSH on the ElectrumX boxes is restricted to `sg-0902312d7cc8ccd52`. If that VPN host is
+gone, use SSM instead of reopening port 22 — the instances already carry
+`txc-electrumx-iam-role-default`:
+
+```bash
+aws ssm start-session --target i-07b536febd8b8fd84
+```
+
+If that fails, the SSM agent is not registered and the box is effectively unreachable.
+That is fine — you are deleting it anyway; take the AMI in step 4 and move on.
+
+
 
 
 ### nginx stream terminator
