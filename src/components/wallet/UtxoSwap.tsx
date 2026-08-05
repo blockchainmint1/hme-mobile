@@ -24,6 +24,8 @@ import { useWallet } from "@/lib/txc/wallet-context";
 import { rootFingerprintHex } from "@/lib/txc/fingerprint";
 import { deriveEvmAccount, EVM_CHAINS } from "@/lib/chains/evm";
 import { hapticError, hapticSuccess } from "@/lib/native/ui";
+import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
+import { ExchangeUnavailable } from "@/components/wallet/ExchangeUnavailable";
 import { confirmWithBiometric } from "@/lib/native/biometric";
 import { friendlyBroadcastError } from "@/lib/broadcast-error";
 import { OP_RETURN_MAX_BYTES } from "@/lib/utxo/op-return";

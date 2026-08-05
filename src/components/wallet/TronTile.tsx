@@ -79,6 +79,7 @@ export function TronTile({
   onOpenDetails: () => void;
 }) {
   const [hidden] = useHideBalances();
+  const exchangeAllowed = useExchangeFeaturesAllowed();
   const accent = CHAIN_META.tron.accent;
   const balText = loading ? "..." : formatTrxCompact(balanceSun);
   const nativeUsd = priceUsd != null ? sunToTrx(balanceSun) * priceUsd : null;
@@ -103,14 +104,16 @@ export function TronTile({
       <div className="flex items-center justify-between">
         <p className="text-sm opacity-80 truncate">{label}</p>
         <div className="flex items-center gap-2">
-          <Link
-            to="/wallet/tron/bridge"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 px-2.5 py-1 text-[11px] font-medium"
-            aria-label="Bridge off Tron"
-          >
-            <ArrowLeftRight className="h-3 w-3" /> Bridge
-          </Link>
+          {exchangeAllowed && (
+            <Link
+              to="/wallet/tron/bridge"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-full bg-white/15 hover:bg-white/25 px-2.5 py-1 text-[11px] font-medium"
+              aria-label="Bridge off Tron"
+            >
+              <ArrowLeftRight className="h-3 w-3" /> Bridge
+            </Link>
+          )}
           <span
             role="button"
             tabIndex={0}
