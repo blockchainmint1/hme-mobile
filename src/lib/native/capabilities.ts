@@ -8,6 +8,9 @@
  * Two independent switches, so a mistake in either direction fails closed:
  *  1. Build-time: `VITE_DISABLE_EXCHANGE=true` (set for App Store builds).
  *  2. Runtime: the Capacitor platform reports `ios`.
+ *
+ * See AGENTS.md: any new exchange-like feature must be gated here and hidden
+ * from iOS before it ships.
  */
 import { useEffect, useState } from "react";
 import { nativePlatform } from "./platform";
