@@ -58,6 +58,7 @@ import {
 import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { TsdCashoutPanel } from "@/components/wallet/TsdCashoutPanel";
+import { useCashoutApiKey } from "@/lib/cashout/api-key";
 import { getCashoutOrder } from "@/lib/cashout/tsd.functions";
 import {
   TSD_PROPERTY_ID,
@@ -227,7 +228,10 @@ function SendPage() {
   const activeToken: TxcTokenMeta | null =
     typeof asset === "number" ? (tokens.find((t) => t.id === asset) ?? null) : null;
   const isTokenSend = activeToken !== null;
-  const canCashOut = exchangeAllowed && activeToken?.id === TSD_PROPERTY_ID;
+  const [cashoutApiKey] = useCashoutApiKey();
+  // The off-ramp only exists once the user has linked their TSD Swap account.
+  const canCashOut =
+    exchangeAllowed && !!cashoutApiKey && activeToken?.id === TSD_PROPERTY_ID;
 
   function applyUri(raw: string) {
     const { address, amount: amt, tokenId } = parseWalletUri(raw);
@@ -673,8 +677,8 @@ function SendPage() {
   const fetchCashoutOrder = useServerFn(getCashoutOrder);
   const cashoutStatus = useQuery({
     queryKey: ["tsd-cashout-order", cashout?.id],
-    enabled: !!cashout && stage.kind === "sent",
-    queryFn: () => fetchCashoutOrder({ data: { id: cashout!.id } }),
+    enabled: !!cashout && !!cashoutApiKey && stage.kind === "sent",
+    queryFn: () => fetchCashoutOrder({ data: { id: cashout!.id, apiKey: cashoutApiKey! } }),
     refetchInterval: (q) =>
       q.state.data && isTerminalCashoutStatus(q.state.data.status) ? false : 10_000,
     retry: false,
@@ -875,6 +879,7 @@ function SendPage() {
                 <TsdCashoutPanel
                   amount={amount}
                   refundAddress={refundAddress}
+                  apiKey={cashoutApiKey!}
                   onOrder={(order) => {
                     setCashout(order);
                     setTo(order.depositAddress);
