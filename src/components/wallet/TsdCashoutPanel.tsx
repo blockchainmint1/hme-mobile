@@ -67,7 +67,11 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
     retry: false,
   });
 
-  const feeBps = settings.data?.redeemFeeBps ?? 100;
+  // Only the service knows the account's fee tier — never guess a default,
+  // or a 0%-fee account sees a phantom 1%.
+  const knownFeeBps = settings.data?.redeemFeeBps;
+  const feeBps = knownFeeBps ?? 0;
+  const feeKnown = typeof knownFeeBps === "number";
 
   // When "my ETH wallet" is ticked we pay out to this wallet's own EVM address.
   const effectivePayout = useOwnWallet && ownEvmAddress ? ownEvmAddress : payout;
