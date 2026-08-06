@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, ExternalLink } from "lucide-react";
+import { AlertTriangle, ArrowDownUp, ExternalLink, Loader2 } from "lucide-react";
 import { TXC_NETWORK } from "@/lib/txc/network";
 import { address as addrLib, payments } from "bitcoinjs-lib";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
@@ -56,6 +56,16 @@ import {
   isOmniCompatibleAddress,
 } from "@/lib/txc/tokens";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
+import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
+import { TsdCashoutPanel } from "@/components/wallet/TsdCashoutPanel";
+import { getCashoutOrder } from "@/lib/cashout/tsd.functions";
+import {
+  TSD_PROPERTY_ID,
+  cashoutStatusLabel,
+  formatUsd,
+  isTerminalCashoutStatus,
+  type CashoutOrder,
+} from "@/lib/cashout/tsd";
 
 import {
   getTxcTokenBalancesForAddresses,
@@ -144,8 +154,6 @@ function omniVsize(kind: DerivationKind): number {
   return v.overhead + v.input + v.output + OMNI_OP_RETURN_VBYTES;
 }
 
-
-
 type Stage =
   | { kind: "form" }
   | {
@@ -163,7 +171,6 @@ type Stage =
       fund?: { sats: number; feeSats: number; inputs: number };
     }
   | { kind: "sent"; txid: string };
-
 
 // "txc" or an Omni property id encoded as string.
 type Asset = "txc" | number;
@@ -209,10 +216,18 @@ function SendPage() {
   const [busy, setBusy] = useState(false);
   /** Human-readable step shown on the send button while a payment is in flight. */
   const [progress, setProgress] = useState<string | null>(null);
+  /**
+   * Set once the user has created a TSD → USDC cash-out order. The recipient
+   * and amount are then locked to the order's inbox so the payment can't drift
+   * away from what the bridge is waiting for.
+   */
+  const [cashout, setCashout] = useState<CashoutOrder | null>(null);
+  const exchangeAllowed = useExchangeFeaturesAllowed();
 
   const activeToken: TxcTokenMeta | null =
-    typeof asset === "number" ? tokens.find((t) => t.id === asset) ?? null : null;
+    typeof asset === "number" ? (tokens.find((t) => t.id === asset) ?? null) : null;
   const isTokenSend = activeToken !== null;
+  const canCashOut = exchangeAllowed && activeToken?.id === TSD_PROPERTY_ID;
 
   function applyUri(raw: string) {
     const { address, amount: amt, tokenId } = parseWalletUri(raw);
@@ -227,10 +242,7 @@ function SendPage() {
   // Never offer coins that a transaction this device already broadcast is
   // spending (an earlier payment, or the background token-holder top-up) —
   // picking them again is what the node rejects as `txn-mempool-conflict`.
-  const utxos = useMemo(
-    () => filterReserved(account.data?.utxos ?? []),
-    [account.data],
-  );
+  const utxos = useMemo(() => filterReserved(account.data?.utxos ?? []), [account.data]);
   const totalAvailable = utxos.reduce((s, u) => s + u.value, 0);
   const amountSats = useMemo(() => txcToSats(amount || "0"), [amount]);
 
@@ -243,6 +255,17 @@ function SendPage() {
     ],
     [account.data],
   );
+  /**
+   * Where a cash-out refund should land. Must be Omni-readable (legacy T…),
+   * and we prefer a receiving address so the refund shows up where the user
+   * expects rather than on a change branch.
+   */
+  const refundAddress = useMemo(() => {
+    const external = account.data?.external.map((a) => a.address) ?? [];
+    return (
+      external.find(isOmniCompatibleAddress) ?? ownAddresses.find(isOmniCompatibleAddress) ?? null
+    );
+  }, [account.data, ownAddresses]);
   /** Derived address metadata (key index + script kind), keyed by address. */
   const addressInfos = useMemo(() => {
     const list = [...(account.data?.external ?? []), ...(account.data?.internal ?? [])];
@@ -252,11 +275,7 @@ function SendPage() {
   }, [account.data]);
 
   const tokenBalances = useQuery({
-    queryKey: [
-      "txc-token-balances",
-      ownAddresses.join(","),
-      tokens.map((t) => t.id).join(","),
-    ],
+    queryKey: ["txc-token-balances", ownAddresses.join(","), tokens.map((t) => t.id).join(",")],
     enabled: ownAddresses.length > 0 && tokens.length > 0,
     queryFn: () =>
       fetchTokenBalances({
@@ -399,7 +418,6 @@ function SendPage() {
         return;
       }
 
-
       // Sender-owned UTXOs first (largest first), then top up from other own
       // addresses if needed for fee. Change goes back to the sender address so
       // future token sends have TXC to work with.
@@ -480,9 +498,7 @@ function SendPage() {
     if (!root || !unlocked || !account.data) return;
     if (stage.kind !== "review") return;
     const ok = await confirmWithBiometric(
-      isTokenSend && activeToken
-        ? `Confirm sending ${activeToken.symbol}`
-        : "Confirm sending TXC",
+      isTokenSend && activeToken ? `Confirm sending ${activeToken.symbol}` : "Confirm sending TXC",
     );
     if (!ok) return;
     setBusy(true);
@@ -513,9 +529,7 @@ function SendPage() {
 
       const willSpend =
         isTokenSend && stage.fund && stage.senderAddress
-          ? sorted
-              .filter((u) => u.address !== stage.senderAddress)
-              .slice(0, stage.fund.inputs)
+          ? sorted.filter((u) => u.address !== stage.senderAddress).slice(0, stage.fund.inputs)
           : ordered.slice(0, stage.selected);
 
       attemptedInputs = willSpend.map((u) => ({ txid: u.txid, vout: u.vout }));
@@ -533,9 +547,7 @@ function SendPage() {
       );
       if (spendStates.some(Boolean)) {
         reserveOutpoints(
-          willSpend
-            .filter((_, i) => spendStates[i])
-            .map((u) => ({ txid: u.txid, vout: u.vout })),
+          willSpend.filter((_, i) => spendStates[i]).map((u) => ({ txid: u.txid, vout: u.vout })),
         );
         void account.refetch();
         setStage({ kind: "form" });
@@ -546,10 +558,6 @@ function SendPage() {
         setProgress(null);
         return;
       }
-
-
-
-
 
       // Holder address has no TXC: broadcast a small funding tx to it first,
       // then chain the Omni transfer onto that fresh output so the token
@@ -593,9 +601,6 @@ function SendPage() {
 
       const picked = chainedInput ? [chainedInput] : ordered.slice(0, stage.selected);
 
-
-
-
       let built;
       if (isTokenSend && activeToken) {
         const amountUnits = parseTokenAmount(amount, activeToken.divisible);
@@ -625,9 +630,7 @@ function SendPage() {
         });
       }
 
-      setProgress(
-        isTokenSend && activeToken ? `Sending ${activeToken.symbol}…` : "Sending TXC…",
-      );
+      setProgress(isTokenSend && activeToken ? `Sending ${activeToken.symbol}…` : "Sending TXC…");
       const txid = await broadcastTx(built.hex);
       reserveOutpoints(picked.map((u) => ({ txid: u.txid, vout: u.vout })));
       hapticSuccess();
@@ -647,7 +650,6 @@ function SendPage() {
         setStage({ kind: "form" });
       }
       setError(friendlyBroadcastError(err));
-
     } finally {
       setBusy(false);
       setProgress(null);
@@ -664,9 +666,19 @@ function SendPage() {
       : 0;
 
   const reviewedAmountLabel =
-    isTokenSend && activeToken
-      ? `${amount} ${activeToken.symbol}`
-      : formatTxc(reviewedOutSats);
+    isTokenSend && activeToken ? `${amount} ${activeToken.symbol}` : formatTxc(reviewedOutSats);
+
+  // Once the TSD is on its way, follow the bridge order until the USDC lands
+  // (or the TSD is refunded) so the user never has to leave the wallet.
+  const fetchCashoutOrder = useServerFn(getCashoutOrder);
+  const cashoutStatus = useQuery({
+    queryKey: ["tsd-cashout-order", cashout?.id],
+    enabled: !!cashout && stage.kind === "sent",
+    queryFn: () => fetchCashoutOrder({ data: { id: cashout!.id } }),
+    refetchInterval: (q) =>
+      q.state.data && isTerminalCashoutStatus(q.state.data.status) ? false : 10_000,
+    retry: false,
+  });
 
   if (stage.kind === "sent") {
     return (
@@ -676,11 +688,56 @@ function SendPage() {
         </div>
         <h1 className="mt-4 text-2xl font-bold">Sent</h1>
         <p className="mt-2 text-muted-foreground">Your transaction was broadcast to the network.</p>
-        {isTokenSend && activeToken && (
+
+        {cashout && (
+          <div className="mx-auto mt-4 max-w-sm rounded-lg border border-primary/40 bg-primary/5 p-4 text-left text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              {cashoutStatus.data && isTerminalCashoutStatus(cashoutStatus.data.status) ? (
+                <ArrowDownUp className="h-4 w-4 text-primary" />
+              ) : (
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              )}
+              {cashoutStatusLabel(cashoutStatus.data?.status ?? cashout.status)}
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {cashout.amountExpected} TSD → {formatUsd(cashout.payoutAmount)} USDC to{" "}
+              <span className="font-mono break-all">{cashout.payoutAddress}</span>
+            </p>
+            {cashoutStatus.data?.releaseTxHash && (
+              <a
+                href={`https://etherscan.io/tx/${cashoutStatus.data.releaseTxHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs underline"
+              >
+                View USDC payout <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            {cashoutStatus.data?.refundTxid && (
+              <a
+                href={explorerTxUrl(cashoutStatus.data.refundTxid)}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs underline"
+              >
+                View refund <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            {cashoutStatus.data?.error && (
+              <p className="mt-2 text-xs text-destructive">{cashoutStatus.data.error}</p>
+            )}
+            <p className="mt-2 text-xs text-muted-foreground">
+              Payout usually lands within a few minutes of the TSD confirming. You can close the app
+              — it keeps running on our side.
+            </p>
+          </div>
+        )}
+
+        {isTokenSend && activeToken && !cashout && (
           <p className="mx-auto mt-3 max-w-sm rounded-lg border border-border/60 bg-card/40 p-3 text-sm text-muted-foreground">
-            Token transfers are only applied once the transaction confirms — usually a few minutes on
-            TEXITcoin. Your {activeToken.symbol} balance and the recipient's will update then, so check
-            back shortly rather than sending again.
+            Token transfers are only applied once the transaction confirms — usually a few minutes
+            on TEXITcoin. Your {activeToken.symbol} balance and the recipient's will update then, so
+            check back shortly rather than sending again.
           </p>
         )}
 
@@ -717,9 +774,7 @@ function SendPage() {
                   activeTokenBalanceUnits ?? 0n,
                   activeToken.divisible,
                 )} ${activeToken.symbol}`}
-            <span className="ml-2 text-xs">
-              (TXC for fee: {formatTxc(totalAvailable)})
-            </span>
+            <span className="ml-2 text-xs">(TXC for fee: {formatTxc(totalAvailable)})</span>
           </>
         ) : (
           <>Available: {account.isLoading ? "…" : formatTxc(totalAvailable)}</>
@@ -773,6 +828,7 @@ function SendPage() {
                     className="font-mono flex-1"
                     autoComplete="off"
                     spellCheck={false}
+                    disabled={!!cashout}
                   />
                   <QrScanButton onScan={applyUri} />
                   <AddressBookButton chain="txc" onPick={(a) => setTo(a)} />
@@ -799,15 +855,13 @@ function SendPage() {
                   id="amount"
                   type="number"
                   inputMode="decimal"
-                  step={
-                    isTokenSend && activeToken && !activeToken.divisible ? "1" : "0.00000001"
-                  }
+                  step={isTokenSend && activeToken && !activeToken.divisible ? "1" : "0.00000001"}
                   min="0"
                   value={sendAll ? "" : amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder={sendAll ? "All available (minus fee)" : "0.0"}
                   className="mt-1"
-                  disabled={sendAll}
+                  disabled={sendAll || !!cashout}
                 />
                 {isTokenSend && activeToken && (
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -815,6 +869,53 @@ function SendPage() {
                   </p>
                 )}
               </div>
+
+              {/* TSD → USDC off-ramp. Hidden on iOS (exchange feature gate). */}
+              {canCashOut && !cashout && (
+                <TsdCashoutPanel
+                  amount={amount}
+                  refundAddress={refundAddress}
+                  onOrder={(order) => {
+                    setCashout(order);
+                    setTo(order.depositAddress);
+                    setAmount(String(order.amountExpected));
+                    setSendAll(false);
+                    setError(null);
+                  }}
+                />
+              )}
+
+              {cashout && (
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <ArrowDownUp className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <div className="flex-1">
+                      <p className="font-medium">Cashing out to USDC on Ethereum</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {cashout.amountExpected} TSD → {formatUsd(cashout.payoutAmount)} USDC to{" "}
+                        <span className="font-mono break-all">{cashout.payoutAddress}</span>
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Send exactly this amount to the address above — it's the order's own inbox.
+                        Refunds return to your wallet automatically.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 h-auto px-2 py-1 text-xs"
+                    onClick={() => {
+                      setCashout(null);
+                      setTo("");
+                    }}
+                  >
+                    Cancel cash-out
+                  </Button>
+                </div>
+              )}
+
               <div>
                 <Label>Fee speed</Label>
                 <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
@@ -874,7 +975,9 @@ function SendPage() {
             <CardTitle>Review and send</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="To"><code className="font-mono break-all">{to.trim()}</code></Row>
+            <Row label="To">
+              <code className="font-mono break-all">{to.trim()}</code>
+            </Row>
             {isTokenSend && stage.senderAddress && (
               <Row label="From">
                 <code className="font-mono break-all text-xs">{stage.senderAddress}</code>
@@ -900,17 +1003,14 @@ function SendPage() {
             </Row>
             {stage.fund && (
               <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground">
-                That address holds your tokens but no TXC, so this sends two
-                transactions: first {formatTxc(stage.fund.sats)} (+{" "}
-                {formatTxc(stage.fund.feeSats)} fee) from your other coins to{" "}
-                <span className="font-mono break-all">{stage.senderAddress}</span>, then the
-                token transfer itself. Both are automatic.
+                That address holds your tokens but no TXC, so this sends two transactions: first{" "}
+                {formatTxc(stage.fund.sats)} (+ {formatTxc(stage.fund.feeSats)} fee) from your other
+                coins to <span className="font-mono break-all">{stage.senderAddress}</span>, then
+                the token transfer itself. Both are automatic.
               </div>
             )}
 
-            {!isTokenSend && (
-              <Row label="Total">{formatTxc(reviewedOutSats + stage.feeSats)}</Row>
-            )}
+            {!isTokenSend && <Row label="Total">{formatTxc(reviewedOutSats + stage.feeSats)}</Row>}
             {error && (
               <div className="flex items-start gap-2 text-sm text-destructive">
                 <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
@@ -924,7 +1024,7 @@ function SendPage() {
                 <AlertDialogTrigger asChild>
                   <Button className="flex-1" disabled={busy}>
                     {busy
-                      ? progress ?? "Sending…"
+                      ? (progress ?? "Sending…")
                       : `Send ${isTokenSend && activeToken ? activeToken.symbol : "TXC"}`}
                   </Button>
                 </AlertDialogTrigger>
@@ -966,7 +1066,6 @@ function SendPage() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-
             </div>
           </CardContent>
         </Card>
