@@ -1,14 +1,23 @@
 /**
- * "Check for updates" card. On the web/PWA it compares the running build's
- * assets with what the server is serving now and offers a hard reload. In the
- * native shell the bundle is frozen at install time, so it points at the
- * latest APK instead.
+ * "Check for updates" card. It asks the backend which release is newest for
+ * this platform (Android/iOS/web) and compares it with the version baked into
+ * the running build. On Android a newer release offers the pinned IPFS APK; on
+ * the web it also compares the served assets and offers a hard reload.
  */
 import { useState } from "react";
 import { Download, RefreshCw, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { APK_URL, APP_VERSION, applyWebUpdate, checkForWebUpdate } from "@/lib/app-release";
+import {
+  APK_URL,
+  APP_VERSION,
+  applyWebUpdate,
+  checkForWebUpdate,
+  compareVersions,
+  fetchLatestRelease,
+  releaseDownloadUrl,
+  type AppRelease,
+} from "@/lib/app-release";
 import { isNative, nativePlatform } from "@/lib/native/platform";
 
 async function openExternal(url: string) {
@@ -24,17 +33,40 @@ async function openExternal(url: string) {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
+type Status = "idle" | "checking" | "current" | "update" | "unknown";
+
 export function UpdateCheckCard() {
-  const [status, setStatus] = useState<"idle" | "checking" | "current" | "update" | "unknown">(
-    "idle",
-  );
+  const [status, setStatus] = useState<Status>("idle");
+  const [latest, setLatest] = useState<AppRelease | null>(null);
   const native = isNative();
   const platform = nativePlatform();
+  const releasePlatform = native ? (platform === "ios" ? "ios" : "android") : "web";
 
   async function check() {
     setStatus("checking");
-    setStatus(await checkForWebUpdate());
+    const rel = await fetchLatestRelease(releasePlatform);
+    setLatest(rel);
+
+    if (rel) {
+      if (compareVersions(rel.version, APP_VERSION) > 0) {
+        setStatus("update");
+        return;
+      }
+      // Server says we're on the newest published version. On the web the
+      // deployed assets can still be ahead of the running tab.
+      if (!native) {
+        setStatus(await checkForWebUpdate());
+        return;
+      }
+      setStatus("current");
+      return;
+    }
+
+    // Couldn't reach the release list.
+    setStatus(native ? "unknown" : await checkForWebUpdate());
   }
+
+  const downloadUrl = releaseDownloadUrl(latest) || APK_URL;
 
   return (
     <Card className="mt-5">
@@ -48,49 +80,68 @@ export function UpdateCheckCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {native ? (
-          <>
-            <p className="text-sm text-muted-foreground">
-              {platform === "android"
-                ? "Installed apps don't update themselves here — grab the latest build below or from your store listing."
-                : "Updates for the iOS app arrive through the App Store."}
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={check}
+          disabled={status === "checking"}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${status === "checking" ? "animate-spin" : ""}`} />
+          {status === "checking" ? "Checking…" : "Check for updates"}
+        </Button>
+
+        {status === "current" && (
+          <p className="text-sm text-muted-foreground">
+            You&apos;re on the latest version{latest ? ` (${latest.version})` : ""}.
+          </p>
+        )}
+
+        {status === "unknown" && (
+          <p className="text-sm text-muted-foreground">
+            Couldn&apos;t reach the update server.
+            {native ? " Try again when you're back online." : " You can still reload to refresh the app."}
+          </p>
+        )}
+
+        {status === "update" && latest && (
+          <div className="space-y-2">
+            <p className="text-sm">
+              <span className="font-medium">Version {latest.version}</span> is available.
+              {latest.mandatory ? " This is a required update." : ""}
             </p>
-            {platform === "android" && (
-              <Button variant="outline" className="w-full" onClick={() => openExternal(APK_URL)}>
-                <Download className="h-4 w-4 mr-2" /> Download latest APK
-              </Button>
-            )}
-          </>
-        ) : (
+            {latest.notes && <p className="text-sm text-muted-foreground">{latest.notes}</p>}
+          </div>
+        )}
+
+        {status === "update" && releasePlatform === "ios" && (
+          <p className="text-sm text-muted-foreground">
+            Updates for the iOS app arrive through the App Store.
+          </p>
+        )}
+
+        {status === "update" && releasePlatform === "android" && (
+          <Button className="w-full" onClick={() => openExternal(downloadUrl)}>
+            <Download className="h-4 w-4 mr-2" /> Download {latest?.version ?? "latest"} APK
+          </Button>
+        )}
+
+        {!native && (status === "update" || status === "unknown") && (
           <>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={check}
-              disabled={status === "checking"}
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${status === "checking" ? "animate-spin" : ""}`} />
-              {status === "checking" ? "Checking…" : "Check for updates"}
+            <Button className="w-full" onClick={() => void applyWebUpdate()}>
+              {status === "update" ? "Update now" : "Reload app"}
             </Button>
-            {status === "current" && (
-              <p className="text-sm text-muted-foreground">You're on the latest version.</p>
-            )}
-            {status === "unknown" && (
-              <p className="text-sm text-muted-foreground">
-                Couldn't reach the update server. You can still reload to refresh the app.
-              </p>
-            )}
-            {(status === "update" || status === "unknown") && (
-              <Button className="w-full" onClick={() => void applyWebUpdate()}>
-                {status === "update" ? "Update now" : "Reload app"}
-              </Button>
-            )}
             {status === "update" && (
               <p className="text-xs text-muted-foreground">
                 Your wallet stays on this device — updating only refreshes the app code.
               </p>
             )}
           </>
+        )}
+
+        {native && platform === "android" && status !== "update" && (
+          <Button variant="ghost" className="w-full" onClick={() => openExternal(downloadUrl)}>
+            <Download className="h-4 w-4 mr-2" /> Download latest APK anyway
+          </Button>
         )}
       </CardContent>
     </Card>
