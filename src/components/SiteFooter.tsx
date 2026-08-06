@@ -57,7 +57,7 @@ export function SiteFooter() {
             type="button"
             onClick={() =>
               openExternal(
-                "https://txc.mypinata.cloud/ipfs/QmQpbDV5oYmh4qr2LhMkjQWq4BrTdinKmfJK1UNdrjygPt?filename=hme-wallet-0.1.202608030734-release.apk",
+                "https://txc.mypinata.cloud/ipfs/bafybeiaulw2eze6o5gnqke3lakvxhvvzppbjc57ihqjdypn4ell463x6ta?filename=hme-wallet-0.1.202608041246-release.apk",
               )
             }
             className="hover:text-foreground"

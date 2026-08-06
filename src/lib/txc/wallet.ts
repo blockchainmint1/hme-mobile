@@ -180,7 +180,16 @@ export function deriveAddresses(
   return out;
 }
 
+/**
+ * TXC dust threshold. The node's minimum relay fee sits 10x above Bitcoin's,
+ * and its dust rule scales with it, so a 546-sat output that would be fine on
+ * Bitcoin is rejected here. 10,000 sat is the value CryptoPOP uses for Omni
+ * reference outputs and is comfortably above the node's limit.
+ */
+export const DUST_SATS = 10_000;
+
 /** Build, sign and serialize a TEXITcoin transaction. Returns raw hex ready to broadcast. */
+
 export function buildAndSignTx(args: {
   root: BIP32Interface;
   kind: AddressKind;
@@ -196,13 +205,35 @@ export function buildAndSignTx(args: {
    * still resolves to the user output. Value on the OP_RETURN is 0.
    */
   opReturnData?: Uint8Array;
+  /**
+   * Outputs below this are non-standard ("dust") on TXC and get the whole
+   * transaction rejected. Change smaller than this is added to the fee
+   * instead of being written as an output.
+   */
+  dustSats?: number;
 }): { hex: string; txid: string; feeSats: number; changeSats: number } {
-  const { root, kind, inputs, outputs, changeAddress, feeSats, opReturnData } = args;
+  const { root, kind, inputs, outputs, changeAddress, opReturnData } = args;
+  const dustSats = args.dustSats ?? DUST_SATS;
 
   const totalIn = inputs.reduce((s, u) => s + u.value, 0);
   const totalOut = outputs.reduce((s, o) => s + o.valueSats, 0);
-  const changeSats = totalIn - totalOut - feeSats;
+  let feeSats = args.feeSats;
+  let changeSats = totalIn - totalOut - feeSats;
   if (changeSats < 0) throw new Error("Insufficient funds for outputs + fee");
+  // Dust change would make the whole transaction non-standard — pay it to the
+  // miners instead of writing an unspendable output.
+  if (changeSats > 0 && changeSats < dustSats) {
+    feeSats += changeSats;
+    changeSats = 0;
+  }
+  for (const o of outputs) {
+    if (o.valueSats < dustSats) {
+      throw new Error(
+        `Output of ${o.valueSats} sat is below TEXITcoin's dust threshold (${dustSats} sat).`,
+      );
+    }
+  }
+
 
   const psbt = new Psbt({ network: TXC_NETWORK, maximumFeeRate: 10_000_000 });
 

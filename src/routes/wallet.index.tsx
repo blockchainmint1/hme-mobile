@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key, Loader2 } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
+import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { usePendingTxs, removePendingTx } from "@/lib/pending-tx";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { decodeOmniSend } from "@/lib/txc/omni-decode";
@@ -722,8 +723,8 @@ function WalletHome() {
                 <ul className="space-y-2">
                   {txs.data!.slice(0, 50).map((tx) => {
                     const inSum = tx.vin
-                      .filter((v) => v.prevout.scriptpubkey_address && ownAddresses.has(v.prevout.scriptpubkey_address))
-                      .reduce((s, v) => s + v.prevout.value, 0);
+                      .filter((v) => v.prevout?.scriptpubkey_address && ownAddresses.has(v.prevout?.scriptpubkey_address))
+                      .reduce((s, v) => s + (v.prevout?.value ?? 0), 0);
                     const outToOwn = tx.vout
                       .filter((v) => v.scriptpubkey_address && ownAddresses.has(v.scriptpubkey_address))
                       .reduce((s, v) => s + v.value, 0);
@@ -1457,7 +1458,9 @@ function BtcForkTile({
   onOpenDetails: () => void;
 }) {
   const [hidden] = useHideBalances();
-  const [utxoSwapEnabled] = useFeature("utxoSwap");
+  const [utxoSwapPref] = useFeature("utxoSwap");
+  const exchangeAllowed = useExchangeFeaturesAllowed();
+  const utxoSwapEnabled = utxoSwapPref && exchangeAllowed;
   const v = BTC_FORK_VARIANTS[variant];
   const balanceUsd = priceUsd ? v.toCoin(balanceSats) * priceUsd : null;
   const balText = loading ? "..." : v.formatCompact(balanceSats);
@@ -1565,10 +1568,10 @@ function BtcForkActivity({
             const inSum = tx.vin
               .filter(
                 (vv) =>
-                  vv.prevout.scriptpubkey_address &&
-                  ownAddresses.has(vv.prevout.scriptpubkey_address),
+                  vv.prevout?.scriptpubkey_address &&
+                  ownAddresses.has(vv.prevout?.scriptpubkey_address),
               )
-              .reduce((s, vv) => s + vv.prevout.value, 0);
+              .reduce((s, vv) => s + (vv.prevout?.value ?? 0), 0);
             const outToOwn = tx.vout
               .filter(
                 (vv) =>
@@ -1642,7 +1645,9 @@ function EvmTile({
 }) {
   const [hidden] = useHideBalances();
   const [refreshing, setRefreshing] = useState(false);
-  const [swapEnabled] = useFeature("evmSwap");
+  const [evmSwapPref] = useFeature("evmSwap");
+  const exchangeAllowed = useExchangeFeaturesAllowed();
+  const swapEnabled = evmSwapPref && exchangeAllowed;
 
 
   const meta = EVM_CHAINS[chainId];
@@ -2145,8 +2150,8 @@ function WatchOnlyActivity({
         <ul className="space-y-2">
           {txs!.slice(0, 50).map((tx) => {
             const inSum = tx.vin
-              .filter((v) => v.prevout.scriptpubkey_address === own)
-              .reduce((s, v) => s + v.prevout.value, 0);
+              .filter((v) => v.prevout?.scriptpubkey_address === own)
+              .reduce((s, v) => s + (v.prevout?.value ?? 0), 0);
             const outToOwn = tx.vout
               .filter((v) => v.scriptpubkey_address === own)
               .reduce((s, v) => s + v.value, 0);
@@ -2425,8 +2430,8 @@ function WifActivity({
         <ul className="space-y-2">
           {txs!.slice(0, 50).map((tx) => {
             const inSum = tx.vin
-              .filter((v) => v.prevout.scriptpubkey_address === own)
-              .reduce((s, v) => s + v.prevout.value, 0);
+              .filter((v) => v.prevout?.scriptpubkey_address === own)
+              .reduce((s, v) => s + (v.prevout?.value ?? 0), 0);
             const outToOwn = tx.vout
               .filter((v) => v.scriptpubkey_address === own)
               .reduce((s, v) => s + v.value, 0);

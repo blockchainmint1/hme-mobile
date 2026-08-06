@@ -24,6 +24,7 @@ import {
   type DerivationKind,
 } from "@/lib/txc/network";
 import { broadcastTx, explorerTxUrl, getFeeEstimates, getTxHex, type FeeEstimates } from "@/lib/txc/mempool";
+import { reserveOutpoints } from "@/lib/txc/spent-outpoints";
 import { formatTxc } from "@/lib/txc/units";
 import { rootFingerprintHex } from "@/lib/txc/fingerprint";
 import {
@@ -306,6 +307,7 @@ function ConsolidatePage() {
           feeSats,
         });
         const txid = await broadcastTx(built.hex);
+        reserveOutpoints(picked.map((u) => ({ txid: u.txid, vout: u.vout })));
         update(fundIdx, { status: "ok", txid });
 
         needFunding.forEach((h, i) => {
@@ -373,6 +375,7 @@ function ConsolidatePage() {
             opReturnData: buildSimpleSendPayload(token.id, h.units),
           });
           const txid = await broadcastTx(built.hex);
+          reserveOutpoints([{ txid: input.txid, vout: input.vout }]);
           update(idx, { status: "ok", txid });
         } catch (err) {
           update(idx, {

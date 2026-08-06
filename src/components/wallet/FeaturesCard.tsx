@@ -3,12 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useFeature } from "@/lib/feature-prefs";
+import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 
 export function FeaturesCard() {
   const [evmSwap, setEvmSwap] = useFeature("evmSwap");
   const [utxoSwap, setUtxoSwap] = useFeature("utxoSwap");
   const [confirmLast4, setConfirmLast4] = useFeature("confirmLast4");
   const [hideSpam, setHideSpam] = useFeature("hideSpamTokens");
+  const exchangeAllowed = useExchangeFeaturesAllowed();
   return (
     <Card>
       <CardHeader>
@@ -53,6 +55,8 @@ export function FeaturesCard() {
             onCheckedChange={setHideSpam}
           />
         </div>
+        {exchangeAllowed && (
+          <>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Label htmlFor="feat-evm-swap" className="text-sm font-medium">
@@ -88,8 +92,8 @@ export function FeaturesCard() {
             onCheckedChange={setUtxoSwap}
           />
         </div>
-
-
+          </>
+        )}
 
       </CardContent>
     </Card>

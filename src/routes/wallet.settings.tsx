@@ -10,6 +10,7 @@ import { DeepRescanCard } from "@/components/wallet/DeepRescanCard";
 import { FeaturesCard } from "@/components/wallet/FeaturesCard";
 import { SecurityCheckupCard } from "@/components/wallet/SecurityCheckupCard";
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
+import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
 import { HideBalancesToggle } from "@/components/wallet/WalletDetailSheet";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { useWallet } from "@/lib/txc/wallet-context";
@@ -160,6 +161,8 @@ function SettingsPage() {
       <div className="mt-5">
         <FeaturesCard />
       </div>
+
+      <TsdCashoutKeyCard />
 
       <UpdateCheckCard />
 

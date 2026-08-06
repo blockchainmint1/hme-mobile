@@ -49,6 +49,8 @@ import {
 } from "@/lib/bridge/relay";
 import { getBridgeQuote, getBridgeStatus } from "@/lib/bridge/relay.functions";
 import { hapticError, hapticSuccess } from "@/lib/native/ui";
+import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
+import { ExchangeUnavailable } from "@/components/wallet/ExchangeUnavailable";
 
 export const Route = createFileRoute("/wallet/tron/bridge")({
   head: () => ({
@@ -69,7 +71,7 @@ export const Route = createFileRoute("/wallet/tron/bridge")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: TronBridge,
+  component: TronBridgeGate,
 });
 
 /** Pull the spender out of an `approve(address,uint256)` calldata blob. */
@@ -77,6 +79,12 @@ function approveSpender(data: string): string | null {
   const hex = data.startsWith("0x") ? data.slice(2) : data;
   if (!hex.startsWith("095ea7b3") || hex.length < 8 + 64) return null;
   return `41${hex.slice(8 + 24, 8 + 64)}`;
+}
+
+function TronBridgeGate() {
+  const exchangeAllowed = useExchangeFeaturesAllowed();
+  if (!exchangeAllowed) return <ExchangeUnavailable title="Bridge" />;
+  return <TronBridge />;
 }
 
 function TronBridge() {

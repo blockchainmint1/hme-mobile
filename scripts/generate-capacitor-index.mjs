@@ -1,4 +1,4 @@
-import { cp, mkdir, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, rm, stat, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -113,9 +113,16 @@ for (const route of staticSpaRoutes) {
 for (const outputDir of outputDirs) {
   if (outputDir !== publicDir) {
     await mkdir(dirname(outputDir), { recursive: true });
+    // Purge hashed assets first: `cp --force` overwrites but never deletes, so
+    // a stale mirror (e.g. ios/App/App/public from an earlier build) can keep
+    // old chunk files around while index.html points at new hashes — or worse,
+    // keep an old index.html pointing at hashes that no longer exist. That
+    // ships a native app whose CSS and JS 404, rendering raw unstyled HTML.
+    await rm(resolve(outputDir, "assets"), { recursive: true, force: true });
     await cp(publicDir, outputDir, { recursive: true, force: true });
   }
 }
+
 
 for (const outputDir of outputDirs) {
   await mkdir(outputDir, { recursive: true });
@@ -132,6 +139,32 @@ for (const outputDir of outputDirs) {
     }
   }
 }
+
+// Fail loudly if any generated shell references an asset that is not present
+// in that output directory. Without this the native app silently boots as
+// unstyled, non-interactive HTML because every /assets/* request 404s.
+const missing = [];
+for (const outputDir of outputDirs) {
+  for (const [route, html] of routeHtml) {
+    const refs = new Set(
+      [...html.matchAll(/(?:href|src)="(\/assets\/[^"]+)"/g)].map((m) => m[1]),
+    );
+    if (!refs.size) missing.push(`${outputDir}/${route || ""} references no /assets/* files`);
+    for (const ref of refs) {
+      if (!existsSync(resolve(outputDir, ref.slice(1)))) {
+        missing.push(`${outputDir}${ref} (referenced by /${route})`);
+      }
+    }
+  }
+}
+if (missing.length) {
+  throw new Error(
+    `Native bundle is inconsistent — missing assets:\n  ${missing.slice(0, 20).join("\n  ")}\n` +
+      `Run a clean build: rm -rf dist ios/App/App/public && bun run build (or build:ios).`,
+  );
+}
+
+
 
 if (iosExists) {
   try {
