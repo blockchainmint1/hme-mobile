@@ -69,6 +69,26 @@ Statuses the wallet understands:
 `awaiting_deposit`, `detected`, `paying`, `released`, `refunded`, `expired`,
 `failed`. Anything else renders as "In progress".
 
+## Dedicated deposit address
+
+The current API creates a fresh deposit address for every order. If the wallet
+should be able to show a single, reusable "my TSD Swap deposit address" (for
+example, on the TSD receive screen or in Settings), TSD Swap needs to expose a
+new endpoint such as:
+
+```
+GET /api/public/v1/cashout/deposit-address
+```
+
+returning a persistent address owned by the authenticated account:
+
+```json
+{ "address": "T…" }
+```
+
+Until that endpoint exists, the wallet can only obtain a deposit address by
+creating an order first.
+
 ## Errors
 
 Non-2xx with `{ "error": "human readable" }`. The wallet surfaces the string
