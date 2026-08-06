@@ -1,11 +1,16 @@
 /**
  * Server-side HTTP client for the TSD Swap public cash-out API
- * (https://tsd.honest.money). Kept off the device so the shared API key
- * never ships in a bundle and the endpoint host can change server-side.
+ * (https://tsd.honest.money). Kept off the device so the endpoint host can
+ * change server-side and the strict CSP `connect-src` stays closed.
+ *
+ * Auth is the *user's own* TSD Swap API key, minted on their account page and
+ * saved in wallet Settings. It travels from the device to our server function
+ * and is forwarded as `x-api-key`; we never store it. The key identifies the
+ * account, so TSD Swap decides the fee tier — the wallet does no pricing.
  *
  * Contract lives in docs/tsd-cashout-api.md.
  */
-import type { CashoutCouponPreview, CashoutOrder, CashoutSettings } from "./tsd";
+import type { CashoutOrder, CashoutSettings } from "./tsd";
 
 const DEFAULT_BASE = "https://tsd.honest.money";
 
@@ -13,21 +18,15 @@ function baseUrl(): string {
   return (process.env["TSD_SWAP_URL"] || DEFAULT_BASE).replace(/\/+$/, "");
 }
 
-function authHeaders(): Record<string, string> {
-  const key = process.env["TSD_CASHOUT_API_KEY"];
-  return key ? { "x-api-key": key } : {};
-}
-
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
+async function call<T>(path: string, apiKey: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`${baseUrl()}${path}`, {
       ...init,
       headers: {
         accept: "application/json",
+        "x-api-key": apiKey,
         ...(init?.body ? { "content-type": "application/json" } : {}),
-        ...authHeaders(),
-        ...(init?.headers as Record<string, string> | undefined),
       },
     });
   } catch {
@@ -43,6 +42,9 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* keep the status message */
     }
+    if (res.status === 401 || res.status === 403) {
+      msg = "Your TSD Swap API key was rejected. Check it in Settings.";
+    }
     if (res.status === 404) {
       msg = "The cash-out service isn't available yet. Please try again later.";
     }
@@ -56,39 +58,29 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
-export function fetchCashoutSettings(): Promise<CashoutSettings> {
-  return call<CashoutSettings>("/api/public/v1/cashout/settings");
-}
-
-export function previewCoupon(code: string): Promise<CashoutCouponPreview> {
-  return call<CashoutCouponPreview>("/api/public/v1/cashout/coupon", {
-    method: "POST",
-    body: JSON.stringify({ code }),
-  });
+export function fetchCashoutSettings(apiKey: string): Promise<CashoutSettings> {
+  return call<CashoutSettings>("/api/public/v1/cashout/settings", apiKey);
 }
 
 export interface CreateArgs {
+  apiKey: string;
   amount: number;
   payoutAddress: string;
   refundAddress: string;
-  couponCode: string | null;
-  accountToken: string | null;
 }
 
 export function createCashout(args: CreateArgs): Promise<CashoutOrder> {
-  return call<CashoutOrder>("/api/public/v1/cashout/orders", {
+  return call<CashoutOrder>("/api/public/v1/cashout/orders", args.apiKey, {
     method: "POST",
     body: JSON.stringify({
       amount: args.amount,
       payoutAddress: args.payoutAddress,
       refundAddress: args.refundAddress,
-      couponCode: args.couponCode,
       source: "hme-wallet",
     }),
-    headers: args.accountToken ? { authorization: `Bearer ${args.accountToken}` } : {},
   });
 }
 
-export function fetchCashoutOrder(id: string): Promise<CashoutOrder> {
-  return call<CashoutOrder>(`/api/public/v1/cashout/orders/${encodeURIComponent(id)}`);
+export function fetchCashoutOrder(id: string, apiKey: string): Promise<CashoutOrder> {
+  return call<CashoutOrder>(`/api/public/v1/cashout/orders/${encodeURIComponent(id)}`, apiKey);
 }
