@@ -21,10 +21,13 @@ import { ArrowDownUp, ChevronDown, Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { getCashoutSettings, createCashoutOrder } from "@/lib/cashout/tsd.functions";
+import { useWallet } from "@/lib/txc/wallet-context";
+import { deriveEvmAccount } from "@/lib/chains/evm";
 import {
   CASHOUT_PAYOUT_LABEL,
   ETH_ADDRESS_RE,
@@ -46,6 +49,9 @@ interface Props {
 
 export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Props) {
   const [open, setOpen] = useState(false);
+  const { root } = useWallet();
+  const ownEvmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
+  const [useOwnWallet, setUseOwnWallet] = useState(true);
   const [payout, setPayout] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,16 +69,19 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
 
   const feeBps = settings.data?.redeemFeeBps ?? 100;
 
+  // When "my ETH wallet" is ticked we pay out to this wallet's own EVM address.
+  const effectivePayout = useOwnWallet && ownEvmAddress ? ownEvmAddress : payout;
+
   const numeric = useMemo(() => Number(amount), [amount]);
   const receive = payoutFor(numeric, feeBps);
 
   useEffect(() => {
     setError(null);
-  }, [amount, payout]);
+  }, [amount, payout, useOwnWallet]);
 
   async function create() {
     setError(null);
-    const to = payout.trim();
+    const to = effectivePayout.trim();
     if (!ETH_ADDRESS_RE.test(to)) {
       setError("Enter the Ethereum address that should receive the USDC (0x…).");
       return;
@@ -141,25 +150,46 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
           </p>
         )}
 
-        <div>
-          <Label htmlFor="cashout-payout">USDC payout address (Ethereum)</Label>
-          <div className="mt-1 flex gap-2">
-            <Input
-              id="cashout-payout"
-              value={payout}
-              onChange={(e) => setPayout(e.target.value)}
-              placeholder="0x…"
-              className="flex-1 font-mono"
-              autoComplete="off"
-              spellCheck={false}
-            />
-            <QrScanButton onScan={(raw) => setPayout(parseWalletUri(raw).address)} />
-            <AddressBookButton chain="eth" onPick={(a) => setPayout(a)} />
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Must be a wallet you control on Ethereum mainnet. Exchange deposit addresses can reject
-            third-party transfers.
-          </p>
+        <div className="space-y-3">
+          <Label>USDC payout address (Ethereum)</Label>
+
+          {ownEvmAddress && (
+            <label className="flex items-start gap-3 rounded-md border border-border/60 bg-muted/30 p-3">
+              <Checkbox
+                checked={useOwnWallet}
+                onCheckedChange={(v) => setUseOwnWallet(v === true)}
+                className="mt-0.5"
+              />
+              <span className="min-w-0 flex-1 text-sm">
+                <span className="font-medium">My ETH wallet</span>
+                <span className="mt-0.5 block break-all font-mono text-xs text-muted-foreground">
+                  {ownEvmAddress}
+                </span>
+              </span>
+            </label>
+          )}
+
+          {!(useOwnWallet && ownEvmAddress) && (
+            <>
+              <div className="flex gap-2">
+                <Input
+                  id="cashout-payout"
+                  value={payout}
+                  onChange={(e) => setPayout(e.target.value)}
+                  placeholder="0x…"
+                  className="flex-1 font-mono"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <QrScanButton onScan={(raw) => setPayout(parseWalletUri(raw).address)} />
+                <AddressBookButton chain="eth" onPick={(a) => setPayout(a)} />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Must be a wallet you control on Ethereum mainnet. Exchange deposit addresses can
+                reject third-party transfers.
+              </p>
+            </>
+          )}
         </div>
 
         <div className="space-y-1 rounded-md bg-muted/40 p-3 text-sm">
