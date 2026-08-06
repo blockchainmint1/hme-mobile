@@ -804,6 +804,7 @@ function SendPage() {
                     className="font-mono flex-1"
                     autoComplete="off"
                     spellCheck={false}
+                    disabled={!!cashout}
                   />
                   <QrScanButton onScan={applyUri} />
                   <AddressBookButton chain="txc" onPick={(a) => setTo(a)} />
@@ -838,7 +839,7 @@ function SendPage() {
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder={sendAll ? "All available (minus fee)" : "0.0"}
                   className="mt-1"
-                  disabled={sendAll}
+                  disabled={sendAll || !!cashout}
                 />
                 {isTokenSend && activeToken && (
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -846,6 +847,53 @@ function SendPage() {
                   </p>
                 )}
               </div>
+
+              {/* TSD → USDC off-ramp. Hidden on iOS (exchange feature gate). */}
+              {canCashOut && !cashout && (
+                <TsdCashoutPanel
+                  amount={amount}
+                  refundAddress={refundAddress}
+                  onOrder={(order) => {
+                    setCashout(order);
+                    setTo(order.depositAddress);
+                    setAmount(String(order.amountExpected));
+                    setSendAll(false);
+                    setError(null);
+                  }}
+                />
+              )}
+
+              {cashout && (
+                <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <ArrowDownUp className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <div className="flex-1">
+                      <p className="font-medium">Cashing out to USDC on Ethereum</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {cashout.amountExpected} TSD → {formatUsd(cashout.payoutAmount)} USDC to{" "}
+                        <span className="font-mono break-all">{cashout.payoutAddress}</span>
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Send exactly this amount to the address above — it's the order's own
+                        inbox. Refunds return to your wallet automatically.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2 h-auto px-2 py-1 text-xs"
+                    onClick={() => {
+                      setCashout(null);
+                      setTo("");
+                    }}
+                  >
+                    Cancel cash-out
+                  </Button>
+                </div>
+              )}
+
               <div>
                 <Label>Fee speed</Label>
                 <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
