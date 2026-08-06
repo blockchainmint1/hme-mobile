@@ -219,10 +219,18 @@ function SendPage() {
   const [busy, setBusy] = useState(false);
   /** Human-readable step shown on the send button while a payment is in flight. */
   const [progress, setProgress] = useState<string | null>(null);
+  /**
+   * Set once the user has created a TSD → USDC cash-out order. The recipient
+   * and amount are then locked to the order's inbox so the payment can't drift
+   * away from what the bridge is waiting for.
+   */
+  const [cashout, setCashout] = useState<CashoutOrder | null>(null);
+  const exchangeAllowed = useExchangeFeaturesAllowed();
 
   const activeToken: TxcTokenMeta | null =
     typeof asset === "number" ? tokens.find((t) => t.id === asset) ?? null : null;
   const isTokenSend = activeToken !== null;
+  const canCashOut = exchangeAllowed && activeToken?.id === TSD_PROPERTY_ID;
 
   function applyUri(raw: string) {
     const { address, amount: amt, tokenId } = parseWalletUri(raw);
