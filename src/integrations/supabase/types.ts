@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_releases: {
+        Row: {
+          build_number: number | null
+          created_at: string
+          download_url: string | null
+          id: string
+          ipfs_cid: string | null
+          mandatory: boolean
+          notes: string | null
+          platform: string
+          released_at: string
+          version: string
+        }
+        Insert: {
+          build_number?: number | null
+          created_at?: string
+          download_url?: string | null
+          id?: string
+          ipfs_cid?: string | null
+          mandatory?: boolean
+          notes?: string | null
+          platform: string
+          released_at?: string
+          version: string
+        }
+        Update: {
+          build_number?: number | null
+          created_at?: string
+          download_url?: string | null
+          id?: string
+          ipfs_cid?: string | null
+          mandatory?: boolean
+          notes?: string | null
+          platform?: string
+          released_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
