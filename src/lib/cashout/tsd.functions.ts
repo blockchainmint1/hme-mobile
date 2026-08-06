@@ -36,14 +36,15 @@ export const createCashoutOrder = createServerFn({ method: "POST" })
       })
       .parse(raw),
   )
-  .handler(async ({ data }): Promise<CashoutOrder> =>
-    createCashout({
-      amount: data.amount,
-      payoutAddress: data.payoutAddress,
-      refundAddress: data.refundAddress,
-      couponCode: data.couponCode?.toUpperCase() || null,
-      accountToken: data.accountToken || null,
-    }),
+  .handler(
+    async ({ data }): Promise<CashoutOrder> =>
+      createCashout({
+        amount: data.amount,
+        payoutAddress: data.payoutAddress,
+        refundAddress: data.refundAddress,
+        couponCode: data.couponCode?.toUpperCase() || null,
+        accountToken: data.accountToken || null,
+      }),
   );
 
 export const getCashoutOrder = createServerFn({ method: "POST" })

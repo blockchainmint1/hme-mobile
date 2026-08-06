@@ -5,11 +5,7 @@
  *
  * Contract lives in docs/tsd-cashout-api.md.
  */
-import type {
-  CashoutCouponPreview,
-  CashoutOrder,
-  CashoutSettings,
-} from "./tsd";
+import type { CashoutCouponPreview, CashoutOrder, CashoutSettings } from "./tsd";
 
 const DEFAULT_BASE = "https://tsd.honest.money";
 

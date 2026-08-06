@@ -13,22 +13,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowDownUp,
-  Check,
-  ChevronDown,
-  Loader2,
-  Ticket,
-  TriangleAlert,
-} from "lucide-react";
+import { ArrowDownUp, Check, ChevronDown, Loader2, Ticket, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import {
@@ -76,9 +65,8 @@ export function TsdCashoutPanel({ amount, refundAddress, onOrder }: Props) {
   });
 
   const baseBps = settings.data?.redeemFeeBps ?? 100;
-  const effectiveBps = coupon?.valid && coupon.redeemFeeBps != null
-    ? Math.min(coupon.redeemFeeBps, baseBps)
-    : baseBps;
+  const effectiveBps =
+    coupon?.valid && coupon.redeemFeeBps != null ? Math.min(coupon.redeemFeeBps, baseBps) : baseBps;
 
   const numeric = useMemo(() => Number(amount), [amount]);
   const receive = payoutFor(numeric, effectiveBps);
@@ -198,8 +186,8 @@ export function TsdCashoutPanel({ amount, refundAddress, onOrder }: Props) {
             <AddressBookButton chain="eth" onPick={(a) => setPayout(a)} />
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Must be a wallet you control on Ethereum mainnet. Exchange deposit addresses can
-            reject third-party transfers.
+            Must be a wallet you control on Ethereum mainnet. Exchange deposit addresses can reject
+            third-party transfers.
           </p>
         </div>
 
@@ -243,8 +231,7 @@ export function TsdCashoutPanel({ amount, refundAddress, onOrder }: Props) {
             </p>
           )}
           <p className="mt-1 text-xs text-muted-foreground">
-            A TSD account code gives you the discount permanently — grab yours at
-            tsd.honest.money.
+            A TSD account code gives you the discount permanently — grab yours at tsd.honest.money.
           </p>
         </div>
 
@@ -254,13 +241,15 @@ export function TsdCashoutPanel({ amount, refundAddress, onOrder }: Props) {
             {numeric > 0 ? `${formatUsd(numeric - receive)} TSD` : "—"}
           </Row>
           <Row label="You receive">
-            <span className="font-semibold">{receive > 0 ? `${formatUsd(receive)} USDC` : "—"}</span>
+            <span className="font-semibold">
+              {receive > 0 ? `${formatUsd(receive)} USDC` : "—"}
+            </span>
           </Row>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          If anything goes wrong — wrong amount, expired order, failed payout — the TSD is
-          returned to this wallet automatically.
+          If anything goes wrong — wrong amount, expired order, failed payout — the TSD is returned
+          to this wallet automatically.
         </p>
 
         {error && (
