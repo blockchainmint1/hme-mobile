@@ -2,10 +2,10 @@
  * Single source of truth for the current published release: the APK download
  * (pinned to IPFS) and the human-readable version shown in Settings.
  */
-export const APP_VERSION = "0.1.202608041246";
+export const APP_VERSION = "0.1.202608060318";
 
 export const APK_URL =
-  "https://txc.mypinata.cloud/ipfs/bafybeiaulw2eze6o5gnqke3lakvxhvvzppbjc57ihqjdypn4ell463x6ta?filename=hme-wallet-0.1.202608041246-release.apk";
+  "https://txc.mypinata.cloud/ipfs/QmbqBUPo44CPVgpM8w8ZhbhC4AuULvbx3KCz5EuU3Pj2AF?filename=hme-wallet-0.1.202608060318-release.apk";
 
 /**
  * Web update check: the deployed index.html references hashed asset URLs.
