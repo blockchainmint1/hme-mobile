@@ -1,36 +1,28 @@
 # TSD cash-out API (wallet → TSD Swap)
 
 The HME wallet offers "Cash out to USDC on Ethereum" on the TSD send screen.
-It needs four public endpoints on **TSD Swap** (`https://tsd.honest.money`).
-These are thin, key-authenticated wrappers around the existing redeem flow
-(`createRedeemOrder`, `previewCouponCode`, `getPublicBridgeSettings`,
-`getBridgeOrder`).
+The feature is **off until the user pastes their own TSD Swap API key** into
+wallet Settings, so only people with a TSD Swap account can redeem from the
+wallet.
 
-Wallet-side config (server-only env vars):
+Three public endpoints on **TSD Swap** (`https://tsd.honest.money`), all
+authenticated with the *user's* key as `x-api-key`. The key identifies the
+account, so TSD Swap decides the fee tier (1% / 0.5% / 0%) — the wallet has no
+coupon field and quotes only what `settings` reports.
 
-- `TSD_SWAP_URL` — base URL, defaults to `https://tsd.honest.money`
-- `TSD_CASHOUT_API_KEY` — sent as `x-api-key` when present
-
-All requests come from the wallet's server, never from the device.
+Wallet-side config (server-only): `TSD_SWAP_URL`, defaults to
+`https://tsd.honest.money`. Requests always leave from the wallet's server, not
+the device; the key is forwarded per request and never stored server-side.
 
 ## 1. `GET /api/public/v1/cashout/settings`
 
 ```json
-{ "live": true, "minAmount": 5, "maxAmount": 25000, "redeemFeeBps": 100 }
+{ "live": true, "minAmount": 5, "maxAmount": 25000, "redeemFeeBps": 50 }
 ```
 
-## 2. `POST /api/public/v1/cashout/coupon`
+`redeemFeeBps` must be the **fee for the account that owns the key**.
 
-Request: `{ "code": "TEXIT100" }`
-
-```json
-{ "valid": true, "code": "TEXIT100", "redeemFeeBps": 0, "reason": null }
-```
-
-Must not consume a use — preview only. Per-account permanent discount codes
-should validate here too (unlimited uses, bound to the account).
-
-## 3. `POST /api/public/v1/cashout/orders`
+## 2. `POST /api/public/v1/cashout/orders`
 
 Request:
 
@@ -39,7 +31,6 @@ Request:
   "amount": 250,
   "payoutAddress": "0x…40 hex",
   "refundAddress": "T…",
-  "couponCode": "TEXIT100",
   "source": "hme-wallet"
 }
 ```
@@ -55,8 +46,8 @@ Response:
   "status": "awaiting_deposit",
   "depositAddress": "T…",
   "amountExpected": 250,
-  "feeBps": 100,
-  "payoutAmount": 247.5,
+  "feeBps": 50,
+  "payoutAmount": 248.75,
   "payoutAddress": "0x…",
   "refundAddress": "T…",
   "expiresAt": "2026-08-06T03:00:00Z",
@@ -69,10 +60,10 @@ Response:
 `depositAddress` **must be a legacy `T…` address** — the Omni layer cannot
 read `txc1…` bech32, so a segwit inbox would strand the tokens.
 
-## 4. `GET /api/public/v1/cashout/orders/:id`
+## 3. `GET /api/public/v1/cashout/orders/:id`
 
-Same order shape. The wallet polls this on the receipt screen every ~10s until
-a terminal status.
+Same order shape, scoped to the key that created it. The wallet polls this on
+the receipt screen every ~10s until a terminal status.
 
 Statuses the wallet understands:
 `awaiting_deposit`, `detected`, `paying`, `released`, `refunded`, `expired`,
@@ -81,5 +72,5 @@ Statuses the wallet understands:
 ## Errors
 
 Non-2xx with `{ "error": "human readable" }`. The wallet surfaces the string
-verbatim. A `404` is treated as "service not deployed yet" and the panel shows
-an unavailable message instead of a hard failure.
+verbatim, except: `401`/`403` becomes "Your TSD Swap API key was rejected.
+Check it in Settings," and `404` becomes "service not available yet."
