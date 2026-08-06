@@ -261,6 +261,19 @@ function SendPage() {
     ],
     [account.data],
   );
+  /**
+   * Where a cash-out refund should land. Must be Omni-readable (legacy T…),
+   * and we prefer a receiving address so the refund shows up where the user
+   * expects rather than on a change branch.
+   */
+  const refundAddress = useMemo(() => {
+    const external = account.data?.external.map((a) => a.address) ?? [];
+    return (
+      external.find(isOmniCompatibleAddress) ??
+      ownAddresses.find(isOmniCompatibleAddress) ??
+      null
+    );
+  }, [account.data, ownAddresses]);
   /** Derived address metadata (key index + script kind), keyed by address. */
   const addressInfos = useMemo(() => {
     const list = [...(account.data?.external ?? []), ...(account.data?.internal ?? [])];
