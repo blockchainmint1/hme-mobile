@@ -720,13 +720,59 @@ function SendPage() {
         </div>
         <h1 className="mt-4 text-2xl font-bold">Sent</h1>
         <p className="mt-2 text-muted-foreground">Your transaction was broadcast to the network.</p>
-        {isTokenSend && activeToken && (
+
+        {cashout && (
+          <div className="mx-auto mt-4 max-w-sm rounded-lg border border-primary/40 bg-primary/5 p-4 text-left text-sm">
+            <div className="flex items-center gap-2 font-medium">
+              {cashoutStatus.data && isTerminalCashoutStatus(cashoutStatus.data.status) ? (
+                <ArrowDownUp className="h-4 w-4 text-primary" />
+              ) : (
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              )}
+              {cashoutStatusLabel(cashoutStatus.data?.status ?? cashout.status)}
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {cashout.amountExpected} TSD → {formatUsd(cashout.payoutAmount)} USDC to{" "}
+              <span className="font-mono break-all">{cashout.payoutAddress}</span>
+            </p>
+            {cashoutStatus.data?.releaseTxHash && (
+              <a
+                href={`https://etherscan.io/tx/${cashoutStatus.data.releaseTxHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs underline"
+              >
+                View USDC payout <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            {cashoutStatus.data?.refundTxid && (
+              <a
+                href={explorerTxUrl(cashoutStatus.data.refundTxid)}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs underline"
+              >
+                View refund <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+            {cashoutStatus.data?.error && (
+              <p className="mt-2 text-xs text-destructive">{cashoutStatus.data.error}</p>
+            )}
+            <p className="mt-2 text-xs text-muted-foreground">
+              Payout usually lands within a few minutes of the TSD confirming. You can close the
+              app — it keeps running on our side.
+            </p>
+          </div>
+        )}
+
+        {isTokenSend && activeToken && !cashout && (
           <p className="mx-auto mt-3 max-w-sm rounded-lg border border-border/60 bg-card/40 p-3 text-sm text-muted-foreground">
             Token transfers are only applied once the transaction confirms — usually a few minutes on
             TEXITcoin. Your {activeToken.symbol} balance and the recipient's will update then, so check
             back shortly rather than sending again.
           </p>
         )}
+
 
         <a
           href={explorerTxUrl(stage.txid)}
