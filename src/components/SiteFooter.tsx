@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { isNative } from "@/lib/native/platform";
+import { APK_URL } from "@/lib/app-release";
 
 async function openExternal(url: string) {
   if (isNative()) {
