@@ -67,7 +67,11 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
     retry: false,
   });
 
-  const feeBps = settings.data?.redeemFeeBps ?? 100;
+  // Only the service knows the account's fee tier — never guess a default,
+  // or a 0%-fee account sees a phantom 1%.
+  const knownFeeBps = settings.data?.redeemFeeBps;
+  const feeBps = knownFeeBps ?? 0;
+  const feeKnown = typeof knownFeeBps === "number";
 
   // When "my ETH wallet" is ticked we pay out to this wallet's own EVM address.
   const effectivePayout = useOwnWallet && ownEvmAddress ? ownEvmAddress : payout;
@@ -194,12 +198,20 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
 
         <div className="space-y-1 rounded-md bg-muted/40 p-3 text-sm">
           <Row label="You send">{numeric > 0 ? `${numeric} TSD` : "—"}</Row>
-          <Row label={`Your account fee (${feeLabel(feeBps)})`}>
-            {numeric > 0 ? `${formatUsd(numeric - receive)} TSD` : "—"}
+          <Row label={`Your account fee${feeKnown ? ` (${feeLabel(feeBps)})` : ""}`}>
+            {!feeKnown ? (
+              <span className="text-muted-foreground">
+                {settings.isLoading ? "Checking…" : "—"}
+              </span>
+            ) : numeric > 0 ? (
+              `${formatUsd(numeric - receive)} TSD`
+            ) : (
+              "—"
+            )}
           </Row>
           <Row label="You receive">
             <span className="font-semibold">
-              {receive > 0 ? `${formatUsd(receive)} USDC` : "—"}
+              {feeKnown && receive > 0 ? `${formatUsd(receive)} USDC` : "—"}
             </span>
           </Row>
         </div>
