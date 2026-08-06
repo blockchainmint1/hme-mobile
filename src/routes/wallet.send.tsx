@@ -699,6 +699,19 @@ function SendPage() {
       ? `${amount} ${activeToken.symbol}`
       : formatTxc(reviewedOutSats);
 
+  // Once the TSD is on its way, follow the bridge order until the USDC lands
+  // (or the TSD is refunded) so the user never has to leave the wallet.
+  const fetchCashoutOrder = useServerFn(getCashoutOrder);
+  const cashoutStatus = useQuery({
+    queryKey: ["tsd-cashout-order", cashout?.id],
+    enabled: !!cashout && stage.kind === "sent",
+    queryFn: () => fetchCashoutOrder({ data: { id: cashout!.id } }),
+    refetchInterval: (q) =>
+      q.state.data && isTerminalCashoutStatus(q.state.data.status) ? false : 10_000,
+    retry: false,
+  });
+
+
   if (stage.kind === "sent") {
     return (
       <main className="mx-auto max-w-xl px-4 py-10 text-center">
