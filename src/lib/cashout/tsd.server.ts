@@ -84,3 +84,19 @@ export function createCashout(args: CreateArgs): Promise<CashoutOrder> {
 export function fetchCashoutOrder(id: string, apiKey: string): Promise<CashoutOrder> {
   return call<CashoutOrder>(`/api/public/v1/cashout/orders/${encodeURIComponent(id)}`, apiKey);
 }
+
+/**
+ * Permanent deposit address for the account that owns the key, plus its fee
+ * tier. Safe to cache — TSD Swap keeps it stable per account.
+ */
+export function fetchDepositAddress(apiKey: string): Promise<unknown> {
+  return call<unknown>("/api/public/v1/cashout/deposit-address", apiKey);
+}
+
+/** Save (once) where USDC payouts should go for this account. */
+export function saveDepositPayoutAddress(apiKey: string, payoutAddress: string): Promise<unknown> {
+  return call<unknown>("/api/public/v1/cashout/payout-address", apiKey, {
+    method: "POST",
+    body: JSON.stringify({ payoutAddress }),
+  });
+}

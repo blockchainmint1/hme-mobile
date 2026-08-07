@@ -3,13 +3,11 @@
  * screen. Collapsed by default so the normal send flow is untouched, and only
  * rendered at all when the user has saved a TSD Swap API key in Settings.
  *
- * The panel only *creates the order*. Once created, the parent pre-fills the
- * ordinary TSD send with the order's deposit address and exact amount, so the
- * broadcast path (coin reservations, dust handling, holder top-up) is the same
- * battle-tested code as any other token payment.
- *
- * Fees come from the user's TSD Swap account (their key decides 1% / 0.5% / 0%)
- * — the wallet quotes what the service reports and never applies coupons.
+ * The panel does not create per-order inboxes any more: TSD Swap gives each
+ * account a *permanent* deposit address plus its fee tier, and remembers where
+ * the USDC should go. So the panel just reads the account, saves the payout
+ * address when it changes, and pre-fills the ordinary TSD send with the
+ * deposit address — the broadcast path stays the same battle-tested code.
  *
  * Exchange/off-ramp feature — gated by `useExchangeFeaturesAllowed()` and
  * therefore absent from the iOS build. See AGENTS.md.
@@ -25,7 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
-import { getCashoutSettings, createCashoutOrder } from "@/lib/cashout/tsd.functions";
+import { getCashoutAccount, setCashoutPayoutAddress } from "@/lib/cashout/tsd.functions";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { deriveEvmAccount } from "@/lib/chains/evm";
 import {
@@ -34,46 +32,60 @@ import {
   feeLabel,
   formatUsd,
   payoutFor,
-  type CashoutOrder,
+  type CashoutAccount,
 } from "@/lib/cashout/tsd";
+
+export interface CashoutPlan {
+  depositAddress: string;
+  feeBps: number;
+  payoutAddress: string;
+  amount: number;
+}
 
 interface Props {
   /** TSD amount currently typed into the send form. */
   amount: string;
-  /** Own TXC address refunds should be returned to (legacy T… preferred). */
-  refundAddress: string | null;
   /** The user's TSD Swap API key — the feature is unavailable without it. */
   apiKey: string;
-  onOrder: (order: CashoutOrder) => void;
+  onReady: (plan: CashoutPlan) => void;
 }
 
-export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Props) {
+export function TsdCashoutPanel({ amount, apiKey, onReady }: Props) {
   const [open, setOpen] = useState(false);
   const { root } = useWallet();
   const ownEvmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
   const [useOwnWallet, setUseOwnWallet] = useState(true);
   const [payout, setPayout] = useState("");
-  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSettings = useServerFn(getCashoutSettings);
-  const createOrder = useServerFn(createCashoutOrder);
+  const fetchAccount = useServerFn(getCashoutAccount);
+  const savePayout = useServerFn(setCashoutPayoutAddress);
 
-  const settings = useQuery({
-    queryKey: ["tsd-cashout-settings", apiKey],
-    queryFn: () => fetchSettings({ data: { apiKey } }),
+  const account = useQuery<CashoutAccount>({
+    queryKey: ["tsd-cashout-account", apiKey],
+    queryFn: () => fetchAccount({ data: { apiKey } }),
     enabled: open,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
     retry: false,
   });
 
+  // If TSD Swap already has a payout address on file, prefer it and don't
+  // silently redirect the money to a different wallet.
+  useEffect(() => {
+    const saved = account.data?.payoutAddress;
+    if (saved && ETH_ADDRESS_RE.test(saved)) {
+      setPayout(saved);
+      setUseOwnWallet(saved.toLowerCase() === (ownEvmAddress ?? "").toLowerCase());
+    }
+  }, [account.data?.payoutAddress, ownEvmAddress]);
+
   // Only the service knows the account's fee tier — never guess a default,
   // or a 0%-fee account sees a phantom 1%.
-  const knownFeeBps = settings.data?.redeemFeeBps;
+  const knownFeeBps = account.data?.feeBps;
   const feeBps = knownFeeBps ?? 0;
   const feeKnown = typeof knownFeeBps === "number";
 
-  // When "my ETH wallet" is ticked we pay out to this wallet's own EVM address.
   const effectivePayout = useOwnWallet && ownEvmAddress ? ownEvmAddress : payout;
 
   const numeric = useMemo(() => Number(amount), [amount]);
@@ -83,7 +95,7 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
     setError(null);
   }, [amount, payout, useOwnWallet]);
 
-  async function create() {
+  async function confirm() {
     setError(null);
     const to = effectivePayout.trim();
     if (!ETH_ADDRESS_RE.test(to)) {
@@ -94,34 +106,38 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
       setError("Enter the amount of TSD to cash out first.");
       return;
     }
-    if (!refundAddress) {
-      setError("Couldn't determine a refund address for your wallet. Try again in a moment.");
+    const a = account.data;
+    if (!a || !a.depositAddress) {
+      setError("Couldn't get your TSD Swap deposit address. Try again in a moment.");
       return;
     }
-    const s = settings.data;
-    if (s && !s.live) {
+    if (!a.live) {
       setError("Cash-out is paused right now. Please check back soon.");
       return;
     }
-    if (s && numeric < s.minAmount) {
-      setError(`Minimum cash-out is ${s.minAmount} TSD.`);
+    if (a.minAmount !== null && numeric < a.minAmount) {
+      setError(`Minimum cash-out is ${a.minAmount} TSD.`);
       return;
     }
-    if (s && numeric > s.maxAmount) {
-      setError(`Maximum cash-out is ${s.maxAmount} TSD.`);
+    if (a.maxAmount !== null && numeric > a.maxAmount) {
+      setError(`Maximum cash-out is ${a.maxAmount} TSD.`);
       return;
     }
 
-    setCreating(true);
+    setSaving(true);
     try {
-      const order = await createOrder({
-        data: { apiKey, amount: numeric, payoutAddress: to, refundAddress },
-      });
-      onOrder(order);
+      let deposit = a.depositAddress;
+      let bps = a.feeBps;
+      if ((a.payoutAddress ?? "").toLowerCase() !== to.toLowerCase()) {
+        const updated = await savePayout({ data: { apiKey, payoutAddress: to } });
+        if (updated.depositAddress) deposit = updated.depositAddress;
+        bps = updated.feeBps;
+      }
+      onReady({ depositAddress: deposit, feeBps: bps, payoutAddress: to, amount: numeric });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't create the cash-out order.");
+      setError(e instanceof Error ? e.message : "Couldn't set up the cash-out.");
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   }
 
@@ -145,11 +161,11 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
       </CollapsibleTrigger>
 
       <CollapsibleContent className="space-y-4 border-t border-border/60 px-3 pb-4 pt-4">
-        {settings.isError && (
+        {account.isError && (
           <p className="flex items-start gap-2 text-sm text-destructive">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
-            {settings.error instanceof Error
-              ? settings.error.message
+            {account.error instanceof Error
+              ? account.error.message
               : "Cash-out is unavailable right now."}
           </p>
         )}
@@ -200,9 +216,7 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
           <Row label="You send">{numeric > 0 ? `${numeric} TSD` : "—"}</Row>
           <Row label={`Your account fee${feeKnown ? ` (${feeLabel(feeBps)})` : ""}`}>
             {!feeKnown ? (
-              <span className="text-muted-foreground">
-                {settings.isLoading ? "Checking…" : "—"}
-              </span>
+              <span className="text-muted-foreground">{account.isLoading ? "Checking…" : "—"}</span>
             ) : numeric > 0 ? (
               `${formatUsd(numeric - receive)} TSD`
             ) : (
@@ -214,11 +228,18 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
               {feeKnown && receive > 0 ? `${formatUsd(receive)} USDC` : "—"}
             </span>
           </Row>
+          <Row label="Deposit address">
+            {account.data?.depositAddress ? (
+              <span className="break-all font-mono text-xs">{account.data.depositAddress}</span>
+            ) : (
+              <span className="text-muted-foreground">{account.isLoading ? "Checking…" : "—"}</span>
+            )}
+          </Row>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          If anything goes wrong — wrong amount, expired order, failed payout — the TSD is returned
-          to this wallet automatically.
+          This is your account's permanent TSD deposit address. If anything goes wrong the TSD is
+          returned to the wallet it came from.
         </p>
 
         {error && (
@@ -230,15 +251,15 @@ export function TsdCashoutPanel({ amount, refundAddress, apiKey, onOrder }: Prop
         <Button
           type="button"
           className="w-full"
-          onClick={create}
-          disabled={creating || settings.isLoading}
+          onClick={confirm}
+          disabled={saving || account.isLoading}
         >
-          {creating ? (
+          {saving ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating order…
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Setting up…
             </>
           ) : (
-            "Create cash-out order"
+            "Use cash-out address"
           )}
         </Button>
       </CollapsibleContent>
