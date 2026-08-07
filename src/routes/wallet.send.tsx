@@ -59,14 +59,8 @@ import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { TsdCashoutPanel, type CashoutPlan } from "@/components/wallet/TsdCashoutPanel";
 import { useCashoutApiKey } from "@/lib/cashout/api-key";
-import { getCashoutOrder } from "@/lib/cashout/tsd.functions";
-import {
-  TSD_PROPERTY_ID,
-  cashoutStatusLabel,
-  formatUsd,
-  isTerminalCashoutStatus,
-  type CashoutOrder,
-} from "@/lib/cashout/tsd";
+import { TSD_PROPERTY_ID, formatUsd, payoutFor } from "@/lib/cashout/tsd";
+
 
 import {
   getTxcTokenBalancesForAddresses,
