@@ -57,7 +57,7 @@ import {
 } from "@/lib/txc/tokens";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
-import { TsdCashoutPanel } from "@/components/wallet/TsdCashoutPanel";
+import { TsdCashoutPanel, type CashoutPlan } from "@/components/wallet/TsdCashoutPanel";
 import { useCashoutApiKey } from "@/lib/cashout/api-key";
 import { getCashoutOrder } from "@/lib/cashout/tsd.functions";
 import {
@@ -222,7 +222,7 @@ function SendPage() {
    * and amount are then locked to the order's inbox so the payment can't drift
    * away from what the bridge is waiting for.
    */
-  const [cashout, setCashout] = useState<CashoutOrder | null>(null);
+  const [cashout, setCashout] = useState<CashoutPlan | null>(null);
   const exchangeAllowed = useExchangeFeaturesAllowed();
 
   const activeToken: TxcTokenMeta | null =
@@ -672,18 +672,6 @@ function SendPage() {
   const reviewedAmountLabel =
     isTokenSend && activeToken ? `${amount} ${activeToken.symbol}` : formatTxc(reviewedOutSats);
 
-  // Once the TSD is on its way, follow the bridge order until the USDC lands
-  // (or the TSD is refunded) so the user never has to leave the wallet.
-  const fetchCashoutOrder = useServerFn(getCashoutOrder);
-  const cashoutStatus = useQuery({
-    queryKey: ["tsd-cashout-order", cashout?.id],
-    enabled: !!cashout && !!cashoutApiKey && stage.kind === "sent",
-    queryFn: () => fetchCashoutOrder({ data: { id: cashout!.id, apiKey: cashoutApiKey! } }),
-    refetchInterval: (q) =>
-      q.state.data && isTerminalCashoutStatus(q.state.data.status) ? false : 10_000,
-    retry: false,
-  });
-
   if (stage.kind === "sent") {
     return (
       <main className="mx-auto max-w-xl px-4 py-10 text-center">
@@ -696,43 +684,15 @@ function SendPage() {
         {cashout && (
           <div className="mx-auto mt-4 max-w-sm rounded-lg border border-primary/40 bg-primary/5 p-4 text-left text-sm">
             <div className="flex items-center gap-2 font-medium">
-              {cashoutStatus.data && isTerminalCashoutStatus(cashoutStatus.data.status) ? (
-                <ArrowDownUp className="h-4 w-4 text-primary" />
-              ) : (
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              )}
-              {cashoutStatusLabel(cashoutStatus.data?.status ?? cashout.status)}
+              <ArrowDownUp className="h-4 w-4 text-primary" /> Cashing out to USDC
             </div>
             <p className="mt-1.5 text-xs text-muted-foreground">
-              {cashout.amountExpected} TSD → {formatUsd(cashout.payoutAmount)} USDC to{" "}
+              {cashout.amount} TSD → {formatUsd(payoutFor(cashout.amount, cashout.feeBps))} USDC to{" "}
               <span className="font-mono break-all">{cashout.payoutAddress}</span>
             </p>
-            {cashoutStatus.data?.releaseTxHash && (
-              <a
-                href={`https://etherscan.io/tx/${cashoutStatus.data.releaseTxHash}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-xs underline"
-              >
-                View USDC payout <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-            {cashoutStatus.data?.refundTxid && (
-              <a
-                href={explorerTxUrl(cashoutStatus.data.refundTxid)}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-flex items-center gap-1 text-xs underline"
-              >
-                View refund <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-            {cashoutStatus.data?.error && (
-              <p className="mt-2 text-xs text-destructive">{cashoutStatus.data.error}</p>
-            )}
             <p className="mt-2 text-xs text-muted-foreground">
-              Payout usually lands within a few minutes of the TSD confirming. You can close the app
-              — it keeps running on our side.
+              TSD Swap pays out once the TSD transfer confirms — usually a few minutes. You can
+              close the app; it keeps running on their side.
             </p>
           </div>
         )}
@@ -878,12 +838,11 @@ function SendPage() {
               {canCashOut && !cashout && (
                 <TsdCashoutPanel
                   amount={amount}
-                  refundAddress={refundAddress}
                   apiKey={cashoutApiKey!}
-                  onOrder={(order) => {
-                    setCashout(order);
-                    setTo(order.depositAddress);
-                    setAmount(String(order.amountExpected));
+                  onReady={(plan) => {
+                    setCashout(plan);
+                    setTo(plan.depositAddress);
+                    setAmount(String(plan.amount));
                     setSendAll(false);
                     setError(null);
                   }}
@@ -897,12 +856,13 @@ function SendPage() {
                     <div className="flex-1">
                       <p className="font-medium">Cashing out to USDC on Ethereum</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {cashout.amountExpected} TSD → {formatUsd(cashout.payoutAmount)} USDC to{" "}
+                        {cashout.amount} TSD →{" "}
+                        {formatUsd(payoutFor(cashout.amount, cashout.feeBps))} USDC to{" "}
                         <span className="font-mono break-all">{cashout.payoutAddress}</span>
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Send exactly this amount to the address above — it's the order's own inbox.
-                        Refunds return to your wallet automatically.
+                        The recipient above is your TSD Swap deposit address. Refunds return to your
+                        wallet automatically.
                       </p>
                     </div>
                   </div>
