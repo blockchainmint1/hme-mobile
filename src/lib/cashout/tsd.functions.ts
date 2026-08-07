@@ -6,8 +6,14 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import type { CashoutOrder, CashoutSettings } from "./tsd";
-import { createCashout, fetchCashoutOrder, fetchCashoutSettings } from "./tsd.server";
+import type { CashoutAccount, CashoutOrder, CashoutSettings } from "./tsd";
+import {
+  createCashout,
+  fetchCashoutOrder,
+  fetchCashoutSettings,
+  fetchDepositAddress,
+  saveDepositPayoutAddress,
+} from "./tsd.server";
 
 const apiKey = z.string().trim().min(16).max(200);
 
@@ -73,4 +79,52 @@ export const getCashoutOrder = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<CashoutOrder> => {
     const raw = await fetchCashoutOrder(data.id, data.apiKey);
     return orderSchema.parse(raw);
+  });
+
+/**
+ * The account's permanent TSD deposit address + fee. TSD Swap has been
+ * inconsistent about field names/types, so accept both `redeemFeeBps` and
+ * `feePercent` and coerce numbers.
+ */
+const accountSchema = z
+  .object({
+    address: z.string().min(20).optional(),
+    depositAddress: z.string().min(20).optional(),
+    redeemFeeBps: z.coerce.number().optional(),
+    feePercent: z.coerce.number().optional(),
+    payoutAddress: z.string().nullable().optional(),
+    live: z.coerce.boolean().optional(),
+    minAmount: z.coerce.number().optional(),
+    maxAmount: z.coerce.number().optional(),
+  })
+  .transform((r) => ({
+    depositAddress: (r.depositAddress ?? r.address ?? "").trim(),
+    feeBps: r.redeemFeeBps ?? (typeof r.feePercent === "number" ? r.feePercent * 100 : 0),
+    payoutAddress: r.payoutAddress ?? null,
+    live: r.live ?? true,
+    minAmount: r.minAmount ?? null,
+    maxAmount: r.maxAmount ?? null,
+  }));
+
+export const getCashoutAccount = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) => z.object({ apiKey }).parse(raw))
+  .handler(async ({ data }): Promise<CashoutAccount> => {
+    return accountSchema.parse(await fetchDepositAddress(data.apiKey));
+  });
+
+export const setCashoutPayoutAddress = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        apiKey,
+        payoutAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/, "Enter a valid 0x… address"),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data }): Promise<CashoutAccount> => {
+    const raw = await saveDepositPayoutAddress(data.apiKey, data.payoutAddress);
+    const parsed = accountSchema.safeParse(raw);
+    if (parsed.success && parsed.data.depositAddress) return parsed.data;
+    // Some responses only acknowledge the save; read the account back.
+    return accountSchema.parse(await fetchDepositAddress(data.apiKey));
   });
