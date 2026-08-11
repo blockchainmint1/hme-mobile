@@ -1,3 +1,4 @@
+import { scopedKey } from "@/lib/profiles";
 /**
  * Watch-only wallets.
  *
@@ -20,7 +21,11 @@ export interface WatchWallet {
   createdAt: number;
 }
 
-const STORAGE_KEY = "hme.watch-only.v1";
+const STORAGE_KEY_BASE = "hme.watch-only.v1";
+/** Namespaced per wallet profile (default profile keeps the original key). */
+function STORAGE_KEY(): string {
+  return scopedKey(STORAGE_KEY_BASE);
+}
 const EVENT = "hme:watch-changed";
 
 function safeParse(raw: string | null): WatchWallet[] {
@@ -39,12 +44,12 @@ function safeParse(raw: string | null): WatchWallet[] {
 
 export function listWatchWallets(): WatchWallet[] {
   if (typeof localStorage === "undefined") return [];
-  return safeParse(localStorage.getItem(STORAGE_KEY));
+  return safeParse(localStorage.getItem(STORAGE_KEY()));
 }
 
 function persist(list: WatchWallet[]): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    localStorage.setItem(STORAGE_KEY(), JSON.stringify(list));
     window.dispatchEvent(new CustomEvent(EVENT));
   } catch {
     /* quota / disabled — non-fatal */

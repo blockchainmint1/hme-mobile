@@ -7,7 +7,8 @@ import {
   rootFromSeed,
   deriveAddress,
 } from "@/lib/txc/wallet";
-import { saveWallet } from "@/lib/txc/storage";
+import { saveWallet, saveWalletToNewProfile } from "@/lib/txc/storage";
+import { getSessionPassword } from "@/lib/txc/session-cache";
 import { assessPassword } from "@/lib/security/password-strength";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { getAddressStats } from "@/lib/txc/mempool";
@@ -23,6 +24,11 @@ import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/import")({
+  // ?add=true imports into an ADDITIONAL wallet profile (vault) instead of
+  // replacing the wallet on this device.
+  validateSearch: (search: Record<string, unknown>): { add?: boolean } => ({
+    add: search.add === true || search.add === "true" || search.add === "1" ? true : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Import wallet — HME Wallet" },
@@ -189,7 +195,10 @@ async function scanKindForImport(
 
 function ImportPage() {
   const navigate = useNavigate();
-  const { loadFromMemory } = useWallet();
+  const { add } = Route.useSearch();
+  const { loadFromMemory, unlocked, profiles } = useWallet();
+  const [sessionPw] = useState<string | null>(() => getSessionPassword());
+  const addingProfile = !!add && !!unlocked && !!sessionPw;
   const [phrase, setPhrase] = useState("");
   const [passphrase, setPassphrase] = useState("");
   const [password, setPassword] = useState("");
@@ -215,9 +224,13 @@ function ImportPage() {
         mnemonic: m,
         passphrase,
         kind: "bip44" as DerivationKind,
-        label: "Imported wallet",
+        label: addingProfile ? `Wallet ${profiles.length + 1}` : "Imported wallet",
       };
-      await saveWallet(u, password);
+      if (addingProfile) {
+        await saveWalletToNewProfile(u, sessionPw!);
+      } else {
+        await saveWallet(u, password);
+      }
       await loadFromMemory(u);
       navigate({ to: "/wallet" });
     } catch (err) {
@@ -247,14 +260,16 @@ function ImportPage() {
       setError("That doesn't look like a valid 12 or 24-word seed phrase.");
       return;
     }
-    const strength = assessPassword(password);
-    if (!strength.ok) {
-      setError(strength.message);
-      return;
-    }
-    if (password !== password2) {
-      setError("Passwords don't match.");
-      return;
+    if (!addingProfile) {
+      const strength = assessPassword(password);
+      if (!strength.ok) {
+        setError(strength.message);
+        return;
+      }
+      if (password !== password2) {
+        setError("Passwords don't match.");
+        return;
+      }
     }
 
     setBusy(true);
@@ -447,35 +462,44 @@ function ImportPage() {
               autoFocus
             />
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="pw1">New password</Label>
-                <Input
-                  id="pw1"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                  disabled={busy}
-                  className="mt-1"
-                />
+            {addingProfile ? (
+              <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                This wallet is added alongside your existing one and encrypted with the same
+                password — one password unlocks all of your wallets.
+              </p>
+            ) : (
+              <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="pw1">New password</Label>
+                  <Input
+                    id="pw1"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                    disabled={busy}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pw2">Confirm</Label>
+                  <Input
+                    id="pw2"
+                    type="password"
+                    value={password2}
+                    onChange={(e) => setPassword2(e.target.value)}
+                    autoComplete="new-password"
+                    disabled={busy}
+                    className="mt-1"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="pw2">Confirm</Label>
-                <Input
-                  id="pw2"
-                  type="password"
-                  value={password2}
-                  onChange={(e) => setPassword2(e.target.value)}
-                  autoComplete="new-password"
-                  disabled={busy}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-            <p className="-mt-2 text-xs text-muted-foreground">
-              This password unlocks the wallet on this device. It's separate from your seed phrase.
-            </p>
+              <p className="-mt-2 text-xs text-muted-foreground">
+                This password unlocks the wallet on this device. It's separate from your seed phrase.
+              </p>
+              </>
+            )}
 
             <details className="rounded-md border border-border bg-muted/30 p-3 text-sm">
               <summary className="cursor-pointer font-medium text-foreground">

@@ -22,6 +22,7 @@ import { getEnabledChains } from "@/lib/chain-prefs";
 import { parsePaymentUri } from "@/lib/pay-uri";
 import { rootFingerprintHex } from "@/lib/txc/fingerprint";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
+import { ProfileSwitcher } from "@/components/wallet/ProfileSwitcher";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -231,6 +232,8 @@ function WalletLayout() {
             )}
           </button>
 
+          <ProfileSwitcher />
+
           <QrScanButton onScan={handleScan} />
 
 
@@ -245,12 +248,12 @@ function WalletLayout() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
-                <Link to="/create">
+                <Link to="/create" search={{ add: true }}>
                   <Sparkles className="h-4 w-4 mr-2" /> Create new wallet
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/import">
+                <Link to="/import" search={{ add: true }}>
                   <Download className="h-4 w-4 mr-2" /> Import wallet
                 </Link>
               </DropdownMenuItem>

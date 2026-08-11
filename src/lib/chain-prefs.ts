@@ -1,3 +1,4 @@
+import { scopedKey } from "@/lib/profiles";
 /**
  * Chain preferences: which chains from the single HD seed to show tiles for.
  * Stored in localStorage so it persists across sessions on-device.
@@ -57,12 +58,16 @@ export const CHAIN_ORDER: ChainId[] = [
   "zcu",
 ];
 
-const ORDER_KEY = "hme.chains.order.v1";
+const ORDER_KEY_BASE = "hme.chains.order.v1";
+/** Namespaced per wallet profile (default profile keeps the original key). */
+function ORDER_KEY(): string {
+  return scopedKey(ORDER_KEY_BASE);
+}
 
 function readOrder(): ChainId[] {
   if (typeof localStorage === "undefined") return [...CHAIN_ORDER];
   try {
-    const raw = localStorage.getItem(ORDER_KEY);
+    const raw = localStorage.getItem(ORDER_KEY());
     if (!raw) return [...CHAIN_ORDER];
     const parsed = JSON.parse(raw) as string[];
     const seen = new Set<ChainId>();
@@ -97,14 +102,18 @@ export function setChainOrder(order: ChainId[]): void {
   }
   for (const id of CHAIN_ORDER) if (!seen.has(id)) normalized.push(id);
   try {
-    localStorage.setItem(ORDER_KEY, JSON.stringify(normalized));
+    localStorage.setItem(ORDER_KEY(), JSON.stringify(normalized));
     window.dispatchEvent(new CustomEvent("hme:chains-changed"));
   } catch {
     /* ignore */
   }
 }
 
-const STORAGE_KEY = "hme.chains.enabled.v1";
+const STORAGE_KEY_BASE = "hme.chains.enabled.v1";
+/** Namespaced per wallet profile (default profile keeps the original key). */
+function STORAGE_KEY(): string {
+  return scopedKey(STORAGE_KEY_BASE);
+}
 const DEFAULT_ENABLED: Record<ChainId, boolean> = {
   txc: true,
   eth: false,
@@ -120,7 +129,7 @@ const DEFAULT_ENABLED: Record<ChainId, boolean> = {
 function read(): Record<ChainId, boolean> {
   if (typeof localStorage === "undefined") return { ...DEFAULT_ENABLED };
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY());
     if (!raw) return { ...DEFAULT_ENABLED };
     const parsed = JSON.parse(raw) as Partial<Record<ChainId, boolean>>;
     const out = { ...DEFAULT_ENABLED };
@@ -154,7 +163,7 @@ export function setChainEnabled(id: ChainId, enabled: boolean): void {
   const prefs = read();
   prefs[id] = enabled;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    localStorage.setItem(STORAGE_KEY(), JSON.stringify(prefs));
     window.dispatchEvent(new CustomEvent("hme:chains-changed"));
   } catch {
     /* ignore */
