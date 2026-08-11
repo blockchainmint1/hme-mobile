@@ -8,9 +8,27 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { flushSync } from "react-dom";
 import type { BIP32Interface } from "bip32";
 import { rootFromSeed, seedFromMnemonic } from "./wallet";
-import { deleteWallet, renameStoredWallet, setStoredKind, unlockWallet, type UnlockedWallet } from "./storage";
+import {
+  deleteWallet,
+  getActiveProfileId,
+  listWalletProfiles,
+  renameStoredWallet,
+  setStoredKind,
+  unlockProfile,
+  unlockWallet,
+  type UnlockedWallet,
+  type WalletProfileSummary,
+} from "./storage";
+import { PROFILES_CHANGED_EVENT } from "@/lib/profiles";
 import type { DerivationKind } from "./network";
-import { AUTO_LOCK_MS, clearSession, loadSession, saveSession, touchSession } from "./session-cache";
+import {
+  AUTO_LOCK_MS,
+  clearSession,
+  getSessionPassword,
+  loadSession,
+  saveSession,
+  touchSession,
+} from "./session-cache";
 import { clearWalletTraces } from "@/lib/query-persist";
 
 
@@ -24,6 +42,19 @@ interface WalletContextValue {
   rename: (label: string) => void;
   /** Switch the primary derivation branch (all paths stay scanned). */
   setKind: (kind: DerivationKind) => void;
+  /** All wallet profiles (vaults) stored on this device. */
+  profiles: WalletProfileSummary[];
+  /** Id of the profile currently loaded. */
+  activeProfileId: string;
+  /**
+   * Switch to another profile. Uses the shared session password; pass one
+   * explicitly when the session has expired. Returns false if it can't unlock.
+   */
+  switchProfile: (id: string, password?: string) => Promise<boolean>;
+  /** True while a session password is cached (switching won't re-prompt). */
+  canSwitchSilently: boolean;
+  /** Re-read the profile list from storage. */
+  refreshProfiles: () => void;
 }
 
 const Ctx = createContext<WalletContextValue | null>(null);
@@ -32,6 +63,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [unlocked, setUnlocked] = useState<UnlockedWallet | null>(null);
   const [root, setRoot] = useState<BIP32Interface | null>(null);
   const autoLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [profiles, setProfiles] = useState<WalletProfileSummary[]>([]);
+  const [activeProfile, setActiveProfile] = useState<string>("default");
+
+  const refreshProfiles = useCallback(() => {
+    setProfiles(listWalletProfiles());
+    setActiveProfile(getActiveProfileId());
+  }, []);
+
+  useEffect(() => {
+    refreshProfiles();
+    const h = () => refreshProfiles();
+    window.addEventListener(PROFILES_CHANGED_EVENT, h);
+    return () => window.removeEventListener(PROFILES_CHANGED_EVENT, h);
+  }, [refreshProfiles]);
 
   const loadFromMemory = useCallback(async (w: UnlockedWallet) => {
     // Key-only wallets have no mnemonic. Their BIP32 "root" is derived from a
@@ -52,7 +97,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setUnlocked(w);
     });
     await saveSession(w);
-  }, []);
+    refreshProfiles();
+  }, [refreshProfiles]);
 
 
   const unlock = useCallback(
@@ -60,9 +106,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const w = await unlockWallet(password);
       if (!w) return false;
       await loadFromMemory(w);
+      // Keep the password for the life of the session so switching vaults
+      // doesn't re-prompt (one password unlocks them all).
+      await saveSession(w, password);
       return true;
     },
     [loadFromMemory],
+  );
+
+  const switchProfile = useCallback(
+    async (id: string, password?: string) => {
+      const pw = password ?? getSessionPassword();
+      if (!pw) return false;
+      const w = await unlockProfile(id, pw);
+      if (!w) return false;
+      await loadFromMemory(w);
+      await saveSession(w, pw);
+      refreshProfiles();
+      return true;
+    },
+    [loadFromMemory, refreshProfiles],
   );
 
   const lock = useCallback(() => {
@@ -77,11 +140,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     clearWalletTraces();
     setUnlocked(null);
     setRoot(null);
-  }, []);
+    refreshProfiles();
+  }, [refreshProfiles]);
 
 
   const rename = useCallback((label: string) => {
     renameStoredWallet(label);
+    setProfiles(listWalletProfiles());
     setUnlocked((prev) => {
       if (!prev) return prev;
       const next = { ...prev, label };
@@ -186,8 +251,35 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
 
   const value = useMemo<WalletContextValue>(
-    () => ({ unlocked, root, unlock, lock, forget, loadFromMemory, rename, setKind }),
-    [unlocked, root, unlock, lock, forget, loadFromMemory, rename, setKind],
+    () => ({
+      unlocked,
+      root,
+      unlock,
+      lock,
+      forget,
+      loadFromMemory,
+      rename,
+      setKind,
+      profiles,
+      activeProfileId: activeProfile,
+      switchProfile,
+      canSwitchSilently: !!unlocked,
+      refreshProfiles,
+    }),
+    [
+      unlocked,
+      root,
+      unlock,
+      lock,
+      forget,
+      loadFromMemory,
+      rename,
+      setKind,
+      profiles,
+      activeProfile,
+      switchProfile,
+      refreshProfiles,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
