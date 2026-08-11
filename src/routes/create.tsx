@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { generateMnemonic, generateMnemonicFromUserEntropy } from "@/lib/txc/wallet";
-import { saveWallet } from "@/lib/txc/storage";
+import { saveWallet, saveWalletToNewProfile } from "@/lib/txc/storage";
+import { getSessionPassword } from "@/lib/txc/session-cache";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,11 @@ function clearDraftMnemonic() {
 }
 
 export const Route = createFileRoute("/create")({
+  // ?add=true creates an ADDITIONAL wallet profile (vault) instead of
+  // replacing the wallet on this device.
+  validateSearch: (search: Record<string, unknown>): { add?: boolean } => ({
+    add: search.add === true || search.add === "true" || search.add === "1" ? true : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Create wallet — HME Wallet" },
@@ -42,7 +48,12 @@ export const Route = createFileRoute("/create")({
 
 function CreatePage() {
   const navigate = useNavigate();
-  const { loadFromMemory } = useWallet();
+  const { add } = Route.useSearch();
+  const { loadFromMemory, unlocked, profiles } = useWallet();
+  // Adding a vault only skips the password step while a session is alive —
+  // the new envelope is encrypted with the same password as the others.
+  const [sessionPw] = useState<string | null>(() => getSessionPassword());
+  const addingProfile = !!add && !!unlocked && !!sessionPw;
   const [mnemonic, setMnemonic] = useState("");
   const words = mnemonic ? mnemonic.split(" ") : [];
   const [confirmedBackup, setConfirmedBackup] = useState(false);
@@ -91,14 +102,16 @@ function CreatePage() {
   async function finalize(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const strength = assessPassword(password);
-    if (!strength.ok) {
-      setError(strength.message);
-      return;
-    }
-    if (password !== password2) {
-      setError("Passwords don't match.");
-      return;
+    if (!addingProfile) {
+      const strength = assessPassword(password);
+      if (!strength.ok) {
+        setError(strength.message);
+        return;
+      }
+      if (password !== password2) {
+        setError("Passwords don't match.");
+        return;
+      }
     }
     if (!locked) {
       setError("Reveal and back up your seed phrase first.");
@@ -116,8 +129,12 @@ function CreatePage() {
     try {
       const u = { mnemonic, passphrase: "", // SLIP-0044 legacy path (m/44'/696969'/0') — matches the TXC Web Wallet
       // and wTXC bridge, so seeds move between them cleanly.
-      kind: "bip44" as const, label: "Main wallet" };
-      await saveWallet(u, password);
+      kind: "bip44" as const, label: addingProfile ? `Wallet ${profiles.length + 1}` : "Main wallet" };
+      if (addingProfile) {
+        await saveWalletToNewProfile(u, sessionPw!);
+      } else {
+        await saveWallet(u, password);
+      }
       await loadFromMemory(u);
       clearDraftMnemonic();
       navigate({ to: "/wallet" });

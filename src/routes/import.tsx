@@ -7,7 +7,8 @@ import {
   rootFromSeed,
   deriveAddress,
 } from "@/lib/txc/wallet";
-import { saveWallet } from "@/lib/txc/storage";
+import { saveWallet, saveWalletToNewProfile } from "@/lib/txc/storage";
+import { getSessionPassword } from "@/lib/txc/session-cache";
 import { assessPassword } from "@/lib/security/password-strength";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { getAddressStats } from "@/lib/txc/mempool";
@@ -189,7 +190,10 @@ async function scanKindForImport(
 
 function ImportPage() {
   const navigate = useNavigate();
-  const { loadFromMemory } = useWallet();
+  const { add } = Route.useSearch();
+  const { loadFromMemory, unlocked, profiles } = useWallet();
+  const [sessionPw] = useState<string | null>(() => getSessionPassword());
+  const addingProfile = !!add && !!unlocked && !!sessionPw;
   const [phrase, setPhrase] = useState("");
   const [passphrase, setPassphrase] = useState("");
   const [password, setPassword] = useState("");
@@ -215,9 +219,13 @@ function ImportPage() {
         mnemonic: m,
         passphrase,
         kind: "bip44" as DerivationKind,
-        label: "Imported wallet",
+        label: addingProfile ? `Wallet ${profiles.length + 1}` : "Imported wallet",
       };
-      await saveWallet(u, password);
+      if (addingProfile) {
+        await saveWalletToNewProfile(u, sessionPw!);
+      } else {
+        await saveWallet(u, password);
+      }
       await loadFromMemory(u);
       navigate({ to: "/wallet" });
     } catch (err) {
@@ -247,14 +255,16 @@ function ImportPage() {
       setError("That doesn't look like a valid 12 or 24-word seed phrase.");
       return;
     }
-    const strength = assessPassword(password);
-    if (!strength.ok) {
-      setError(strength.message);
-      return;
-    }
-    if (password !== password2) {
-      setError("Passwords don't match.");
-      return;
+    if (!addingProfile) {
+      const strength = assessPassword(password);
+      if (!strength.ok) {
+        setError(strength.message);
+        return;
+      }
+      if (password !== password2) {
+        setError("Passwords don't match.");
+        return;
+      }
     }
 
     setBusy(true);
