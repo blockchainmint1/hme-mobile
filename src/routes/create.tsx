@@ -296,64 +296,73 @@ function CreatePage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Set a wallet password</CardTitle>
+          <CardTitle>{addingProfile ? "Add this wallet" : "Set a wallet password"}</CardTitle>
           <CardDescription>
             Encrypts your seed inside this browser. You'll enter it each time you open the wallet.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={finalize} className="space-y-4">
-            <div>
-              <Label htmlFor="pw1">Password</Label>
-              <Input
-                id="pw1"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-                className="mt-1"
-              />
-              {password.length > 0 &&
-                (() => {
-                  const s = assessPassword(password);
-                  const colors = [
-                    "bg-destructive",
-                    "bg-destructive",
-                    "bg-amber-500",
-                    "bg-emerald-500",
-                    "bg-emerald-500",
-                  ];
-                  return (
-                    <div className="mt-2">
-                      <div className="flex gap-1" aria-hidden>
-                        {[0, 1, 2, 3].map((i) => (
-                          <div
-                            key={i}
-                            className={`h-1.5 flex-1 rounded-full ${
-                              i < s.score ? colors[s.score] : "bg-border/60"
-                            }`}
-                          />
-                        ))}
+            {addingProfile ? (
+              <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                This wallet will be encrypted with the same password you already use on this
+                device — one password unlocks all of your wallets.
+              </p>
+            ) : (
+              <>
+              <div>
+                <Label htmlFor="pw1">Password</Label>
+                <Input
+                  id="pw1"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  className="mt-1"
+                />
+                {password.length > 0 &&
+                  (() => {
+                    const s = assessPassword(password);
+                    const colors = [
+                      "bg-destructive",
+                      "bg-destructive",
+                      "bg-amber-500",
+                      "bg-emerald-500",
+                      "bg-emerald-500",
+                    ];
+                    return (
+                      <div className="mt-2">
+                        <div className="flex gap-1" aria-hidden>
+                          {[0, 1, 2, 3].map((i) => (
+                            <div
+                              key={i}
+                              className={`h-1.5 flex-1 rounded-full ${
+                                i < s.score ? colors[s.score] : "bg-border/60"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Strength: <span className="font-medium">{s.label}</span>
+                          {!s.ok && s.message ? `. ${s.message}` : ""}
+                        </p>
                       </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Strength: <span className="font-medium">{s.label}</span>
-                        {!s.ok && s.message ? `. ${s.message}` : ""}
-                      </p>
-                    </div>
-                  );
-                })()}
-            </div>
-            <div>
-              <Label htmlFor="pw2">Confirm password</Label>
-              <Input
-                id="pw2"
-                type="password"
-                value={password2}
-                onChange={(e) => setPassword2(e.target.value)}
-                autoComplete="new-password"
-                className="mt-1"
-              />
-            </div>
+                    );
+                  })()}
+              </div>
+              <div>
+                <Label htmlFor="pw2">Confirm password</Label>
+                <Input
+                  id="pw2"
+                  type="password"
+                  value={password2}
+                  onChange={(e) => setPassword2(e.target.value)}
+                  autoComplete="new-password"
+                  className="mt-1"
+                />
+              </div>
+              </>
+            )}
             <div className="flex items-start gap-3 text-sm">
               <input
                 id="backup-confirmed"
