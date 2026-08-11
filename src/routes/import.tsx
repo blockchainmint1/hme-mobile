@@ -462,35 +462,44 @@ function ImportPage() {
               autoFocus
             />
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="pw1">New password</Label>
-                <Input
-                  id="pw1"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                  disabled={busy}
-                  className="mt-1"
-                />
+            {addingProfile ? (
+              <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+                This wallet is added alongside your existing one and encrypted with the same
+                password — one password unlocks all of your wallets.
+              </p>
+            ) : (
+              <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="pw1">New password</Label>
+                  <Input
+                    id="pw1"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                    disabled={busy}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pw2">Confirm</Label>
+                  <Input
+                    id="pw2"
+                    type="password"
+                    value={password2}
+                    onChange={(e) => setPassword2(e.target.value)}
+                    autoComplete="new-password"
+                    disabled={busy}
+                    className="mt-1"
+                  />
+                </div>
               </div>
-              <div>
-                <Label htmlFor="pw2">Confirm</Label>
-                <Input
-                  id="pw2"
-                  type="password"
-                  value={password2}
-                  onChange={(e) => setPassword2(e.target.value)}
-                  autoComplete="new-password"
-                  disabled={busy}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-            <p className="-mt-2 text-xs text-muted-foreground">
-              This password unlocks the wallet on this device. It's separate from your seed phrase.
-            </p>
+              <p className="-mt-2 text-xs text-muted-foreground">
+                This password unlocks the wallet on this device. It's separate from your seed phrase.
+              </p>
+              </>
+            )}
 
             <details className="rounded-md border border-border bg-muted/30 p-3 text-sm">
               <summary className="cursor-pointer font-medium text-foreground">
