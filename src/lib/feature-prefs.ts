@@ -1,3 +1,4 @@
+import { scopedKey } from "@/lib/profiles";
 import { useEffect, useState } from "react";
 
 /**
@@ -15,7 +16,11 @@ const DEFAULTS: Record<FeatureId, boolean> = {
   hideSpamTokens: true,
 };
 
-const STORAGE_KEY = "hme:features";
+const STORAGE_KEY_BASE = "hme:features";
+/** Namespaced per wallet profile (default profile keeps the original key). */
+function STORAGE_KEY(): string {
+  return scopedKey(STORAGE_KEY_BASE);
+}
 const EVENT = "hme:features-changed";
 
 type FeatureMap = Partial<Record<FeatureId, boolean>>;
@@ -23,7 +28,7 @@ type FeatureMap = Partial<Record<FeatureId, boolean>>;
 function read(): FeatureMap {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY());
     return raw ? (JSON.parse(raw) as FeatureMap) : {};
   } catch {
     return {};
@@ -32,7 +37,7 @@ function read(): FeatureMap {
 
 function write(m: FeatureMap) {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(m));
+    window.localStorage.setItem(STORAGE_KEY(), JSON.stringify(m));
     window.dispatchEvent(new Event(EVENT));
   } catch {
     /* noop */

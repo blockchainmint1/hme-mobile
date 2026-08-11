@@ -1,3 +1,4 @@
+import { scopedKey } from "@/lib/profiles";
 /**
  * User preferences and per-account state for TXC receive-address rotation.
  *
@@ -17,19 +18,23 @@
 
 export type RotationPolicy = "manual" | "on-load" | "on-receive" | "never";
 
-const POLICY_KEY = "hme.rotation-policy";
+const POLICY_KEY_BASE = "hme.rotation-policy";
+/** Namespaced per wallet profile (default profile keeps the original key). */
+function POLICY_KEY(): string {
+  return scopedKey(POLICY_KEY_BASE);
+}
 const DEFAULT_POLICY: RotationPolicy = "on-receive";
 
 export function getRotationPolicy(): RotationPolicy {
   if (typeof window === "undefined") return DEFAULT_POLICY;
-  const v = window.localStorage.getItem(POLICY_KEY);
+  const v = window.localStorage.getItem(POLICY_KEY());
   if (v === "manual" || v === "on-load" || v === "on-receive" || v === "never") return v;
   return DEFAULT_POLICY;
 }
 
 export function setRotationPolicy(p: RotationPolicy): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(POLICY_KEY, p);
+  window.localStorage.setItem(POLICY_KEY(), p);
 }
 
 function indexKey(accountId: string, kind: string): string {

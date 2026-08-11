@@ -1,3 +1,4 @@
+import { scopedKey } from "@/lib/profiles";
 /**
  * Per-chain ERC-20 token preferences: which built-in tokens to show, and any
  * user-added custom tokens. Persisted in localStorage; components subscribe
@@ -15,8 +16,16 @@ import {
   type Erc20TokenMeta,
 } from "@/lib/chains/erc20";
 
-const CUSTOM_KEY = "hme:tokens:custom:v1";
-const HIDDEN_KEY = "hme:tokens:hidden:v1";
+const CUSTOM_KEY_BASE = "hme:tokens:custom:v1";
+/** Namespaced per wallet profile (default profile keeps the original key). */
+function CUSTOM_KEY(): string {
+  return scopedKey(CUSTOM_KEY_BASE);
+}
+const HIDDEN_KEY_BASE = "hme:tokens:hidden:v1";
+/** Namespaced per wallet profile (default profile keeps the original key). */
+function HIDDEN_KEY(): string {
+  return scopedKey(HIDDEN_KEY_BASE);
+}
 const EVT = "hme:tokens-changed";
 
 type CustomMap = Partial<Record<EvmChainId, Erc20TokenMeta[]>>;
@@ -25,7 +34,7 @@ type HiddenSet = string[];
 
 function readCustom(): CustomMap {
   try {
-    const raw = localStorage.getItem(CUSTOM_KEY);
+    const raw = localStorage.getItem(CUSTOM_KEY());
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return typeof parsed === "object" && parsed ? parsed : {};
@@ -34,11 +43,11 @@ function readCustom(): CustomMap {
   }
 }
 function writeCustom(v: CustomMap) {
-  localStorage.setItem(CUSTOM_KEY, JSON.stringify(v));
+  localStorage.setItem(CUSTOM_KEY(), JSON.stringify(v));
 }
 function readHidden(): Set<string> {
   try {
-    const raw = localStorage.getItem(HIDDEN_KEY);
+    const raw = localStorage.getItem(HIDDEN_KEY());
     if (!raw) return new Set();
     const arr = JSON.parse(raw) as HiddenSet;
     return new Set(Array.isArray(arr) ? arr : []);
@@ -47,7 +56,7 @@ function readHidden(): Set<string> {
   }
 }
 function writeHidden(s: Set<string>) {
-  localStorage.setItem(HIDDEN_KEY, JSON.stringify([...s]));
+  localStorage.setItem(HIDDEN_KEY(), JSON.stringify([...s]));
 }
 function emit() {
   window.dispatchEvent(new Event(EVT));
