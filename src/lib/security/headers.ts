@@ -33,6 +33,8 @@ const CONNECT_SRC = [
   // server-fn / API calls to the deployed worker so they reach a real backend
   // instead of being intercepted by the local webview server.
   "https://hme-mobile.lovable.app",
+  // Fixed release feed used by the "check for updates" card.
+  "https://mobile.honest.money",
 ].join(" ");
 
 const CSP_DIRECTIVES: Record<string, string> = {
