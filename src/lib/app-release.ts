@@ -25,8 +25,55 @@ export type AppRelease = {
   released_at: string;
 };
 
-/** Newest published release for a platform, or null if we can't reach the server. */
+/**
+ * Fixed, key-free places to ask "what's the newest build?".
+ *
+ * Every build (past, present, future) checks the SAME endpoints in the SAME
+ * order, so a release recorded once is visible to every installed app. The
+ * Supabase SDK is only a last-ditch fallback — it depends on the API key
+ * baked into whatever build the user happens to be running.
+ */
+export const RELEASE_FEED_HOSTS = [
+  "https://mobile.honest.money",
+  "https://hme-wallet.lovable.app",
+  "https://project--633f1235-4607-4b38-ad25-8b0c6b359acb.lovable.app",
+] as const;
+
+const RELEASE_FEED_PATH = "/api/public/latest-release";
+
+async function fetchFeed(base: string, platform: ReleasePlatform): Promise<AppRelease | null> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 8000);
+  try {
+    const res = await fetch(`${base}${RELEASE_FEED_PATH}?platform=${platform}&_=${Date.now()}`, {
+      cache: "no-store",
+      signal: ctl.signal,
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { release?: AppRelease | null };
+    return json?.release ?? null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Newest published release for a platform, or null if we can't reach any source. */
 export async function fetchLatestRelease(platform: ReleasePlatform): Promise<AppRelease | null> {
+  const bases: string[] = [];
+  // On the web, same-origin first (works on previews and custom domains alike).
+  if (typeof window !== "undefined" && window.location.origin.startsWith("http")) {
+    bases.push(window.location.origin);
+  }
+  for (const h of RELEASE_FEED_HOSTS) if (!bases.includes(h)) bases.push(h);
+
+  for (const base of bases) {
+    const rel = await fetchFeed(base, platform);
+    if (rel) return rel;
+  }
+
+  // Last resort: direct Data API read with this build's key.
   try {
     const { data, error } = await supabase
       .from("app_releases")
@@ -41,6 +88,7 @@ export async function fetchLatestRelease(platform: ReleasePlatform): Promise<App
     return null;
   }
 }
+
 
 /** Numeric-aware version compare: 1 if a > b, -1 if a < b, 0 if equal. */
 export function compareVersions(a: string, b: string): number {

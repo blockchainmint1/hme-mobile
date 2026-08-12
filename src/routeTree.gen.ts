@@ -41,6 +41,7 @@ import { Route as WalletDogeSwapRouteImport } from './routes/wallet.doge.swap'
 import { Route as WalletDogeSendRouteImport } from './routes/wallet.doge.send'
 import { Route as WalletDogeReceiveRouteImport } from './routes/wallet.doge.receive'
 import { Route as ApiTronSplatRouteImport } from './routes/api/tron.$'
+import { Route as ApiPublicLatestReleaseRouteImport } from './routes/api/public/latest-release'
 import { Route as ApiEvmChainRouteImport } from './routes/api/evm.$chain'
 import { Route as WalletWifIdSendRouteImport } from './routes/wallet.wif.$id.send'
 import { Route as WalletWifIdReceiveRouteImport } from './routes/wallet.wif.$id.receive'
@@ -210,6 +211,11 @@ const ApiTronSplatRoute = ApiTronSplatRouteImport.update({
   path: '/api/tron/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicLatestReleaseRoute = ApiPublicLatestReleaseRouteImport.update({
+  id: '/api/public/latest-release',
+  path: '/api/public/latest-release',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEvmChainRoute = ApiEvmChainRouteImport.update({
   id: '/api/evm/$chain',
   path: '/api/evm/$chain',
@@ -270,6 +276,7 @@ export interface FileRoutesByFullPath {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
@@ -311,6 +318,7 @@ export interface FileRoutesByTo {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
@@ -354,6 +362,7 @@ export interface FileRoutesById {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
@@ -398,6 +407,7 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/api/public/latest-release'
     | '/api/tron/$'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
@@ -439,6 +449,7 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet'
     | '/api/evm/$chain'
+    | '/api/public/latest-release'
     | '/api/tron/$'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
@@ -481,6 +492,7 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/api/public/latest-release'
     | '/api/tron/$'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
@@ -516,6 +528,7 @@ export interface RootRouteChildren {
   LegalTermsRoute: typeof LegalTermsRoute
   PayInvoiceIdRoute: typeof PayInvoiceIdRoute
   ApiEvmChainRoute: typeof ApiEvmChainRoute
+  ApiPublicLatestReleaseRoute: typeof ApiPublicLatestReleaseRoute
   ApiTronSplatRoute: typeof ApiTronSplatRoute
   ApiNectarPayInvoiceIdRoute: typeof ApiNectarPayInvoiceIdRoute
   ApiUtxoCoinSplatRoute: typeof ApiUtxoCoinSplatRoute
@@ -747,6 +760,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTronSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/latest-release': {
+      id: '/api/public/latest-release'
+      path: '/api/public/latest-release'
+      fullPath: '/api/public/latest-release'
+      preLoaderRoute: typeof ApiPublicLatestReleaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/evm/$chain': {
       id: '/api/evm/$chain'
       path: '/api/evm/$chain'
@@ -890,6 +910,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalTermsRoute: LegalTermsRoute,
   PayInvoiceIdRoute: PayInvoiceIdRoute,
   ApiEvmChainRoute: ApiEvmChainRoute,
+  ApiPublicLatestReleaseRoute: ApiPublicLatestReleaseRoute,
   ApiTronSplatRoute: ApiTronSplatRoute,
   ApiNectarPayInvoiceIdRoute: ApiNectarPayInvoiceIdRoute,
   ApiUtxoCoinSplatRoute: ApiUtxoCoinSplatRoute,
@@ -897,3 +918,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
