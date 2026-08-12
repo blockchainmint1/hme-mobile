@@ -1,3 +1,4 @@
+import { scopedKey } from "@/lib/profiles";
 /**
  * Per-chain wallet tile labels. TXC uses the mnemonic-wallet label
  * (managed by wallet-context); every other chain uses this store so
@@ -6,7 +7,11 @@
 import { useEffect, useState } from "react";
 import type { ChainId } from "./chain-prefs";
 
-const STORAGE_KEY = "hme.chain-labels.v1";
+const STORAGE_KEY_BASE = "hme.chain-labels.v1";
+/** Namespaced per wallet profile (default profile keeps the original key). */
+function STORAGE_KEY(): string {
+  return scopedKey(STORAGE_KEY_BASE);
+}
 export const CHAIN_LABEL_EVENT = "hme:chain-label-changed";
 
 export const CHAIN_LABEL_DEFAULTS: Partial<Record<ChainId, string>> = {
@@ -16,7 +21,7 @@ export const CHAIN_LABEL_DEFAULTS: Partial<Record<ChainId, string>> = {
 function read(): Record<string, string> {
   if (typeof localStorage === "undefined") return {};
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY());
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === "object" ? parsed : {};
@@ -36,7 +41,7 @@ export function setChainLabel(chain: ChainId, label: string): void {
   if (!clean) delete all[chain];
   else all[chain] = clean.slice(0, 40);
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    localStorage.setItem(STORAGE_KEY(), JSON.stringify(all));
     window.dispatchEvent(new CustomEvent(CHAIN_LABEL_EVENT));
   } catch {
     /* ignore */

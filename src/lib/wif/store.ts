@@ -1,3 +1,4 @@
+import { scopedKey } from "@/lib/profiles";
 /**
  * Persistence for imported single-key (WIF) wallets.
  *
@@ -25,7 +26,11 @@ export interface WifWalletEntry {
   fp: string;
 }
 
-const STORAGE_KEY = "hme.wif.v1";
+const STORAGE_KEY_BASE = "hme.wif.v1";
+/** Namespaced per wallet profile (default profile keeps the original key). */
+function STORAGE_KEY(): string {
+  return scopedKey(STORAGE_KEY_BASE);
+}
 export const WIF_CHANGED_EVENT = "hme:wif-changed";
 
 function b64enc(u: Uint8Array): string {
@@ -80,12 +85,12 @@ function safeParse(raw: string | null): WifWalletEntry[] {
 
 export function listWifWallets(): WifWalletEntry[] {
   if (typeof localStorage === "undefined") return [];
-  return safeParse(localStorage.getItem(STORAGE_KEY));
+  return safeParse(localStorage.getItem(STORAGE_KEY()));
 }
 
 function persist(list: WifWalletEntry[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    localStorage.setItem(STORAGE_KEY(), JSON.stringify(list));
     window.dispatchEvent(new CustomEvent(WIF_CHANGED_EVENT));
   } catch {
     /* quota — non-fatal */

@@ -56,6 +56,13 @@ export function SiteFooter() {
           </button>
           <button
             type="button"
+            onClick={() => openExternal("https://github.com/blockchainmint1/hme-mobile")}
+            className="hover:text-foreground"
+          >
+            GitHub
+          </button>
+          <button
+            type="button"
             onClick={() => openExternal(APK_URL)}
             className="hover:text-foreground"
           >

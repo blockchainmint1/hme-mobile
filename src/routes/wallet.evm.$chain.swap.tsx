@@ -98,8 +98,10 @@ function EvmSwap() {
   const [from, setFrom] = useState<AssetKind>({ kind: "native" });
   const [to, setTo] = useState<AssetKind>(defaultTo);
   const [amount, setAmount] = useState("");
+  const [slippage, setSlippage] = useState(0.01);
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [stage, setStage] = useState<string | null>(null);
 
   const nativeBal = useQuery({
     queryKey: ["evm-balance", chainId, account?.address],
@@ -139,6 +141,18 @@ function EvmSwap() {
   }, [amount, from]);
 
   // Auto-quote when both assets picked + amount entered.
+  const quoteArgs = useMemo(
+    () => ({
+      chain: chainId,
+      fromToken: assetAddress(from),
+      toToken: assetAddress(to),
+      fromAmount: rawAmount?.toString() ?? "0",
+      fromAddress: account?.address ?? "0x",
+      slippage,
+    }),
+    [chainId, from, to, rawAmount, account?.address, slippage],
+  );
+
   const quote = useQuery<SwapQuote>({
     queryKey: [
       "swap-quote",
@@ -147,21 +161,16 @@ function EvmSwap() {
       assetKey(to),
       rawAmount?.toString() ?? "",
       account?.address,
+      slippage,
     ],
     enabled: !!account && !!rawAmount && assetKey(from) !== assetKey(to),
-    queryFn: () =>
-      fetchQuote({
-        data: {
-          chain: chainId,
-          fromToken: assetAddress(from),
-          toToken: assetAddress(to),
-          fromAmount: rawAmount!.toString(),
-          fromAddress: account!.address,
-        },
-      }),
-    staleTime: 20_000,
+    queryFn: () => fetchQuote({ data: quoteArgs }),
+    // Quotes go stale fast; refresh so we never sign a minutes-old route.
+    staleTime: 15_000,
+    refetchInterval: 20_000,
     retry: 0,
   });
+
 
   const receiveDisplay = useMemo(() => {
     if (!quote.data) return null;
@@ -173,56 +182,105 @@ function EvmSwap() {
   const swap = useMutation({
     mutationFn: async () => {
       if (!account) throw new Error("Wallet locked");
-      if (!quote.data) throw new Error("No quote yet");
-      const q = quote.data;
+      if (!rawAmount) throw new Error("Enter an amount");
 
       const walletClient = createWalletClient({
         account,
         chain: meta.viemChain,
         transport: http(`/api/evm/${chainId}`),
       });
+      const pub = evmClient(chainId);
 
-      // ERC-20 approval, if needed.
+      // ERC-20 approval, if needed. Done BEFORE the final quote so the
+      // route we sign is as fresh as possible.
       if (from.kind === "erc20") {
-        const approvalTo = q.estimate.approvalAddress as Address;
-        const current = await evmClient(chainId).readContract({
+        setStage("Checking approval…");
+        const approvalTo = (quote.data?.estimate.approvalAddress ??
+          (await fetchQuote({ data: quoteArgs })).estimate.approvalAddress) as Address;
+        const current = await pub.readContract({
           address: from.token.address,
           abi: erc20Abi,
           functionName: "allowance",
           args: [account.address, approvalTo],
         });
-        const required = BigInt(q.estimate.fromAmount);
+        // Approve generously so a re-quoted (slightly larger) amount still fits.
+        const required = rawAmount;
         if (current < required) {
-          const data = encodeFunctionData({
-            abi: erc20Abi,
-            functionName: "approve",
-            args: [approvalTo, required],
-          });
+          // USDT-style tokens revert when moving a non-zero allowance to
+          // another non-zero value — reset to 0 first.
+          if (current > 0n) {
+            setStage("Resetting approval…");
+            const resetHash = await walletClient.sendTransaction({
+              to: from.token.address,
+              data: encodeFunctionData({
+                abi: erc20Abi,
+                functionName: "approve",
+                args: [approvalTo, 0n],
+              }),
+              value: 0n,
+            });
+            await pub.waitForTransactionReceipt({ hash: resetHash });
+          }
+          setStage("Approving…");
           const approveHash = await walletClient.sendTransaction({
             to: from.token.address,
-            data,
+            data: encodeFunctionData({
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [approvalTo, required],
+            }),
             value: 0n,
           });
-          await evmClient(chainId).waitForTransactionReceipt({ hash: approveHash });
+          const rec = await pub.waitForTransactionReceipt({ hash: approveHash });
+          if (rec.status !== "success") throw new Error("Token approval failed on-chain");
         }
       }
 
-      const hash = await walletClient.sendTransaction({
+      // Always sign against a freshly fetched route — a quote that sat on
+      // screen for a minute will revert on slippage.
+      setStage("Refreshing route…");
+      const q = await fetchQuote({ data: quoteArgs });
+
+      setStage("Swapping…");
+      const tx = {
         to: q.transactionRequest.to,
         data: q.transactionRequest.data,
         value: BigInt(q.transactionRequest.value ?? "0x0"),
-      });
-      return hash;
+      };
+      // Simulate first so a revert surfaces as a readable error instead of a
+      // failed on-chain transaction that burns gas.
+      let gas: bigint | undefined;
+      try {
+        gas = await pub.estimateGas({ account, ...tx });
+        gas = (gas * 130n) / 100n;
+      } catch (e) {
+        const quoted = q.transactionRequest.gasLimit
+          ? BigInt(q.transactionRequest.gasLimit)
+          : undefined;
+        if (!quoted) {
+          throw new Error(
+            `The router rejected this swap (likely price moved). Try again, or raise slippage. Details: ${
+              (e as Error).message.split("\n")[0]
+            }`,
+          );
+        }
+        gas = (quoted * 130n) / 100n;
+      }
+
+      return await walletClient.sendTransaction({ ...tx, gas });
     },
     onError: (e: Error) => {
       hapticError();
+      setStage(null);
       setError(e.message);
     },
     onSuccess: (hash) => {
       hapticSuccess();
+      setStage(null);
       setTxHash(hash);
     },
   });
+
 
   function flip() {
     setFrom(to);
@@ -358,6 +416,29 @@ function EvmSwap() {
             <p className="text-xs text-rose-400">{(quote.error as Error).message}</p>
           )}
 
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Slippage
+            </span>
+            <div className="flex gap-1">
+              {[0.005, 0.01, 0.02, 0.03].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSlippage(s)}
+                  className={`rounded-md border px-2 py-1 text-xs ${
+                    slippage === s
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {s * 100}%
+                </button>
+              ))}
+            </div>
+          </div>
+
+
           {quote.data && !sameAsset && !insufficient && (
             <div className="rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground space-y-1">
               <div className="flex justify-between">
@@ -414,11 +495,8 @@ function EvmSwap() {
             {(swap.isPending || quote.isFetching) && (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             )}
-            {swap.isPending
-              ? from.kind === "erc20"
-                ? "Approving & swapping…"
-                : "Swapping…"
-              : "Review & swap"}
+            {swap.isPending ? (stage ?? "Swapping…") : "Review & swap"}
+
           </Button>
 
           <p className="text-[10px] text-muted-foreground">

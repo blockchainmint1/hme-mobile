@@ -1,6 +1,17 @@
 import type { BIP32Interface } from "bip32";
 import { isLegacyCoinTypeKind, type DerivationKind } from "./network";
 import { rootFromSeed, seedFromMnemonic } from "./wallet";
+import {
+  DEFAULT_PROFILE_ID,
+  activeProfileId,
+  listProfileIds,
+  newProfileId,
+  purgeProfileStorage,
+  registerProfile,
+  scopedKey,
+  setActiveProfileId,
+  unregisterProfile,
+} from "@/lib/profiles";
 /**
  * Encrypted wallet storage for the TEXITcoin web wallet.
  *
@@ -15,6 +26,14 @@ import { rootFromSeed, seedFromMnemonic } from "./wallet";
  */
 
 const STORAGE_KEY = "txc.wallet.v1";
+
+/**
+ * Envelope key for a profile ("vault"). The first/default profile keeps the
+ * historical unprefixed key, so existing installs are untouched.
+ */
+function walletKey(profileId: string = activeProfileId()): string {
+  return scopedKey(STORAGE_KEY, profileId);
+}
 // KDF cost for NEW wallets. Raised from the previous 600k. The actual count
 // used to DECRYPT is read from each envelope (see `iterations` below) so
 // existing wallets keep unlocking with whatever they were saved at. This is
@@ -148,7 +167,8 @@ export async function saveWallet(
     pathsV: 2,
     ...(keyOnly ? { mode: "keyonly" as const } : {}),
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(env));
+  registerProfile(activeProfileId());
+  localStorage.setItem(walletKey(), JSON.stringify(env));
   return env;
 }
 
@@ -206,9 +226,9 @@ export async function upgradeKeyOnlyToSeed(
   return unlocked;
 }
 
-export function loadEnvelope(): StoredWalletEnvelope | null {
+export function loadEnvelope(profileId?: string): StoredWalletEnvelope | null {
   if (typeof window === "undefined") return null;
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = localStorage.getItem(walletKey(profileId));
   if (!raw) return null;
   try {
     return JSON.parse(raw) as StoredWalletEnvelope;
@@ -279,7 +299,13 @@ export async function unlockWallet(password: string): Promise<UnlockedWallet | n
 
 export function deleteWallet(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(STORAGE_KEY);
+  const id = activeProfileId();
+  localStorage.removeItem(walletKey(id));
+  if (id !== DEFAULT_PROFILE_ID) {
+    purgeProfileStorage(id);
+    unregisterProfile(id);
+    setActiveProfileId(DEFAULT_PROFILE_ID);
+  }
 }
 
 /**
@@ -290,7 +316,7 @@ export function renameStoredWallet(newLabel: string): StoredWalletEnvelope | nul
   const env = loadEnvelope();
   if (!env) return null;
   const next: StoredWalletEnvelope = { ...env, label: newLabel };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  localStorage.setItem(walletKey(), JSON.stringify(next));
   return next;
 }
 
@@ -304,10 +330,82 @@ export function setStoredKind(kind: DerivationKind): StoredWalletEnvelope | null
   const env = loadEnvelope();
   if (!env) return null;
   const next: StoredWalletEnvelope = { ...env, kind, pathsV: 2 };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  localStorage.setItem(walletKey(), JSON.stringify(next));
   return next;
 }
 
 export function hasWallet(): boolean {
   return loadEnvelope() !== null;
+}
+
+/* -------------------------------------------------------------------------
+ * Profiles (multi-seed vaults)
+ * ---------------------------------------------------------------------- */
+
+export interface WalletProfileSummary {
+  id: string;
+  label: string;
+  createdAt: number;
+  mode: "seed" | "keyonly";
+  isActive: boolean;
+}
+
+/** Every profile that actually holds an encrypted wallet, oldest first. */
+export function listWalletProfiles(): WalletProfileSummary[] {
+  if (typeof window === "undefined") return [];
+  const active = activeProfileId();
+  return listProfileIds()
+    .map((id) => {
+      const env = loadEnvelope(id);
+      if (!env) return null;
+      return {
+        id,
+        label: env.label || "Wallet",
+        createdAt: env.createdAt ?? 0,
+        mode: env.mode === "keyonly" ? ("keyonly" as const) : ("seed" as const),
+        isActive: id === active,
+      };
+    })
+    .filter((p): p is WalletProfileSummary => p !== null);
+}
+
+export function getActiveProfileId(): string {
+  return activeProfileId();
+}
+
+/**
+ * Create a brand-new profile and store `unlocked` in it, encrypted with the
+ * same password used everywhere else on this device (one password unlocks all
+ * profiles). Returns the new profile id, which is left active.
+ */
+export async function saveWalletToNewProfile(
+  unlocked: UnlockedWallet,
+  password: string,
+): Promise<string> {
+  const id = newProfileId();
+  registerProfile(id);
+  setActiveProfileId(id);
+  try {
+    await saveWallet(unlocked, password);
+  } catch (e) {
+    unregisterProfile(id);
+    setActiveProfileId(DEFAULT_PROFILE_ID);
+    throw e;
+  }
+  return id;
+}
+
+/** Switch profiles and unlock the target with the shared password. */
+export async function unlockProfile(
+  profileId: string,
+  password: string,
+): Promise<UnlockedWallet | null> {
+  const previous = activeProfileId();
+  setActiveProfileId(profileId);
+  const w = await unlockWallet(password);
+  if (!w) {
+    setActiveProfileId(previous);
+    return null;
+  }
+  return w;
 }

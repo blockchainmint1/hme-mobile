@@ -20,6 +20,12 @@ export const AUTO_LOCK_MS = 5 * 60 * 1000; // 5 minutes
 
 interface CachedPlain {
   wallet: UnlockedWallet;
+  /**
+   * The wallet password, kept ONLY inside this ephemeral envelope (encrypted
+   * with a per-process in-memory AES key). One password unlocks every profile,
+   * so switching vaults must not re-prompt while the session is alive.
+   */
+  password?: string;
   lastActiveAt: number;
 }
 
@@ -72,8 +78,12 @@ async function ensureKey(): Promise<CryptoKey | null> {
   }
 }
 
-export async function saveSession(wallet: UnlockedWallet): Promise<void> {
-  const payload: CachedPlain = { wallet, lastActiveAt: Date.now() };
+export async function saveSession(wallet: UnlockedWallet, password?: string): Promise<void> {
+  const payload: CachedPlain = {
+    wallet,
+    password: password ?? memPayload?.password,
+    lastActiveAt: Date.now(),
+  };
   memPayload = payload;
   const key = await ensureKey();
   const s = safeSession();
@@ -108,6 +118,13 @@ export function touchSession(): void {
   } catch {
     s.removeItem(KEY);
   }
+}
+
+/** The session password, when the session is still alive. */
+export function getSessionPassword(): string | null {
+  if (!memPayload) return null;
+  if (Date.now() - memPayload.lastActiveAt > AUTO_LOCK_MS) return null;
+  return memPayload.password ?? null;
 }
 
 export async function loadSession(): Promise<UnlockedWallet | null> {

@@ -109,3 +109,17 @@ export function cashoutStatusLabel(status: string): string {
 export function isTerminalCashoutStatus(status: string): boolean {
   return ["released", "refunded", "expired", "failed"].includes(status);
 }
+
+/**
+ * The account's standing cash-out setup: a permanent legacy T… deposit
+ * address, the fee tier that key gets, and (once saved) the USDC payout
+ * address orders default to.
+ */
+export interface CashoutAccount {
+  depositAddress: string;
+  feeBps: number;
+  payoutAddress: string | null;
+  live: boolean;
+  minAmount: number | null;
+  maxAmount: number | null;
+}

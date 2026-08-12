@@ -8,10 +8,10 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export const APP_VERSION = "0.1.202608060318";
+export const APP_VERSION = "0.1.202608060859";
 
 export const APK_URL =
-  "https://txc.mypinata.cloud/ipfs/QmbqBUPo44CPVgpM8w8ZhbhC4AuULvbx3KCz5EuU3Pj2AF?filename=hme-wallet-0.1.202608060318-release.apk";
+  "https://txc.mypinata.cloud/ipfs/bafybeihiuj357lerlyihkcwp56elhtd3wb7j6kmtmp2pfq6w4bpayqh6ey?filename=hme-wallet-0.1.202608060859-release.apk";
 
 export type ReleasePlatform = "android" | "ios" | "web";
 
