@@ -365,6 +365,40 @@ function RootComponent() {
     return () => remove?.();
   }, []);
 
+  // SCREEN FIT (App Store 4.0/2.4.1): inside the native shell the webview must
+  // never be pinch-zoomed — a stuck zoom makes the layout render wider than the
+  // window and the right edge gets clipped (Apple's rejection screenshot).
+  // Web keeps pinch-zoom for accessibility; only native locks the scale.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { isNative } = await import("../lib/native/platform");
+        if (cancelled || !isNative()) return;
+        const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
+        if (meta) {
+          meta.setAttribute(
+            "content",
+            "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+          );
+        }
+        const block = (e: Event) => e.preventDefault();
+        document.addEventListener("gesturestart", block);
+        document.addEventListener("gesturechange", block);
+        return () => {
+          document.removeEventListener("gesturestart", block);
+          document.removeEventListener("gesturechange", block);
+        };
+      } catch {
+        /* noop */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+
   // Simple offline banner — @capacitor/network is only wired natively; on
   // the web we fall back to the browser's navigator.onLine + events.
   const [offline, setOffline] = useState(false);
