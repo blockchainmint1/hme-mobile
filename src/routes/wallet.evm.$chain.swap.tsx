@@ -416,6 +416,29 @@ function EvmSwap() {
             <p className="text-xs text-rose-400">{(quote.error as Error).message}</p>
           )}
 
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">
+              Slippage
+            </span>
+            <div className="flex gap-1">
+              {[0.005, 0.01, 0.02, 0.03].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSlippage(s)}
+                  className={`rounded-md border px-2 py-1 text-xs ${
+                    slippage === s
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border/60 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {s * 100}%
+                </button>
+              ))}
+            </div>
+          </div>
+
+
           {quote.data && !sameAsset && !insufficient && (
             <div className="rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground space-y-1">
               <div className="flex justify-between">
