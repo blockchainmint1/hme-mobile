@@ -71,6 +71,11 @@ if (typeof window !== "undefined") {
 
 
 const THEME_INIT_SCRIPT = `(function(){try{var k='txc.theme';var t=localStorage.getItem(k)||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){document.documentElement.classList.add('dark');}})();`;
+// Lock the webview scale to 1 inside the native shell BEFORE first paint. A
+// stuck/implicit zoom renders the page wider than the window and clips the
+// right edge (App Store 4.0 rejection). Web keeps pinch-zoom for a11y.
+const NATIVE_VIEWPORT_LOCK_SCRIPT = `(function(){try{var w=window;var native=(w.Capacitor&&w.Capacitor.isNativePlatform&&w.Capacitor.isNativePlatform())||(w.webkit&&w.webkit.messageHandlers&&w.webkit.messageHandlers.bridge)||location.protocol==='capacitor:';if(!native)return;var content='width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';var apply=function(){var m=document.querySelector('meta[name="viewport"]');if(!m){m=document.createElement('meta');m.setAttribute('name','viewport');document.head.appendChild(m);}if(m.getAttribute('content')!==content)m.setAttribute('content',content);};apply();document.addEventListener('DOMContentLoaded',apply);var mo=new MutationObserver(apply);if(document.head)mo.observe(document.head,{childList:true,subtree:true,attributes:true});setTimeout(function(){mo.disconnect();},8000);var block=function(e){e.preventDefault();};document.addEventListener('gesturestart',block,{passive:false});document.addEventListener('gesturechange',block,{passive:false});}catch(e){}})();`;
+
 const NATIVE_NAV_FALLBACK_SCRIPT = `(function(){if(window.__HME_NATIVE_NAV_FALLBACK__)return;window.__HME_NATIVE_NAV_FALLBACK__=true;function routeFromEvent(e){var t=e.target;if(!t||!t.closest)return null;var a=t.closest('a[data-native-route],a[href="/import"],a[href="/create"]');if(!a)return null;var h=a.getAttribute('data-native-route')||a.getAttribute('href');return h==='/import'||h==='/create'?h:null}function go(e){if(document.documentElement&&document.documentElement.dataset&&document.documentElement.dataset.hmeHydrated==='true')return;var h=routeFromEvent(e);if(!h)return;e.preventDefault();e.stopPropagation();location.assign(h)}document.addEventListener('pointerup',go,true);document.addEventListener('touchend',go,true);document.addEventListener('click',go,true);})();`;
 
 function NotFoundComponent() {
@@ -268,6 +273,8 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: NATIVE_VIEWPORT_LOCK_SCRIPT }} />
+
         <HeadContent />
       </head>
       <body className="min-h-[100dvh] bg-background text-foreground antialiased">
