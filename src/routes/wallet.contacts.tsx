@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import {
   CHAIN_LABELS,
   type Contact,
@@ -194,26 +195,35 @@ function ContactForm({
           </div>
           <div>
             <Label htmlFor="c-addr">Address</Label>
-            <Input
-              id="c-addr"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder={
-                chain === "txc"
-                  ? "txc1..."
-                  : chain === "isk"
-                    ? "is..."
-                    : chain === "ltc"
-                      ? "ltc1..."
-                      : chain === "doge"
-                        ? "D..."
-                        : "0x..."
-              }
-              className="mt-1 font-mono"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-            />
+            <div className="mt-1 flex gap-2">
+              <Input
+                id="c-addr"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder={
+                  chain === "txc"
+                    ? "txc1..."
+                    : chain === "isk"
+                      ? "is..."
+                      : chain === "ltc"
+                        ? "ltc1..."
+                        : chain === "doge"
+                          ? "D..."
+                          : "0x..."
+                }
+                className="font-mono"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+              <QrScanButton
+                onScan={(raw) => {
+                  const parsed = parseWalletUri(raw);
+                  setAddress(parsed.address || raw.trim());
+                  setError(null);
+                }}
+              />
+            </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <div className="flex gap-2">
