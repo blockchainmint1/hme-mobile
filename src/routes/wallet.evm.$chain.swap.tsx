@@ -98,8 +98,10 @@ function EvmSwap() {
   const [from, setFrom] = useState<AssetKind>({ kind: "native" });
   const [to, setTo] = useState<AssetKind>(defaultTo);
   const [amount, setAmount] = useState("");
+  const [slippage, setSlippage] = useState(0.01);
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [stage, setStage] = useState<string | null>(null);
 
   const nativeBal = useQuery({
     queryKey: ["evm-balance", chainId, account?.address],
