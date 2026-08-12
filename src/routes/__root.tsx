@@ -273,6 +273,8 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: NATIVE_VIEWPORT_LOCK_SCRIPT }} />
+
         <HeadContent />
       </head>
       <body className="min-h-[100dvh] bg-background text-foreground antialiased">
