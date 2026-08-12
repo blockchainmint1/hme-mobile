@@ -35,8 +35,7 @@ export type AppRelease = {
  */
 export const RELEASE_FEED_HOSTS = [
   "https://mobile.honest.money",
-  "https://hme-wallet.lovable.app",
-  "https://project--633f1235-4607-4b38-ad25-8b0c6b359acb.lovable.app",
+  "https://hme-mobile.lovable.app",
 ] as const;
 
 const RELEASE_FEED_PATH = "/api/public/latest-release";
