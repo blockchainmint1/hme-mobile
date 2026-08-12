@@ -182,56 +182,105 @@ function EvmSwap() {
   const swap = useMutation({
     mutationFn: async () => {
       if (!account) throw new Error("Wallet locked");
-      if (!quote.data) throw new Error("No quote yet");
-      const q = quote.data;
+      if (!rawAmount) throw new Error("Enter an amount");
 
       const walletClient = createWalletClient({
         account,
         chain: meta.viemChain,
         transport: http(`/api/evm/${chainId}`),
       });
+      const pub = evmClient(chainId);
 
-      // ERC-20 approval, if needed.
+      // ERC-20 approval, if needed. Done BEFORE the final quote so the
+      // route we sign is as fresh as possible.
       if (from.kind === "erc20") {
-        const approvalTo = q.estimate.approvalAddress as Address;
-        const current = await evmClient(chainId).readContract({
+        setStage("Checking approval…");
+        const approvalTo = (quote.data?.estimate.approvalAddress ??
+          (await fetchQuote({ data: quoteArgs })).estimate.approvalAddress) as Address;
+        const current = await pub.readContract({
           address: from.token.address,
           abi: erc20Abi,
           functionName: "allowance",
           args: [account.address, approvalTo],
         });
-        const required = BigInt(q.estimate.fromAmount);
+        // Approve generously so a re-quoted (slightly larger) amount still fits.
+        const required = rawAmount;
         if (current < required) {
-          const data = encodeFunctionData({
-            abi: erc20Abi,
-            functionName: "approve",
-            args: [approvalTo, required],
-          });
+          // USDT-style tokens revert when moving a non-zero allowance to
+          // another non-zero value — reset to 0 first.
+          if (current > 0n) {
+            setStage("Resetting approval…");
+            const resetHash = await walletClient.sendTransaction({
+              to: from.token.address,
+              data: encodeFunctionData({
+                abi: erc20Abi,
+                functionName: "approve",
+                args: [approvalTo, 0n],
+              }),
+              value: 0n,
+            });
+            await pub.waitForTransactionReceipt({ hash: resetHash });
+          }
+          setStage("Approving…");
           const approveHash = await walletClient.sendTransaction({
             to: from.token.address,
-            data,
+            data: encodeFunctionData({
+              abi: erc20Abi,
+              functionName: "approve",
+              args: [approvalTo, required],
+            }),
             value: 0n,
           });
-          await evmClient(chainId).waitForTransactionReceipt({ hash: approveHash });
+          const rec = await pub.waitForTransactionReceipt({ hash: approveHash });
+          if (rec.status !== "success") throw new Error("Token approval failed on-chain");
         }
       }
 
-      const hash = await walletClient.sendTransaction({
+      // Always sign against a freshly fetched route — a quote that sat on
+      // screen for a minute will revert on slippage.
+      setStage("Refreshing route…");
+      const q = await fetchQuote({ data: quoteArgs });
+
+      setStage("Swapping…");
+      const tx = {
         to: q.transactionRequest.to,
         data: q.transactionRequest.data,
         value: BigInt(q.transactionRequest.value ?? "0x0"),
-      });
-      return hash;
+      };
+      // Simulate first so a revert surfaces as a readable error instead of a
+      // failed on-chain transaction that burns gas.
+      let gas: bigint | undefined;
+      try {
+        gas = await pub.estimateGas({ account, ...tx });
+        gas = (gas * 130n) / 100n;
+      } catch (e) {
+        const quoted = q.transactionRequest.gasLimit
+          ? BigInt(q.transactionRequest.gasLimit)
+          : undefined;
+        if (!quoted) {
+          throw new Error(
+            `The router rejected this swap (likely price moved). Try again, or raise slippage. Details: ${
+              (e as Error).message.split("\n")[0]
+            }`,
+          );
+        }
+        gas = (quoted * 130n) / 100n;
+      }
+
+      return await walletClient.sendTransaction({ ...tx, gas });
     },
     onError: (e: Error) => {
       hapticError();
+      setStage(null);
       setError(e.message);
     },
     onSuccess: (hash) => {
       hapticSuccess();
+      setStage(null);
       setTxHash(hash);
     },
   });
+
 
   function flip() {
     setFrom(to);
