@@ -141,6 +141,18 @@ function EvmSwap() {
   }, [amount, from]);
 
   // Auto-quote when both assets picked + amount entered.
+  const quoteArgs = useMemo(
+    () => ({
+      chain: chainId,
+      fromToken: assetAddress(from),
+      toToken: assetAddress(to),
+      fromAmount: rawAmount?.toString() ?? "0",
+      fromAddress: account?.address ?? "0x",
+      slippage,
+    }),
+    [chainId, from, to, rawAmount, account?.address, slippage],
+  );
+
   const quote = useQuery<SwapQuote>({
     queryKey: [
       "swap-quote",
@@ -149,21 +161,16 @@ function EvmSwap() {
       assetKey(to),
       rawAmount?.toString() ?? "",
       account?.address,
+      slippage,
     ],
     enabled: !!account && !!rawAmount && assetKey(from) !== assetKey(to),
-    queryFn: () =>
-      fetchQuote({
-        data: {
-          chain: chainId,
-          fromToken: assetAddress(from),
-          toToken: assetAddress(to),
-          fromAmount: rawAmount!.toString(),
-          fromAddress: account!.address,
-        },
-      }),
-    staleTime: 20_000,
+    queryFn: () => fetchQuote({ data: quoteArgs }),
+    // Quotes go stale fast; refresh so we never sign a minutes-old route.
+    staleTime: 15_000,
+    refetchInterval: 20_000,
     retry: 0,
   });
+
 
   const receiveDisplay = useMemo(() => {
     if (!quote.data) return null;
