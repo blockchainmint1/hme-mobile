@@ -193,3 +193,12 @@ body,
   max-width: 100%;
   overflow-x: hidden;
 }
+
+/* WKWebView "text autosizing" inflates font sizes based on the layout width it
+   guesses, which pushes fixed-width rows past the window and clips the right
+   edge (the App Store screenshot). Pin text scaling to 100% everywhere. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
