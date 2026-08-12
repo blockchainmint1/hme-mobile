@@ -495,11 +495,8 @@ function EvmSwap() {
             {(swap.isPending || quote.isFetching) && (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             )}
-            {swap.isPending
-              ? from.kind === "erc20"
-                ? "Approving & swapping…"
-                : "Swapping…"
-              : "Review & swap"}
+            {swap.isPending ? (stage ?? "Swapping…") : "Review & swap"}
+
           </Button>
 
           <p className="text-[10px] text-muted-foreground">
