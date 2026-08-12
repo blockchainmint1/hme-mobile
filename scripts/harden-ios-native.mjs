@@ -66,6 +66,8 @@ const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 	<array>
 		<string>arm64</string>
 	</array>
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

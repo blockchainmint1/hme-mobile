@@ -180,3 +180,16 @@ body {
   overscroll-behavior: none;
   background-color: var(--color-background);
 }
+
+/* Screen-fit hardening (App Store 4.0/2.4.1 rejections): the webview must never
+   render wider than its window. When iOS hands the app a smaller window than the
+   physical screen (iPad compatibility window, Stage Manager, rotation), a layout
+   that can exceed 100% width gets clipped on the right. Clamp every root box to
+   the visible width and let the app column shrink instead. */
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
