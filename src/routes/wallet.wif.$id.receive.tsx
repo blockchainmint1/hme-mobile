@@ -3,10 +3,11 @@ import { useMemo } from "react";
 import { QrCode } from "@/components/wallet/QrCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Copy, Share2 } from "lucide-react";
+import { Check, Copy, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { shareText } from "@/lib/native/ui";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { getWifWallet } from "@/lib/wif/store";
 
 export const Route = createFileRoute("/wallet/wif/$id/receive")({
