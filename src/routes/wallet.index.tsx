@@ -131,6 +131,14 @@ function WalletHome() {
   // Active tile tracked via scroll position
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
+  const scrollTo = useCallback((idx: number) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const w = el.clientWidth;
+    if (!w) return;
+    const clamped = Math.max(0, Math.min(idx, slots.length - 1));
+    el.scrollTo({ left: clamped * w, behavior: "smooth" });
+  }, [slots.length]);
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
