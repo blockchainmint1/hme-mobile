@@ -14,10 +14,11 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Copy, Plus, Share2 } from "lucide-react";
+import { Check, Copy, Plus, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { shareText } from "@/lib/native/ui";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 
 export const Route = createFileRoute("/wallet/isk/receive")({
   head: () => ({ meta: [{ title: "Receive ISK — HME Wallet" }] }),
