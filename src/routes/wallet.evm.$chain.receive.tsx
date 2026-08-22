@@ -11,6 +11,7 @@ import { useWallet } from "@/lib/txc/wallet-context";
 import { EVM_CHAINS, deriveEvmAccount, type EvmChainId } from "@/lib/chains/evm";
 import { copyToClipboard } from "@/lib/clipboard";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/wallet/evm/$chain/receive")({
   component: EvmReceive,
