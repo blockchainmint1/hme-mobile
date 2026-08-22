@@ -52,6 +52,7 @@ function ReceivePage() {
   const primaryKind = unlocked?.kind ?? "bip44";
   const primaryIsOmniSafe = primaryKind === "bip44" || primaryKind === "bip49";
   const activeKind = mode === "token" && !primaryIsOmniSafe ? "bip44" : primaryKind;
+  const { copied, copy } = useCopyFeedback();
 
   const firstUnused = account.data?.nextReceiveIndex ?? 0;
 
