@@ -3,13 +3,14 @@
  */
 import { createFileRoute, Link, notFound, useParams } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ArrowLeft, Copy } from "lucide-react";
+import { ArrowLeft, Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QrCode } from "@/components/wallet/QrCode";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { EVM_CHAINS, deriveEvmAccount, type EvmChainId } from "@/lib/chains/evm";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 
 export const Route = createFileRoute("/wallet/evm/$chain/receive")({
   component: EvmReceive,
