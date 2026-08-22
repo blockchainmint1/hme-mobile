@@ -491,11 +491,22 @@ function WalletHome() {
       <div className="flex-1 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-3xl w-full">
           {/* Swipeable chain tiles */}
-          <div
-            ref={scrollerRef}
-            className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar"
-            style={{ scrollbarWidth: "none" }}
-          >
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 border border-border/60 shadow-sm disabled:opacity-30"
+              onClick={() => scrollTo(activeIdx - 1)}
+              disabled={activeIdx === 0}
+              aria-label="Previous wallet"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div
+              ref={scrollerRef}
+              className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar"
+              style={{ scrollbarWidth: "none" }}
+            >
             {slots.map((slot, slotIdx) => {
               const key =
                 slot.kind === "chain"
