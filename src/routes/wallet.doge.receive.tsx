@@ -8,10 +8,11 @@ import { DOGE_DERIVATION_PATHS, DOGE_DEFAULT_KIND } from "@/lib/doge/network";
 import { QrCode } from "@/components/wallet/QrCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Copy, Plus, Share2 } from "lucide-react";
+import { Check, Copy, Plus, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { shareText } from "@/lib/native/ui";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 
 export const Route = createFileRoute("/wallet/doge/receive")({
   head: () => ({ meta: [{ title: "Receive DOGE — HME Wallet" }] }),
