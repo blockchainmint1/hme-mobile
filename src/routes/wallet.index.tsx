@@ -694,11 +694,14 @@ function WalletHome() {
           {slots.length > 1 && (
             <div className="flex justify-center gap-1.5 mt-3">
               {slots.map((s, i) => (
-                <span
+                <button
                   key={s.kind === "chain" ? `c:${s.chain}` : s.kind === "watch" ? `w:${s.watch.id}` : `k:${s.wif.id}`}
+                  type="button"
+                  onClick={() => scrollTo(i)}
                   className={`h-1.5 rounded-full transition-all ${
-                    i === activeIdx ? "w-6 bg-foreground" : "w-1.5 bg-muted-foreground/40"
+                    i === activeIdx ? "w-6 bg-foreground" : "w-1.5 bg-muted-foreground/40 hover:bg-muted-foreground/70"
                   }`}
+                  aria-label={`Go to wallet ${i + 1}`}
                 />
               ))}
             </div>
