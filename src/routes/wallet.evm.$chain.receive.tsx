@@ -25,6 +25,7 @@ function EvmReceive() {
   const meta = EVM_CHAINS[chainId];
   const { root } = useWallet();
   const address = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
+  const { copied, copy } = useCopyFeedback();
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
