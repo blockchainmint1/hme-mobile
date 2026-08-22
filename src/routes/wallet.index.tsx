@@ -678,6 +678,17 @@ function WalletHome() {
             })}
 
           </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 border border-border/60 shadow-sm disabled:opacity-30"
+              onClick={() => scrollTo(activeIdx + 1)}
+              disabled={activeIdx >= slots.length - 1}
+              aria-label="Next wallet"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
 
           {/* Dots indicator */}
           {slots.length > 1 && (
