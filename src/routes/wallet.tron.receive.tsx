@@ -56,11 +56,21 @@ function TronReceive() {
           )}
           <p className="font-mono text-xs break-all text-center">{address ?? "..."}</p>
           <Button
-            variant="secondary"
-            onClick={() => address && copyToClipboard(address)}
+            variant={copied ? "default" : "secondary"}
+            onClick={async () => {
+              if (!address) return;
+              const ok = await copy(address);
+              if (ok) toast.success("Address copied");
+            }}
             disabled={!address}
+            aria-live="polite"
           >
-            <Copy className="h-4 w-4 mr-2" /> Copy address
+            {copied ? (
+              <Check className="h-4 w-4 mr-2" />
+            ) : (
+              <Copy className="h-4 w-4 mr-2" />
+            )}
+            {copied ? "Copied!" : "Copy address"}
           </Button>
           <p className="text-xs text-muted-foreground text-center">
             Only send assets on the <strong>Tron (TRC-20)</strong> network to this address.
