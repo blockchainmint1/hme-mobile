@@ -3,13 +3,15 @@
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ArrowLeft, Copy } from "lucide-react";
+import { ArrowLeft, Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QrCode } from "@/components/wallet/QrCode";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { deriveTronAccount } from "@/lib/tron/address";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/wallet/tron/receive")({
   head: () => ({
