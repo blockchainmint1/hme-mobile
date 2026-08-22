@@ -47,11 +47,21 @@ function EvmReceive() {
           )}
           <p className="font-mono text-xs break-all text-center">{address ?? "..."}</p>
           <Button
-            variant="secondary"
-            onClick={() => address && copyToClipboard(address)}
+            variant={copied ? "default" : "secondary"}
+            onClick={async () => {
+              if (!address) return;
+              const ok = await copy(address);
+              if (ok) toast.success("Address copied");
+            }}
             disabled={!address}
+            aria-live="polite"
           >
-            <Copy className="h-4 w-4 mr-2" /> Copy address
+            {copied ? (
+              <Check className="h-4 w-4 mr-2" />
+            ) : (
+              <Copy className="h-4 w-4 mr-2" />
+            )}
+            {copied ? "Copied!" : "Copy address"}
           </Button>
           <p className="text-xs text-muted-foreground text-center">
             Send {meta.nativeSymbol} or any ERC-20 token on {meta.name} to this address.
