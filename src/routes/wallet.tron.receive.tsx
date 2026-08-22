@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { QrCode } from "@/components/wallet/QrCode";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { deriveTronAccount } from "@/lib/tron/address";
-import { copyToClipboard } from "@/lib/clipboard";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { toast } from "sonner";
 
