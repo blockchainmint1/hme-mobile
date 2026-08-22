@@ -69,12 +69,21 @@ function ReceiveDogePage() {
                 Address #{shown.index} · <span className="font-mono">{shown.path}</span>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button variant="secondary" onClick={async () => {
-                  const ok = await copyToClipboard(address);
-                  if (ok) toast.success("Address copied");
-                  else toast.error("Could not copy. Long-press the address to select it.");
-                }}>
-                  <Copy className="h-4 w-4 mr-2" /> Copy
+                <Button
+                  variant={copied ? "default" : "secondary"}
+                  onClick={async () => {
+                    const ok = await copy(address);
+                    if (ok) toast.success("Address copied");
+                    else toast.error("Could not copy. Long-press the address to select it.");
+                  }}
+                  aria-live="polite"
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-2" />
+                  )}
+                  {copied ? "Copied!" : "Copy"}
                 </Button>
                 <Button variant="secondary" onClick={async () => {
                   const ok = await shareText({ title: "My DOGE address", text: address, dialogTitle: "Share DOGE address" });
