@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
 import { scanIskAccount } from "@/lib/isk/scan";
@@ -35,7 +35,7 @@ import { useTokenHolderTopUp } from "@/lib/txc/topup";
 import { getTxcTokenBalancesForAddresses, getOmniTxValidity } from "@/lib/txc/tokens.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key, Loader2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronLeft, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key, Loader2 } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { usePendingTxs, removePendingTx } from "@/lib/pending-tx";
@@ -131,6 +131,14 @@ function WalletHome() {
   // Active tile tracked via scroll position
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
+  const scrollTo = useCallback((idx: number) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const w = el.clientWidth;
+    if (!w) return;
+    const clamped = Math.max(0, Math.min(idx, slots.length - 1));
+    el.scrollTo({ left: clamped * w, behavior: "smooth" });
+  }, [slots.length]);
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
@@ -483,11 +491,22 @@ function WalletHome() {
       <div className="flex-1 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto max-w-3xl w-full">
           {/* Swipeable chain tiles */}
-          <div
-            ref={scrollerRef}
-            className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar"
-            style={{ scrollbarWidth: "none" }}
-          >
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 border border-border/60 shadow-sm disabled:opacity-30"
+              onClick={() => scrollTo(activeIdx - 1)}
+              disabled={activeIdx === 0}
+              aria-label="Previous wallet"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div
+              ref={scrollerRef}
+              className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar"
+              style={{ scrollbarWidth: "none" }}
+            >
             {slots.map((slot, slotIdx) => {
               const key =
                 slot.kind === "chain"
@@ -659,16 +678,30 @@ function WalletHome() {
             })}
 
           </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 border border-border/60 shadow-sm disabled:opacity-30"
+              onClick={() => scrollTo(activeIdx + 1)}
+              disabled={activeIdx >= slots.length - 1}
+              aria-label="Next wallet"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </Button>
+          </div>
 
           {/* Dots indicator */}
           {slots.length > 1 && (
             <div className="flex justify-center gap-1.5 mt-3">
               {slots.map((s, i) => (
-                <span
+                <button
                   key={s.kind === "chain" ? `c:${s.chain}` : s.kind === "watch" ? `w:${s.watch.id}` : `k:${s.wif.id}`}
+                  type="button"
+                  onClick={() => scrollTo(i)}
                   className={`h-1.5 rounded-full transition-all ${
-                    i === activeIdx ? "w-6 bg-foreground" : "w-1.5 bg-muted-foreground/40"
+                    i === activeIdx ? "w-6 bg-foreground" : "w-1.5 bg-muted-foreground/40 hover:bg-muted-foreground/70"
                   }`}
+                  aria-label={`Go to wallet ${i + 1}`}
                 />
               ))}
             </div>
