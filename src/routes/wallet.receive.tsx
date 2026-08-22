@@ -8,10 +8,11 @@ import { DERIVATION_PATHS } from "@/lib/txc/network";
 import { QrCode } from "@/components/wallet/QrCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Copy, Plus, Share2 } from "lucide-react";
+import { Check, Copy, Plus, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { shareText } from "@/lib/native/ui";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import {
   getDisplayIndex,
   getRotationPolicy,
@@ -51,6 +52,7 @@ function ReceivePage() {
   const primaryKind = unlocked?.kind ?? "bip44";
   const primaryIsOmniSafe = primaryKind === "bip44" || primaryKind === "bip49";
   const activeKind = mode === "token" && !primaryIsOmniSafe ? "bip44" : primaryKind;
+  const { copied, copy } = useCopyFeedback();
 
   const firstUnused = account.data?.nextReceiveIndex ?? 0;
 
@@ -135,14 +137,20 @@ function ReceivePage() {
 
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <Button
-                  variant="secondary"
+                  variant={copied ? "default" : "secondary"}
                   onClick={async () => {
-                    const ok = await copyToClipboard(address);
+                    const ok = await copy(address);
                     if (ok) toast.success("Address copied");
                     else toast.error("Could not copy. Long-press the address to select it.");
                   }}
+                  aria-live="polite"
                 >
-                  <Copy className="h-4 w-4 mr-2" /> Copy
+                  {copied ? (
+                    <Check className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-2" />
+                  )}
+                  {copied ? "Copied!" : "Copy"}
                 </Button>
                 <Button
                   variant="secondary"

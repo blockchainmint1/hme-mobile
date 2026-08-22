@@ -8,10 +8,11 @@ import { LTC_DERIVATION_PATHS, LTC_DEFAULT_KIND } from "@/lib/ltc/network";
 import { QrCode } from "@/components/wallet/QrCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Copy, Plus, Share2 } from "lucide-react";
+import { Check, Copy, Plus, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { shareText } from "@/lib/native/ui";
 import { copyToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 
 export const Route = createFileRoute("/wallet/ltc/receive")({
   head: () => ({ meta: [{ title: "Receive LTC — HME Wallet" }] }),
@@ -32,6 +33,7 @@ function ReceiveLtcPage() {
   });
 
   const [manualBump, setManualBump] = useState(0);
+  const { copied, copy } = useCopyFeedback();
   const firstUnused = account.data?.nextReceiveIndex ?? 0;
 
   const shown = useMemo(() => {
@@ -67,12 +69,21 @@ function ReceiveLtcPage() {
                 Address #{shown.index} · <span className="font-mono">{shown.path}</span>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                <Button variant="secondary" onClick={async () => {
-                  const ok = await copyToClipboard(address);
-                  if (ok) toast.success("Address copied");
-                  else toast.error("Could not copy. Long-press the address to select it.");
-                }}>
-                  <Copy className="h-4 w-4 mr-2" /> Copy
+                <Button
+                  variant={copied ? "default" : "secondary"}
+                  onClick={async () => {
+                    const ok = await copy(address);
+                    if (ok) toast.success("Address copied");
+                    else toast.error("Could not copy. Long-press the address to select it.");
+                  }}
+                  aria-live="polite"
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-2" />
+                  )}
+                  {copied ? "Copied!" : "Copy"}
                 </Button>
                 <Button variant="secondary" onClick={async () => {
                   const ok = await shareText({ title: "My LTC address", text: address, dialogTitle: "Share LTC address" });

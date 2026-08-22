@@ -3,13 +3,14 @@
  */
 import { createFileRoute, Link, notFound, useParams } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { ArrowLeft, Copy } from "lucide-react";
+import { ArrowLeft, Check, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QrCode } from "@/components/wallet/QrCode";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { EVM_CHAINS, deriveEvmAccount, type EvmChainId } from "@/lib/chains/evm";
-import { copyToClipboard } from "@/lib/clipboard";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/wallet/evm/$chain/receive")({
   component: EvmReceive,
@@ -24,6 +25,7 @@ function EvmReceive() {
   const meta = EVM_CHAINS[chainId];
   const { root } = useWallet();
   const address = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
+  const { copied, copy } = useCopyFeedback();
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6">
@@ -45,11 +47,21 @@ function EvmReceive() {
           )}
           <p className="font-mono text-xs break-all text-center">{address ?? "..."}</p>
           <Button
-            variant="secondary"
-            onClick={() => address && copyToClipboard(address)}
+            variant={copied ? "default" : "secondary"}
+            onClick={async () => {
+              if (!address) return;
+              const ok = await copy(address);
+              if (ok) toast.success("Address copied");
+            }}
             disabled={!address}
+            aria-live="polite"
           >
-            <Copy className="h-4 w-4 mr-2" /> Copy address
+            {copied ? (
+              <Check className="h-4 w-4 mr-2" />
+            ) : (
+              <Copy className="h-4 w-4 mr-2" />
+            )}
+            {copied ? "Copied!" : "Copy address"}
           </Button>
           <p className="text-xs text-muted-foreground text-center">
             Send {meta.nativeSymbol} or any ERC-20 token on {meta.name} to this address.
