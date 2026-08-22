@@ -31,6 +31,7 @@ function WifReceivePage() {
   const uriScheme = entry.chain === "txc" ? "texitcoin" : "iskandercoin";
   const address = entry.address;
   const chainLabel = entry.chain.toUpperCase();
+  const { copied, copy } = useCopyFeedback();
 
   return (
     <main className="mx-auto max-w-xl px-4 py-8">
