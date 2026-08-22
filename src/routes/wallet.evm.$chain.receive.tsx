@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { QrCode } from "@/components/wallet/QrCode";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { EVM_CHAINS, deriveEvmAccount, type EvmChainId } from "@/lib/chains/evm";
-import { copyToClipboard } from "@/lib/clipboard";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { toast } from "sonner";
 
