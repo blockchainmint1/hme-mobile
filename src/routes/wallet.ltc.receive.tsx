@@ -33,6 +33,7 @@ function ReceiveLtcPage() {
   });
 
   const [manualBump, setManualBump] = useState(0);
+  const { copied, copy } = useCopyFeedback();
   const firstUnused = account.data?.nextReceiveIndex ?? 0;
 
   const shown = useMemo(() => {
