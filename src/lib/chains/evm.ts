@@ -79,6 +79,17 @@ export const EVM_CHAINS: Record<EvmChainId, EvmChainMeta> = {
     explorerTx: (h) => `https://bscscan.com/tx/${h}`,
     explorerAddress: (a) => `https://bscscan.com/address/${a}`,
   },
+  zcu: {
+    id: "zcu",
+    name: "Zero Chill",
+    shortName: "ZCU",
+    nativeSymbol: "ZCU",
+    priceSymbol: "ZCU",
+    viemChain: zeroChill,
+    accent: "#0EA5E9",
+    explorerTx: (h) => `https://scan.zerochill.com/tx/${h}`,
+    explorerAddress: (a) => `https://scan.zerochill.com/address/${a}`,
+  },
 };
 
 export const EVM_CHAIN_LIST = Object.values(EVM_CHAINS);
