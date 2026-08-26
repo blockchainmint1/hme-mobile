@@ -6,7 +6,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 
-export type EvmChainId = "eth" | "base" | "bsc";
+export type EvmChainId = "eth" | "base" | "bsc" | "zcu";
 
 export interface EvmTransfer {
   hash: string;
@@ -131,6 +131,8 @@ const ALCHEMY_URL: Record<EvmChainId, (k: string) => string | null> = {
   base: (k) => `https://base-mainnet.g.alchemy.com/v2/${k}`,
   // getAssetTransfers unsupported on BSC through Alchemy.
   bsc: () => null,
+  // Zero Chill is not indexed by Alchemy.
+  zcu: () => null,
 };
 
 interface AlchemyTransfer {
