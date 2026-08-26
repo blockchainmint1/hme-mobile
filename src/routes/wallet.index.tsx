@@ -1680,7 +1680,8 @@ function EvmTile({
   const [refreshing, setRefreshing] = useState(false);
   const [evmSwapPref] = useFeature("evmSwap");
   const exchangeAllowed = useExchangeFeaturesAllowed();
-  const swapEnabled = evmSwapPref && exchangeAllowed;
+  // Zero Chill has no DEX aggregator coverage yet — no swap entry point.
+  const swapEnabled = evmSwapPref && exchangeAllowed && chainId !== "zcu";
 
 
   const meta = EVM_CHAINS[chainId];

@@ -10,11 +10,14 @@ const UPSTREAM: Record<string, (key: string) => string> = {
   eth: (k) => `https://eth-mainnet.g.alchemy.com/v2/${k}`,
   base: (k) => `https://base-mainnet.g.alchemy.com/v2/${k}`,
   bsc: (k) => `https://bnb-mainnet.g.alchemy.com/v2/${k}`,
+  // Zero Chill runs on our own node — no API key involved.
+  zcu: () => "https://rpc.zerochill.com",
 };
 
 // Public fallbacks if Alchemy doesn't have a given network on the plan.
 const FALLBACK: Record<string, string> = {
   bsc: "https://bsc-dataseed.binance.org",
+  zcu: "https://rpc.zerochill.com",
 };
 
 // Only allow safe read + raw send methods. Blocks `eth_accounts`,

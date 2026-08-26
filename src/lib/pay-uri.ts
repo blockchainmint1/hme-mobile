@@ -34,6 +34,7 @@ const EVM_CHAIN_BY_ID: Record<number, EvmChainId> = {
   1: "eth",
   8453: "base",
   56: "bsc",
+  90031273: "zcu",
 };
 
 function isEvmAddress(s: string): boolean {

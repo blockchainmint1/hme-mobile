@@ -43,7 +43,12 @@ export const CHAIN_META: Record<ChainId, ChainMeta> = {
   ltc: { id: "ltc", name: "Litecoin", shortName: "LTC", accent: "#345D9D" },
   doge: { id: "doge", name: "Dogecoin", shortName: "DOGE", accent: "#C2A633" },
   tron: { id: "tron", name: "Tron", shortName: "TRX", accent: "#EF0027" },
-  zcu: { id: "zcu", name: "Zero Chill Units", shortName: "ZCU", soon: true, accent: "#0EA5E9" },
+  zcu: {
+    id: "zcu",
+    name: "Zero Chill",
+    shortName: EVM_CHAINS.zcu.shortName,
+    accent: EVM_CHAINS.zcu.accent,
+  },
 };
 
 export const CHAIN_ORDER: ChainId[] = [

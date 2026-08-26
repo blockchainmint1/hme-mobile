@@ -6,7 +6,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 
-export type EvmChainId = "eth" | "base" | "bsc";
+export type EvmChainId = "eth" | "base" | "bsc" | "zcu";
 
 export interface EvmTransfer {
   hash: string;
@@ -61,6 +61,8 @@ const VERIFIED_CONTRACTS: Record<EvmChainId, Set<string>> = {
     "0xe9e7cea3dedca5984780bafc599bd69add087d56", // BUSD
     "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c", // WBNB
   ]),
+  // No canonical token deployments on Zero Chill yet.
+  zcu: new Set<string>(),
 };
 
 /** Well-known "real" symbols that spammers love to impersonate. */
@@ -131,6 +133,8 @@ const ALCHEMY_URL: Record<EvmChainId, (k: string) => string | null> = {
   base: (k) => `https://base-mainnet.g.alchemy.com/v2/${k}`,
   // getAssetTransfers unsupported on BSC through Alchemy.
   bsc: () => null,
+  // Zero Chill is not indexed by Alchemy.
+  zcu: () => null,
 };
 
 interface AlchemyTransfer {

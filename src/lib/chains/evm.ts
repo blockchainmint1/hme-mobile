@@ -2,12 +2,33 @@
  * EVM chain registry and helpers. One address (m/44'/60'/0'/0/0) works on
  * every EVM network we support; only the RPC + native token differ.
  */
-import { createPublicClient, http, type PublicClient, type Chain, formatEther } from "viem";
+import {
+  createPublicClient,
+  defineChain,
+  http,
+  type PublicClient,
+  type Chain,
+  formatEther,
+} from "viem";
 import { mainnet, base, bsc } from "viem/chains";
 import { privateKeyToAccount, type PrivateKeyAccount } from "viem/accounts";
 import type { BIP32Interface } from "bip32";
 
-export type EvmChainId = "eth" | "bsc" | "base";
+export type EvmChainId = "eth" | "bsc" | "base" | "zcu";
+
+/** Chains that have canonical stablecoin deployments we ship built-in. */
+export type StableEvmChainId = Exclude<EvmChainId, "zcu">;
+
+/** Zero Chill Units — Honest Money ecosystem L1 (EVM). */
+export const zeroChill = defineChain({
+  id: 90031273,
+  name: "Zero Chill",
+  nativeCurrency: { name: "Zero Chill Units", symbol: "ZCU", decimals: 18 },
+  rpcUrls: { default: { http: ["https://rpc.zerochill.com"] } },
+  blockExplorers: {
+    default: { name: "Zero Chill Explorer", url: "https://scan.zerochill.com" },
+  },
+});
 
 export interface EvmChainMeta {
   id: EvmChainId;
@@ -57,6 +78,17 @@ export const EVM_CHAINS: Record<EvmChainId, EvmChainMeta> = {
     accent: "#F0B90B",
     explorerTx: (h) => `https://bscscan.com/tx/${h}`,
     explorerAddress: (a) => `https://bscscan.com/address/${a}`,
+  },
+  zcu: {
+    id: "zcu",
+    name: "Zero Chill",
+    shortName: "ZCU",
+    nativeSymbol: "ZCU",
+    priceSymbol: "ZCU",
+    viemChain: zeroChill,
+    accent: "#0EA5E9",
+    explorerTx: (h) => `https://scan.zerochill.com/tx/${h}`,
+    explorerAddress: (a) => `https://scan.zerochill.com/address/${a}`,
   },
 };
 
