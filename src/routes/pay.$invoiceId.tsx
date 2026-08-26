@@ -33,6 +33,7 @@ import {
   evmClient,
   formatEth,
   type EvmChainId,
+  type StableEvmChainId,
 } from "@/lib/chains/evm";
 import {
   USDC_BY_CHAIN,
@@ -100,7 +101,7 @@ function PayRoute() {
     queryFn: async () => {
       const addr = evmAccount!.address;
       const out: BalanceSnapshot[] = [];
-      const chainIds: EvmChainId[] = ["eth", "base", "bsc"];
+      const chainIds: StableEvmChainId[] = ["eth", "base", "bsc"];
       // Native balances in parallel.
       const native = await Promise.all(
         chainIds.map((c) =>
@@ -205,7 +206,7 @@ function PayRoute() {
 
       let hash: `0x${string}`;
       if (wantsErc20) {
-        const token = USDC_BY_CHAIN[chainId];
+        const token = USDC_BY_CHAIN[chainId as StableEvmChainId];
         const amount = tokenAmountToRaw(String(locked.crypto_amount), token.decimals);
         const data = encodeTransfer(to, amount);
         hash = await walletClient.sendTransaction({ to: token.address, data, value: 0n });

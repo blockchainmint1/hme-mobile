@@ -18,7 +18,8 @@ export type ContactChain =
   | "tron"
   | "eth"
   | "base"
-  | "bsc";
+  | "bsc"
+  | "zcu";
 
 export interface Contact {
   id: string;
@@ -37,10 +38,11 @@ export const CHAIN_LABELS: Record<ContactChain, string> = {
   eth: "Ethereum (ETH)",
   base: "Base",
   bsc: "BNB Smart Chain",
+  zcu: "Zero Chill (ZCU)",
 };
 
 /** EVM chains share an address format; group them when filtering by chain. */
-export const EVM_CHAINS: ContactChain[] = ["eth", "base", "bsc"];
+export const EVM_CHAINS: ContactChain[] = ["eth", "base", "bsc", "zcu"];
 
 const KEY = "hme:address-book:v1";
 
