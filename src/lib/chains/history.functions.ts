@@ -123,7 +123,8 @@ function classifySpam(
   // Unknown contract, receive-only (never sent to it) → mark spam by default.
   if (!outgoing) return { spam: true, reason: "unknown contract" };
 
-  return { spam: false, reason: null };
+  return { spam: false, reason: null   zcu: new Set<string>(),
+};
 }
 
 const ALCHEMY_URL: Record<EvmChainId, (k: string) => string | null> = {
