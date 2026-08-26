@@ -61,6 +61,8 @@ const VERIFIED_CONTRACTS: Record<EvmChainId, Set<string>> = {
     "0xe9e7cea3dedca5984780bafc599bd69add087d56", // BUSD
     "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c", // WBNB
   ]),
+  // No canonical token deployments on Zero Chill yet.
+  zcu: new Set<string>(),
 };
 
 /** Well-known "real" symbols that spammers love to impersonate. */
