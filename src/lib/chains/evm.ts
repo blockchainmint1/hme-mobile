@@ -26,7 +26,7 @@ export const zeroChill = defineChain({
   nativeCurrency: { name: "Zero Chill Units", symbol: "ZCU", decimals: 18 },
   rpcUrls: { default: { http: ["https://node-zcu.honest.money"] } },
   blockExplorers: {
-    default: { name: "Zero Chill Explorer", url: "https://explorer.zerochill.com" },
+    default: { name: "Zero Chill Scan", url: "https://scan.zerochill.com" },
   },
 });
 
@@ -87,8 +87,8 @@ export const EVM_CHAINS: Record<EvmChainId, EvmChainMeta> = {
     priceSymbol: "ZCU",
     viemChain: zeroChill,
     accent: "#0EA5E9",
-    explorerTx: (h) => `https://explorer.zerochill.com/tx/${h}`,
-    explorerAddress: (a) => `https://explorer.zerochill.com/address/${a}`,
+    explorerTx: (h) => `https://scan.zerochill.com/tx/${h}`,
+    explorerAddress: (a) => `https://scan.zerochill.com/address/${a}`,
   },
 };
 
