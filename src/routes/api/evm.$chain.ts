@@ -183,9 +183,10 @@ export const Route = createFileRoute("/api/evm/$chain")({
 
         const upstream = await fetch(url, {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...authHeaders },
           body: JSON.stringify(body),
         });
+
 
         const text = await upstream.text();
         return new Response(text, {
