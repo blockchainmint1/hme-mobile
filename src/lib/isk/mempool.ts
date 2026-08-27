@@ -82,15 +82,32 @@ export async function getFeeEstimates(): Promise<FeeEstimates> {
 }
 
 export async function broadcastTx(hex: string): Promise<string> {
-  const res = await fetch(`${ISK_MEMPOOL_API}/tx`, {
-    method: "POST",
-    headers: { "content-type": "text/plain" },
-    body: hex,
-  });
-  const body = await res.text();
-  if (!res.ok) throw new Error(`isk broadcast failed: ${res.status} ${cleanUpstreamBody(body)}`);
-  return body.trim();
+  let explorerErr: string | null = null;
+  try {
+    const res = await fetch(`${ISK_MEMPOOL_API}/tx`, {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: hex,
+    });
+    const body = await res.text();
+    if (res.ok) return body.trim();
+    explorerErr = `${res.status} ${cleanUpstreamBody(body)}`;
+  } catch (e) {
+    explorerErr = e instanceof Error ? e.message : String(e);
+  }
+
+  // Explorer unavailable / rejected — fall back to our own ISK node.
+  try {
+    const { iskNodeBroadcast } = await import("./node.functions");
+    const { txid } = await iskNodeBroadcast({ data: { hex } });
+    if (txid) return txid.trim();
+  } catch (e) {
+    const nodeErr = e instanceof Error ? e.message : String(e);
+    throw new Error(`isk broadcast failed: ${explorerErr} (node: ${cleanUpstreamBody(nodeErr)})`);
+  }
+  throw new Error(`isk broadcast failed: ${explorerErr}`);
 }
+
 
 export function explorerTxUrl(txid: string): string {
   return `${ISK_MEMPOOL_BASE}/tx/${txid}`;
