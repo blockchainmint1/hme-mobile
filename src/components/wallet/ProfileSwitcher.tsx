@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronDown, Download, Loader2, Pencil, Sparkles, Wallet } from "lucide-react";
+import { Check, ChevronDown, Download, Eye, Key, Loader2, Pencil, Sparkles, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -206,7 +206,22 @@ export function ProfileSwitcher() {
               <Download className="h-4 w-4 mr-2" /> Import a seed
             </Link>
           </Button>
+          <Button asChild variant="outline" onClick={() => setOpen(false)}>
+            <Link to="/wallet/wif-add">
+              <Key className="h-4 w-4 mr-2" /> Import private key
+            </Link>
+          </Button>
+          <Button asChild variant="outline" onClick={() => setOpen(false)}>
+            <Link to="/wallet/watch-add">
+              <Eye className="h-4 w-4 mr-2" /> Watch-only address
+            </Link>
+          </Button>
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Private keys and watch-only addresses are added to{" "}
+          <span className="font-medium text-foreground">{activeLabel}</span> as their own tiles.
+        </p>
+
       </SheetContent>
     </Sheet>
   );
