@@ -465,7 +465,10 @@ function RootComponent() {
                   You&apos;re offline — balances and prices may be out of date.
                 </div>
               )}
-              <div className="flex flex-1 min-h-0 flex-col">
+              {/* The frame itself is fixed-height and clips overflow, so this
+                  wrapper must be the scroll container — otherwise long pages
+                  (Settings) simply get cut off with no way to scroll. */}
+              <div className="flex flex-1 min-h-0 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
                 <Outlet />
               </div>
               <div className="shrink-0 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
