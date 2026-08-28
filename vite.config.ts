@@ -6,7 +6,18 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// BUILD_ID: injected at build time so a running (possibly cached) webview can
+// compare itself against what the server is now shipping. The same value is
+// available to server route handlers because it's defined for both bundles.
+const BUILD_ID = process.env.LOVABLE_BUILD_ID || String(Date.now());
+process.env.LOVABLE_BUILD_ID = BUILD_ID;
+
 export default defineConfig({
+  vite: {
+    define: {
+      __BUILD_ID__: JSON.stringify(BUILD_ID),
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
