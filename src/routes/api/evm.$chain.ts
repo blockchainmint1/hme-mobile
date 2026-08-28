@@ -10,11 +10,14 @@ const UPSTREAM: Record<string, (key: string) => string> = {
   eth: (k) => `https://eth-mainnet.g.alchemy.com/v2/${k}`,
   base: (k) => `https://base-mainnet.g.alchemy.com/v2/${k}`,
   bsc: (k) => `https://bnb-mainnet.g.alchemy.com/v2/${k}`,
+  // Zero Chill runs on our own node — no API key involved.
+  zcu: () => "https://node-zcu.honest.money",
 };
 
 // Public fallbacks if Alchemy doesn't have a given network on the plan.
 const FALLBACK: Record<string, string> = {
   bsc: "https://bsc-dataseed.binance.org",
+  zcu: "https://node-zcu.honest.money",
 };
 
 // Only allow safe read + raw send methods. Blocks `eth_accounts`,
@@ -144,9 +147,25 @@ export const Route = createFileRoute("/api/evm/$chain")({
         const builder = UPSTREAM[chain];
         if (!builder) return new Response("Unknown chain", { status: 404 });
 
-        const key = process.env.ALCHEMY_KEY;
-        const url = key ? builder(key) : FALLBACK[chain];
+        // Zero Chill runs on our own node: prefer the private RPC endpoint
+        // (with basic auth) when configured, else the public one.
+        let url: string | undefined;
+        const authHeaders: Record<string, string> = {};
+        if (chain === "zcu") {
+          url = process.env.ZCU_RPC_URL ?? FALLBACK.zcu;
+          if (url && !url.startsWith("http")) url = `https://${url}`;
+          const u = process.env.ZCU_RPC_USER;
+          const p = process.env.ZCU_RPC_PASS ?? process.env.ZCU_RPC_PASSWORD;
+          if (u && p) {
+            authHeaders.authorization =
+              "Basic " + Buffer.from(`${u}:${p}`).toString("base64");
+          }
+        } else {
+          const key = process.env.ALCHEMY_KEY;
+          url = key ? builder(key) : FALLBACK[chain];
+        }
         if (!url) return new Response("RPC not configured", { status: 500 });
+
 
         let body: unknown;
         try {
@@ -164,9 +183,10 @@ export const Route = createFileRoute("/api/evm/$chain")({
 
         const upstream = await fetch(url, {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...authHeaders },
           body: JSON.stringify(body),
         });
+
 
         const text = await upstream.text();
         return new Response(text, {

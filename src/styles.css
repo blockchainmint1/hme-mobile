@@ -180,3 +180,25 @@ body {
   overscroll-behavior: none;
   background-color: var(--color-background);
 }
+
+/* Screen-fit hardening (App Store 4.0/2.4.1 rejections): the webview must never
+   render wider than its window. When iOS hands the app a smaller window than the
+   physical screen (iPad compatibility window, Stage Manager, rotation), a layout
+   that can exceed 100% width gets clipped on the right. Clamp every root box to
+   the visible width and let the app column shrink instead. */
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* WKWebView "text autosizing" inflates font sizes based on the layout width it
+   guesses, which pushes fixed-width rows past the window and clips the right
+   edge (the App Store screenshot). Pin text scaling to 100% everywhere. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
