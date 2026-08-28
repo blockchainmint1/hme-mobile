@@ -5,6 +5,7 @@
  * the UI shows an "open in explorer" link instead.
  */
 import { createServerFn } from "@tanstack/react-start";
+import { fetchZcuHistory } from "./zcu-explorer.server";
 
 export type EvmChainId = "eth" | "base" | "bsc" | "zcu";
 
@@ -191,6 +192,15 @@ export const getEvmHistory = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data }): Promise<{ transfers: EvmTransfer[]; supported: boolean }> => {
+    // Zero Chill is our own L1 — Alchemy doesn't index it. Use the explorer API.
+    if (data.chain === "zcu") {
+      try {
+        return { transfers: await fetchZcuHistory(data.address), supported: true };
+      } catch {
+        return { transfers: [], supported: true };
+      }
+    }
+
     const key = process.env.ALCHEMY_KEY;
     const builder = ALCHEMY_URL[data.chain];
     const url = key ? builder(key) : null;

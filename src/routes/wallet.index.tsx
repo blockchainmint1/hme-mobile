@@ -449,7 +449,13 @@ function WalletHome() {
       queryKey: ["evm-balance", id, evmAddress],
       enabled: !!evmAddress,
       queryFn: () => evmClient(id).getBalance({ address: evmAddress! }),
+      // Keep tiles live: poll every 30s and retry transient RPC hiccups.
+      staleTime: 15_000,
+      refetchInterval: 30_000,
+      retry: 3,
+      retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 8000),
     })),
+
   });
 
   // Watch-only balances + tx history. Balance query is always on so the
@@ -1802,6 +1808,8 @@ function EvmActivity({
     queryKey: ["evm-history", chainId, address],
     enabled: !!address,
     queryFn: () => fetchHistory({ data: { chain: chainId, address: address! } }),
+    staleTime: 20_000,
+    refetchInterval: 45_000,
   });
   const [hideSpam] = useFeature("hideSpamTokens");
   const visibleTokens = useMemo(() => {
