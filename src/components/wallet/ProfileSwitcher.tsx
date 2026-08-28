@@ -24,7 +24,8 @@ import { useWallet } from "@/lib/txc/wallet-context";
 import { renameStoredWallet } from "@/lib/txc/storage";
 
 export function ProfileSwitcher() {
-  const { profiles, activeProfileId, switchProfile, refreshProfiles, rename } = useWallet();
+  const { profiles, activeProfileId, switchProfile, refreshProfiles, rename, unlocked } =
+    useWallet();
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [needPassword, setNeedPassword] = useState<string | null>(null);
