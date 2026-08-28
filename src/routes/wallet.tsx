@@ -204,8 +204,12 @@ function WalletLayout() {
   if (!unlocked) return null;
 
   return (
-    <div className="min-h-[100dvh] flex flex-col">
-      <header className="border-b border-border/60 bg-card/40 backdrop-blur supports-[backdrop-filter]:bg-card/30 sticky top-[env(safe-area-inset-top)] z-20">
+    <div className="flex flex-1 min-h-0 flex-col">
+      {/* Pinned header: the root frame already applies the top safe-area
+          spacer, so this stays shrink-0 at the top of the column instead of
+          sticky-with-inset (which let tiles slide under it on Android). */}
+      <header className="shrink-0 border-b border-border/60 bg-card/40 backdrop-blur supports-[backdrop-filter]:bg-card/30 z-20">
+
 
         <div className="mx-auto max-w-3xl px-4 py-3 flex items-center justify-between gap-2">
           <button
@@ -278,7 +282,9 @@ function WalletLayout() {
           </Button>
         </div>
       </header>
-      <div className="flex-1 flex flex-col min-h-0">
+      {/* Own scroller so sub-pages (Settings, sends) scroll while the header
+          stays pinned; the dashboard fills this exactly and scrolls internally. */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overscroll-contain">
         <Outlet />
       </div>
 
