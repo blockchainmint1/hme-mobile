@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronDown, Download, Loader2, Pencil, Sparkles, Wallet } from "lucide-react";
+import { Check, ChevronDown, Download, Eye, Key, Loader2, Pencil, Sparkles, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
