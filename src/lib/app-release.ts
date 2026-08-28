@@ -183,10 +183,13 @@ export async function applyWebUpdate(): Promise<void> {
     }
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.update().catch(() => undefined)));
+      await Promise.all(regs.map((r) => r.unregister().catch(() => undefined)));
     }
   } catch {
     /* best effort */
   }
-  window.location.reload();
+  // Cache-busting param: a plain reload can be served from the webview cache.
+  const url = new URL(window.location.href);
+  url.searchParams.set("_r", Date.now().toString());
+  window.location.replace(url.toString());
 }
