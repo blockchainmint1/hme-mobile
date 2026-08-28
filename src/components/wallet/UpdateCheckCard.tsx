@@ -4,7 +4,7 @@
  * the running build. On Android a newer release offers the pinned IPFS APK; on
  * the web it also compares the served assets and offers a hard reload.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, RefreshCw, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import {
   checkForWebUpdate,
   compareVersions,
   fetchLatestRelease,
+  installedVersion,
   releaseDownloadUrl,
   type AppRelease,
 } from "@/lib/app-release";
@@ -38,35 +39,54 @@ type Status = "idle" | "checking" | "current" | "update" | "unknown";
 export function UpdateCheckCard() {
   const [status, setStatus] = useState<Status>("idle");
   const [latest, setLatest] = useState<AppRelease | null>(null);
+  const [webStale, setWebStale] = useState(false);
+  const [current, setCurrent] = useState(APP_VERSION);
   const native = isNative();
   const platform = nativePlatform();
   const releasePlatform = native ? (platform === "ios" ? "ios" : "android") : "web";
 
+  useEffect(() => {
+    installedVersion()
+      .then(setCurrent)
+      .catch(() => undefined);
+  }, []);
+
   async function check() {
     setStatus("checking");
-    const rel = await fetchLatestRelease(releasePlatform);
-    setLatest(rel);
+    setWebStale(false);
 
-    if (rel) {
-      if (compareVersions(rel.version, APP_VERSION) > 0) {
-        setStatus("update");
-        return;
-      }
-      // Server says we're on the newest published version. On the web the
-      // deployed assets can still be ahead of the running tab.
-      if (!native) {
-        setStatus(await checkForWebUpdate());
-        return;
-      }
-      setStatus("current");
+    // Two independent questions, asked every time:
+    //  1. Is there a newer published release for this platform?
+    //  2. Is the web bundle we're running behind what the server ships?
+    // The native shell loads its content from the server, so (2) matters
+    // inside the app too — a stale webview cache is the common failure.
+    const [rel, web] = await Promise.all([
+      fetchLatestRelease(releasePlatform),
+      checkForWebUpdate(),
+    ]);
+    setLatest(rel);
+    setWebStale(web === "update");
+
+    const installed = await installedVersion();
+    setCurrent(installed);
+
+    if (rel && compareVersions(rel.version, installed) > 0) {
+      setStatus("update");
       return;
     }
-
-    // Couldn't reach the release list.
-    setStatus(native ? "unknown" : await checkForWebUpdate());
+    if (web === "update") {
+      setStatus("update");
+      return;
+    }
+    if (!rel && web === "unknown") {
+      setStatus("unknown");
+      return;
+    }
+    setStatus("current");
   }
 
   const downloadUrl = releaseDownloadUrl(latest) || APK_URL;
+  const nativeUpdate = !!latest && compareVersions(latest.version, current) > 0;
 
   return (
     <Card className="mt-5">
@@ -75,7 +95,7 @@ export function UpdateCheckCard() {
           <RotateCw className="h-5 w-5" /> Updates
         </CardTitle>
         <CardDescription>
-          Version {APP_VERSION}
+          Version {current}
           {native ? ` · ${platform} app` : " · web"}
         </CardDescription>
       </CardHeader>
@@ -98,12 +118,12 @@ export function UpdateCheckCard() {
 
         {status === "unknown" && (
           <p className="text-sm text-muted-foreground">
-            Couldn&apos;t reach the update server.
-            {native ? " Try again when you're back online." : " You can still reload to refresh the app."}
+            Couldn&apos;t reach the update server. Check your connection and try again — you can
+            still reload the app below.
           </p>
         )}
 
-        {status === "update" && latest && (
+        {status === "update" && nativeUpdate && latest && (
           <div className="space-y-2">
             <p className="text-sm">
               <span className="font-medium">Version {latest.version}</span> is available.
@@ -113,32 +133,37 @@ export function UpdateCheckCard() {
           </div>
         )}
 
-        {status === "update" && releasePlatform === "ios" && (
+        {status === "update" && nativeUpdate && releasePlatform === "ios" && (
           <p className="text-sm text-muted-foreground">
             Updates for the iOS app arrive through the App Store.
           </p>
         )}
 
-        {status === "update" && releasePlatform === "android" && (
+        {status === "update" && nativeUpdate && releasePlatform === "android" && (
           <Button className="w-full" onClick={() => openExternal(downloadUrl)}>
             <Download className="h-4 w-4 mr-2" /> Download {latest?.version ?? "latest"} APK
           </Button>
         )}
 
-        {!native && (status === "update" || status === "unknown") && (
+        {webStale && (
           <>
+            <p className="text-sm">Newer app code is live. Reload to get it.</p>
             <Button className="w-full" onClick={() => void applyWebUpdate()}>
-              {status === "update" ? "Update now" : "Reload app"}
+              Update now
             </Button>
-            {status === "update" && (
-              <p className="text-xs text-muted-foreground">
-                Your wallet stays on this device — updating only refreshes the app code.
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground">
+              Your wallet stays on this device — updating only refreshes the app code.
+            </p>
           </>
         )}
 
-        {native && platform === "android" && status !== "update" && (
+        {!webStale && status === "unknown" && (
+          <Button className="w-full" onClick={() => void applyWebUpdate()}>
+            Reload app
+          </Button>
+        )}
+
+        {native && platform === "android" && !nativeUpdate && (
           <Button variant="ghost" className="w-full" onClick={() => openExternal(downloadUrl)}>
             <Download className="h-4 w-4 mr-2" /> Download latest APK anyway
           </Button>

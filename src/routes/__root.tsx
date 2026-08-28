@@ -457,7 +457,7 @@ function RootComponent() {
           <div data-wallet-frame className="min-h-[100dvh] w-full bg-muted/40 sm:py-6">
             <div
               data-wallet-frame
-              className="mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:min-h-[calc(100dvh-3rem)] sm:max-w-[520px] md:max-w-[600px] lg:max-w-[680px] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-border overflow-hidden"
+              className="mx-auto flex h-[100dvh] w-full max-w-[480px] flex-col bg-background sm:h-[calc(100dvh-3rem)] sm:max-w-[520px] md:max-w-[600px] lg:max-w-[680px] sm:rounded-[2.25rem] sm:shadow-2xl sm:ring-1 sm:ring-border overflow-hidden"
             >
               <div className="pt-[env(safe-area-inset-top)]" />
               {offline && (
@@ -465,12 +465,16 @@ function RootComponent() {
                   You&apos;re offline — balances and prices may be out of date.
                 </div>
               )}
-              <div className="flex-1">
+              {/* The frame itself is fixed-height and clips overflow, so this
+                  wrapper must be the scroll container — otherwise long pages
+                  (Settings) simply get cut off with no way to scroll. */}
+              <div className="flex flex-1 min-h-0 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
                 <Outlet />
               </div>
-              <div className="pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+              <div className="shrink-0 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
                 <SiteFooter />
               </div>
+
             </div>
           </div>
 
