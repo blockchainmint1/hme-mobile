@@ -45,6 +45,7 @@ import { hapticSuccess, hapticError } from "@/lib/native/ui";
 import { getSwapQuote, NATIVE_TOKEN_ADDRESS, type SwapQuote } from "@/lib/chains/swap.functions";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { ExchangeUnavailable } from "@/components/wallet/ExchangeUnavailable";
+import { sendEvmTransaction } from "@/lib/chains/evm-send";
 
 type AssetKind =
   | { kind: "native" }
@@ -210,7 +211,7 @@ function EvmSwap() {
           // another non-zero value — reset to 0 first.
           if (current > 0n) {
             setStage("Resetting approval…");
-            const resetHash = await walletClient.sendTransaction({
+            const resetHash = await sendEvmTransaction(chainId, walletClient, {
               to: from.token.address,
               data: encodeFunctionData({
                 abi: erc20Abi,
@@ -222,7 +223,7 @@ function EvmSwap() {
             await pub.waitForTransactionReceipt({ hash: resetHash });
           }
           setStage("Approving…");
-          const approveHash = await walletClient.sendTransaction({
+          const approveHash = await sendEvmTransaction(chainId, walletClient, {
             to: from.token.address,
             data: encodeFunctionData({
               abi: erc20Abi,
@@ -267,7 +268,7 @@ function EvmSwap() {
         gas = (quoted * 130n) / 100n;
       }
 
-      return await walletClient.sendTransaction({ ...tx, gas });
+      return await sendEvmTransaction(chainId, walletClient, { ...tx, gas });
     },
     onError: (e: Error) => {
       hapticError();
