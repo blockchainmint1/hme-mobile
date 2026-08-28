@@ -282,7 +282,9 @@ function WalletLayout() {
           </Button>
         </div>
       </header>
-      <div className="flex-1 flex flex-col min-h-0">
+      {/* Own scroller so sub-pages (Settings, sends) scroll while the header
+          stays pinned; the dashboard fills this exactly and scrolls internally. */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto overscroll-contain">
         <Outlet />
       </div>
 
