@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronDown, Download, Loader2, Sparkles, Wallet } from "lucide-react";
+import { Check, ChevronDown, Download, Loader2, Pencil, Sparkles, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,16 +21,20 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useWallet } from "@/lib/txc/wallet-context";
+import { renameStoredWallet } from "@/lib/txc/storage";
 
 export function ProfileSwitcher() {
-  const { profiles, activeProfileId, switchProfile, refreshProfiles, unlocked } = useWallet();
+  const { profiles, activeProfileId, switchProfile, refreshProfiles, rename } = useWallet();
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [needPassword, setNeedPassword] = useState<string | null>(null);
   const [password, setPassword] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftLabel, setDraftLabel] = useState("");
 
   useEffect(() => {
     if (open) refreshProfiles();
+    else setEditingId(null);
   }, [open, refreshProfiles]);
 
   const activeLabel =
