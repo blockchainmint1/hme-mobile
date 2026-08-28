@@ -14,28 +14,59 @@ export interface PricesResult {
 
 const SYMBOLS = ["TXC", "ETH", "BNB"];
 
+/**
+ * ZCU is priced from the wZCU/USDC Uniswap V3 pool via the public wZCU API
+ * (no key, CORS-open). We request the 30m TWAP — the pool's built-in
+ * observation oracle — so a single manipulated block can't skew the
+ * portfolio total; the API returns spot if the window isn't available.
+ */
+async function fetchZcuUsd(): Promise<number | null> {
+  try {
+    const res = await fetch(
+      "https://wzcu.zerochill.com/api/public/price?twap=30m",
+      { headers: { accept: "application/json" } },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { ok?: boolean; usd?: number };
+    return json.ok && typeof json.usd === "number" ? json.usd : null;
+  } catch {
+    return null;
+  }
+}
+
 export const getAllPricesUsd = createServerFn({ method: "GET" }).handler(
   async (): Promise<PricesResult> => {
     const key = process.env.CMC_API ?? process.env.CMC_API_KEY;
-    if (!key) return { prices: {}, fetchedAt: Date.now(), source: "unavailable" };
+    const prices: PriceMap = {};
 
-    try {
-      const url = `https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?symbol=${SYMBOLS.join(",")}&convert=USD`;
-      const res = await fetch(url, {
-        headers: { "X-CMC_PRO_API_KEY": key, accept: "application/json" },
-      });
-      if (!res.ok) return { prices: {}, fetchedAt: Date.now(), source: "unavailable" };
-      const json = (await res.json()) as {
-        data?: Record<string, Array<{ quote?: { USD?: { price?: number } } }>>;
-      };
-      const prices: PriceMap = {};
-      for (const sym of SYMBOLS) {
-        const p = json.data?.[sym]?.[0]?.quote?.USD?.price;
-        if (typeof p === "number") prices[sym] = p;
-      }
-      return { prices, fetchedAt: Date.now(), source: "cmc" };
-    } catch {
-      return { prices: {}, fetchedAt: Date.now(), source: "unavailable" };
-    }
+    const [zcu] = await Promise.all([
+      fetchZcuUsd(),
+      (async () => {
+        if (!key) return;
+        try {
+          const url = `https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?symbol=${SYMBOLS.join(",")}&convert=USD`;
+          const res = await fetch(url, {
+            headers: { "X-CMC_PRO_API_KEY": key, accept: "application/json" },
+          });
+          if (!res.ok) return;
+          const json = (await res.json()) as {
+            data?: Record<string, Array<{ quote?: { USD?: { price?: number } } }>>;
+          };
+          for (const sym of SYMBOLS) {
+            const p = json.data?.[sym]?.[0]?.quote?.USD?.price;
+            if (typeof p === "number") prices[sym] = p;
+          }
+        } catch {
+          /* CMC unavailable — other sources may still have filled prices */
+        }
+      })(),
+    ]);
+    if (zcu != null) prices.ZCU = zcu;
+
+    return {
+      prices,
+      fetchedAt: Date.now(),
+      source: Object.keys(prices).length > 0 ? "cmc" : "unavailable",
+    };
   },
 );
