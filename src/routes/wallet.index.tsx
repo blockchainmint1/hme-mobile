@@ -1808,6 +1808,8 @@ function EvmActivity({
     queryKey: ["evm-history", chainId, address],
     enabled: !!address,
     queryFn: () => fetchHistory({ data: { chain: chainId, address: address! } }),
+    staleTime: 20_000,
+    refetchInterval: 45_000,
   });
   const [hideSpam] = useFeature("hideSpamTokens");
   const visibleTokens = useMemo(() => {
