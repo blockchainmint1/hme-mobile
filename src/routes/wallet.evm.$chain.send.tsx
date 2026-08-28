@@ -60,6 +60,7 @@ import { hapticSuccess, hapticError } from "@/lib/native/ui";
 import { confirmWithBiometric } from "@/lib/native/biometric";
 import { useFeature } from "@/lib/feature-prefs";
 import { addPendingTx } from "@/lib/pending-tx";
+import { sendEvmTransaction } from "@/lib/chains/evm-send";
 
 function findKnownToken(chain: EvmChainId, symbol: string): Erc20TokenMeta | null {
   const s = symbol.toUpperCase();
@@ -236,7 +237,7 @@ function EvmSend() {
 
       if (asset.kind === "native") {
         const value = parseEther(amount as `${number}`);
-        return walletClient.sendTransaction({
+        return sendEvmTransaction(chainId, walletClient, {
           to: to as Address,
           value,
         });
@@ -245,7 +246,7 @@ function EvmSend() {
       // ERC20 transfer(to, amount)
       const raw = tokenAmountToRaw(amount, asset.token.decimals);
       const data = encodeTransfer(to as Address, raw);
-      return walletClient.sendTransaction({
+      return sendEvmTransaction(chainId, walletClient, {
         to: asset.token.address,
         data,
         value: 0n,

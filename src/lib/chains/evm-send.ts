@@ -1,18 +1,17 @@
 /**
  * Reliable EVM broadcast helper.
  *
- * Two failure modes we kept hitting on our own nodes (ZCU especially):
+ * Problem this solves: sending twice in a row would reuse the same nonce.
+ * viem asks the node for the "pending" nonce, but several nodes we talk to
+ * (ZCU especially) answer with the mined ("latest") count, so the second send
+ * collides with the first and the node rejects it as
+ * `replacement transaction underpriced`.
  *
- *  1. `replacement transaction underpriced` — a previous send is still sitting
- *     in the node's mempool at the same nonce. viem asks the node for the
- *     "pending" nonce, but some nodes answer with the mined ("latest") count,
- *     so the new transaction collides with the stuck one and is rejected
- *     unless its fee is meaningfully higher.
- *  2. `already known` / `nonce too low` — same root cause, opposite direction.
- *
- * So: resolve the nonce as max(latest, pending), and on a collision retry with
- * an aggressively bumped fee (which also un-sticks the old transaction, since
- * the replacement wins) or the next nonce when the node says it's too low.
+ * Fix: every send *reserves* its own nonce. We take max(latest, pending,
+ * locally-reserved + 1) so the counter stays ahead even when the node
+ * under-reports pending transactions, and a collision retries on the NEXT
+ * nonce (a new transaction) instead of bumping the fee, which would have
+ * replaced — and cancelled — the earlier send.
  */
 import type { Address, WalletClient } from "viem";
 import { evmClient, type EvmChainId } from "./evm";
@@ -24,22 +23,45 @@ export interface EvmTxRequest {
   gas?: bigint;
 }
 
+const KEY = (chain: EvmChainId, address: string) =>
+  `evm-nonce:${chain}:${address.toLowerCase()}`;
+
+/** Last nonce we handed out locally (survives reloads). */
+function readReserved(chain: EvmChainId, address: string): number | null {
+  try {
+    const raw = localStorage.getItem(KEY(chain, address));
+    if (!raw) return null;
+    const { nonce, at } = JSON.parse(raw) as { nonce: number; at: number };
+    // Forget stale reservations — after an hour the chain is authoritative.
+    if (!Number.isFinite(nonce) || Date.now() - at > 60 * 60_000) return null;
+    return nonce;
+  } catch {
+    return null;
+  }
+}
+
+function writeReserved(chain: EvmChainId, address: string, nonce: number) {
+  try {
+    localStorage.setItem(
+      KEY(chain, address),
+      JSON.stringify({ nonce, at: Date.now() }),
+    );
+  } catch {
+    /* storage unavailable — chain nonce still works */
+  }
+}
+
 function msgOf(e: unknown): string {
   const err = e as { message?: string; details?: string; shortMessage?: string };
   return `${err?.message ?? ""} ${err?.details ?? ""} ${err?.shortMessage ?? ""}`.toLowerCase();
 }
 
-const isUnderpriced = (m: string) =>
+const isNonceCollision = (m: string) =>
   m.includes("replacement transaction underpriced") ||
   m.includes("replacement_underpriced") ||
   m.includes("already known") ||
-  m.includes("transaction underpriced") ||
-  m.includes("fee too low");
-
-const isNonceTooLow = (m: string) => m.includes("nonce too low");
-
-/** Bump helper: at least +25% (nodes require >=10%), rounded up. */
-const bump = (v: bigint, factor: bigint) => (v * factor) / 100n;
+  m.includes("nonce too low") ||
+  m.includes("known transaction");
 
 export async function sendEvmTransaction(
   chainId: EvmChainId,
@@ -55,57 +77,34 @@ export async function sendEvmTransaction(
     pub.getTransactionCount({ address, blockTag: "latest" }),
     pub.getTransactionCount({ address, blockTag: "pending" }).catch(() => 0),
   ]);
-  let nonce = Math.max(latest, pending);
-
-  // Baseline fees from the node.
-  let maxFeePerGas: bigint | undefined;
-  let maxPriorityFeePerGas: bigint | undefined;
-  try {
-    const fees = await pub.estimateFeesPerGas();
-    maxFeePerGas = fees.maxFeePerGas;
-    maxPriorityFeePerGas = fees.maxPriorityFeePerGas;
-  } catch {
-    /* fall back to viem's own estimation below */
-  }
+  const reserved = readReserved(chainId, address);
+  let nonce = Math.max(latest, pending, reserved != null ? reserved + 1 : 0);
 
   let lastErr: unknown;
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      return await walletClient.sendTransaction({
+      const hash = await walletClient.sendTransaction({
         account,
         chain: walletClient.chain,
         ...tx,
         nonce,
-        ...(maxFeePerGas != null
-          ? { maxFeePerGas, maxPriorityFeePerGas: maxPriorityFeePerGas ?? 0n }
-          : {}),
       } as Parameters<WalletClient["sendTransaction"]>[0]);
+      writeReserved(chainId, address, nonce);
+      return hash;
     } catch (e) {
       lastErr = e;
-      const m = msgOf(e);
-      if (isNonceTooLow(m)) {
+      if (isNonceCollision(msgOf(e))) {
+        // Someone (an earlier send) already owns this slot — take the next one
+        // so we add a transaction instead of replacing theirs.
         nonce += 1;
-        continue;
-      }
-      if (isUnderpriced(m)) {
-        // Either bump the fee to replace the stuck transaction, or (once we've
-        // tried that) queue behind it with the next nonce.
-        if (attempt < 2) {
-          const base = maxFeePerGas ?? (await pub.getGasPrice());
-          const prio = maxPriorityFeePerGas ?? base / 10n;
-          maxFeePerGas = bump(base, 200n);
-          maxPriorityFeePerGas = bump(prio > 0n ? prio : base / 10n, 200n);
-        } else {
-          nonce += 1;
-        }
         continue;
       }
       throw e;
     }
   }
-  throw lastErr instanceof Error
-    ? new Error(
-        `Couldn't broadcast: an earlier transaction from this wallet is still pending on the network. Wait for it to confirm, then try again. (${lastErr.message.split("\n")[0]})`,
-      )
-    : new Error("Couldn't broadcast this transaction");
+  const detail =
+    lastErr instanceof Error ? ` (${lastErr.message.split("\n")[0]})` : "";
+  throw new Error(
+    `Couldn't broadcast: earlier transactions from this wallet are still pending. Wait for one to confirm, then try again.${detail}`,
+  );
 }
