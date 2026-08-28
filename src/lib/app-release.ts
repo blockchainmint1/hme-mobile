@@ -143,30 +143,35 @@ export function releaseDownloadUrl(r: AppRelease | null): string {
   return APK_URL;
 }
 
+/** Build stamp the server is shipping right now, or null if unreachable. */
+export async function fetchServerBuildId(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const bases: string[] = [window.location.origin, ...RELEASE_FEED_HOSTS];
+  for (const base of bases) {
+    try {
+      const res = await fetch(`${base}/api/public/build-id?_=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
+      if (!res.ok) continue;
+      const json = (await res.json()) as { buildId?: string };
+      if (json?.buildId) return json.buildId;
+    } catch {
+      /* try next host */
+    }
+  }
+  return null;
+}
+
 /**
- * Web update check: the deployed index.html references hashed asset URLs.
- * If the freshly fetched HTML points at scripts this running page never
- * loaded, a newer build is live and a reload will pick it up.
+ * Web/webview freshness: compare the build stamp baked into this bundle with
+ * the one the server is serving now. A mismatch means a reload gets new code.
  */
 export async function checkForWebUpdate(): Promise<"current" | "update" | "unknown"> {
-  if (typeof window === "undefined") return "unknown";
-  try {
-    const res = await fetch(`/?_=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) return "unknown";
-    const html = await res.text();
-    const remote = [...html.matchAll(/(?:src|href)="(\/[^"]*\.(?:js|css))"/g)].map((m) => m[1]);
-    const jsOnly = remote.filter((u) => u.endsWith(".js"));
-    if (jsOnly.length === 0) return "unknown";
-    const loaded = new Set(
-      [...document.querySelectorAll<HTMLScriptElement>("script[src]")].map(
-        (s) => new URL(s.src, window.location.origin).pathname,
-      ),
-    );
-    const hasNew = jsOnly.some((u) => !loaded.has(u));
-    return hasNew ? "update" : "current";
-  } catch {
-    return "unknown";
-  }
+  const serverBuild = await fetchServerBuildId();
+  if (!serverBuild) return "unknown";
+  if (LOCAL_BUILD_ID === "dev") return "current";
+  return serverBuild === LOCAL_BUILD_ID ? "current" : "update";
 }
 
 /** Drop caches (incl. service worker) and hard-reload into the new build. */
