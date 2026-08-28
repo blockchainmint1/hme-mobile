@@ -4,7 +4,7 @@
  * the running build. On Android a newer release offers the pinned IPFS APK; on
  * the web it also compares the served assets and offers a hard reload.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, RefreshCw, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ import {
   checkForWebUpdate,
   compareVersions,
   fetchLatestRelease,
+  installedVersion,
   releaseDownloadUrl,
   type AppRelease,
 } from "@/lib/app-release";
