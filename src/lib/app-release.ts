@@ -16,6 +16,33 @@ export const APK_URL =
 
 export type ReleasePlatform = "android" | "ios" | "web";
 
+declare const __BUILD_ID__: string;
+
+/** Build stamp of the JS bundle this tab/webview is currently running. */
+export const LOCAL_BUILD_ID: string =
+  typeof __BUILD_ID__ !== "undefined" ? __BUILD_ID__ : "dev";
+
+/**
+ * Version that actually matters for a native install.
+ *
+ * The app shell loads its web content from the server, so APP_VERSION is the
+ * *web bundle's* version — not the installed APK/IPA's. Ask Capacitor for the
+ * real native version whenever we're running inside the app.
+ */
+export async function installedVersion(): Promise<string> {
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    if (Capacitor.isNativePlatform()) {
+      const { App } = await import("@capacitor/app");
+      const info = await App.getInfo();
+      if (info?.version) return info.version;
+    }
+  } catch {
+    /* not native, or plugin unavailable */
+  }
+  return APP_VERSION;
+}
+
 export type AppRelease = {
   platform: string;
   version: string;
@@ -116,30 +143,35 @@ export function releaseDownloadUrl(r: AppRelease | null): string {
   return APK_URL;
 }
 
+/** Build stamp the server is shipping right now, or null if unreachable. */
+export async function fetchServerBuildId(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const bases: string[] = [window.location.origin, ...RELEASE_FEED_HOSTS];
+  for (const base of bases) {
+    try {
+      const res = await fetch(`${base}/api/public/build-id?_=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
+      if (!res.ok) continue;
+      const json = (await res.json()) as { buildId?: string };
+      if (json?.buildId) return json.buildId;
+    } catch {
+      /* try next host */
+    }
+  }
+  return null;
+}
+
 /**
- * Web update check: the deployed index.html references hashed asset URLs.
- * If the freshly fetched HTML points at scripts this running page never
- * loaded, a newer build is live and a reload will pick it up.
+ * Web/webview freshness: compare the build stamp baked into this bundle with
+ * the one the server is serving now. A mismatch means a reload gets new code.
  */
 export async function checkForWebUpdate(): Promise<"current" | "update" | "unknown"> {
-  if (typeof window === "undefined") return "unknown";
-  try {
-    const res = await fetch(`/?_=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) return "unknown";
-    const html = await res.text();
-    const remote = [...html.matchAll(/(?:src|href)="(\/[^"]*\.(?:js|css))"/g)].map((m) => m[1]);
-    const jsOnly = remote.filter((u) => u.endsWith(".js"));
-    if (jsOnly.length === 0) return "unknown";
-    const loaded = new Set(
-      [...document.querySelectorAll<HTMLScriptElement>("script[src]")].map(
-        (s) => new URL(s.src, window.location.origin).pathname,
-      ),
-    );
-    const hasNew = jsOnly.some((u) => !loaded.has(u));
-    return hasNew ? "update" : "current";
-  } catch {
-    return "unknown";
-  }
+  const serverBuild = await fetchServerBuildId();
+  if (!serverBuild) return "unknown";
+  if (LOCAL_BUILD_ID === "dev") return "current";
+  return serverBuild === LOCAL_BUILD_ID ? "current" : "update";
 }
 
 /** Drop caches (incl. service worker) and hard-reload into the new build. */
@@ -151,10 +183,13 @@ export async function applyWebUpdate(): Promise<void> {
     }
     if ("serviceWorker" in navigator) {
       const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map((r) => r.update().catch(() => undefined)));
+      await Promise.all(regs.map((r) => r.unregister().catch(() => undefined)));
     }
   } catch {
     /* best effort */
   }
-  window.location.reload();
+  // Cache-busting param: a plain reload can be served from the webview cache.
+  const url = new URL(window.location.href);
+  url.searchParams.set("_r", Date.now().toString());
+  window.location.replace(url.toString());
 }
