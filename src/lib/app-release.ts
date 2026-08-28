@@ -16,6 +16,33 @@ export const APK_URL =
 
 export type ReleasePlatform = "android" | "ios" | "web";
 
+declare const __BUILD_ID__: string;
+
+/** Build stamp of the JS bundle this tab/webview is currently running. */
+export const LOCAL_BUILD_ID: string =
+  typeof __BUILD_ID__ !== "undefined" ? __BUILD_ID__ : "dev";
+
+/**
+ * Version that actually matters for a native install.
+ *
+ * The app shell loads its web content from the server, so APP_VERSION is the
+ * *web bundle's* version — not the installed APK/IPA's. Ask Capacitor for the
+ * real native version whenever we're running inside the app.
+ */
+export async function installedVersion(): Promise<string> {
+  try {
+    const { Capacitor } = await import("@capacitor/core");
+    if (Capacitor.isNativePlatform()) {
+      const { App } = await import("@capacitor/app");
+      const info = await App.getInfo();
+      if (info?.version) return info.version;
+    }
+  } catch {
+    /* not native, or plugin unavailable */
+  }
+  return APP_VERSION;
+}
+
 export type AppRelease = {
   platform: string;
   version: string;
