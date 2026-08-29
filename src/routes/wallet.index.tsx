@@ -494,8 +494,8 @@ function WalletHome() {
 
   return (
     <main className="flex-1 flex flex-col min-h-0">
-      <div className="flex-1 overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))]">
-        <div className="mx-auto max-w-3xl w-full">
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+        <div className="mx-auto max-w-3xl w-full flex-1">
           {/* Swipeable chain tiles */}
           <div className="relative">
             <Button
@@ -930,18 +930,20 @@ function WalletHome() {
             />
           )}
         </div>
-      </div>
 
-      {/* Fixed bottom send/receive — routes based on the active slot */}
-      <div className="fixed bottom-0 inset-x-0 z-10 border-t border-border/60 bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60 pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto max-w-3xl px-4 py-3 flex gap-2">
-          {activeWatch ? (
-            <WatchOnlyBottomActions wallet={activeWatch} />
-          ) : activeWif ? (
-            <WifBottomActions entry={activeWif} />
-          ) : (
-            <BottomActions chain={activeChain} />
-          )}
+        {/* Sticky bottom send/receive — routes based on the active slot.
+            Sticky (not fixed) so it stays visible inside the WKWebView frame,
+            which clips/contains fixed positioning on iOS. */}
+        <div className="sticky bottom-0 z-10 mt-auto shrink-0 border-t border-border/60 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 pb-[env(safe-area-inset-bottom)]">
+          <div className="mx-auto max-w-3xl px-4 py-3 flex gap-2">
+            {activeWatch ? (
+              <WatchOnlyBottomActions wallet={activeWatch} />
+            ) : activeWif ? (
+              <WifBottomActions entry={activeWif} />
+            ) : (
+              <BottomActions chain={activeChain} />
+            )}
+          </div>
         </div>
       </div>
       <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
