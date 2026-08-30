@@ -176,6 +176,15 @@ export async function checkForWebUpdate(): Promise<"current" | "update" | "unkno
 
 /** Drop caches (incl. service worker) and hard-reload into the new build. */
 export async function applyWebUpdate(): Promise<void> {
+  // A hard reload wipes the in-memory session key, so the wallet will lock and
+  // the user lands back on the unlock screen. Flag that this was an *update*
+  // reload (not a sign-out) so the landing screen can say so and fast-path
+  // biometrics, instead of feeling like the app ejected them.
+  try {
+    window.sessionStorage.setItem("hme.postUpdate", "1");
+  } catch {
+    /* memory-only session; still fine */
+  }
   try {
     if ("caches" in window) {
       const keys = await caches.keys();
