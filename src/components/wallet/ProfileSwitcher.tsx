@@ -96,8 +96,11 @@ export function ProfileSwitcher() {
           <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="rounded-t-2xl">
-        <SheetHeader className="text-left">
+      <SheetContent
+        side="bottom"
+        className="flex max-h-[85dvh] flex-col gap-0 rounded-t-2xl pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+      >
+        <SheetHeader className="shrink-0 text-left">
           <SheetTitle>Your wallets</SheetTitle>
           <SheetDescription>
             Each wallet is a separate seed with its own chains, keys and contacts. One password
@@ -105,7 +108,8 @@ export function ProfileSwitcher() {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-4 grid gap-2">
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="grid gap-2">
           {profiles.map((p) =>
             editingId === p.id ? (
               <form
