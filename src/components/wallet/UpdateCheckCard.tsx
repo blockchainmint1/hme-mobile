@@ -102,8 +102,10 @@ export function UpdateCheckCard() {
           <RotateCw className="h-5 w-5" /> Updates
         </CardTitle>
         <CardDescription>
-          Version {current}
-          {native ? ` · ${platform} app` : " · web"}
+          App version {APP_VERSION}
+          {shell ? ` · shell ${shell}` : ""}
+          {native ? ` · ${platform}` : " · web"}
+          {latest ? ` · latest: ${latest.version}` : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
