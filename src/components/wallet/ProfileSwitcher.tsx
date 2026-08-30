@@ -199,7 +199,7 @@ export function ProfileSwitcher() {
           </form>
         )}
 
-        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+        <div className="mt-5 grid shrink-0 gap-2 sm:grid-cols-2">
           <Button asChild variant="secondary" onClick={() => setOpen(false)}>
             <Link to="/create" search={{ add: true }}>
               <Sparkles className="h-4 w-4 mr-2" /> Add new seed
