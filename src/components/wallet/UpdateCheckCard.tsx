@@ -164,7 +164,20 @@ export function UpdateCheckCard() {
         )}
 
         {native && platform === "android" && !nativeUpdate && (
-          <Button variant="ghost" className="w-full" onClick={() => openExternal(downloadUrl)}>
+          <Button
+            variant="ghost"
+            className="w-full"
+            disabled={status === "checking"}
+            onClick={async () => {
+              // Never trust the version baked into this build — ask the release
+              // feed right now so "anyway" really means *latest*.
+              setStatus("checking");
+              const rel = await fetchLatestRelease(releasePlatform);
+              if (rel) setLatest(rel);
+              setStatus("idle");
+              await openExternal(rel ? releaseDownloadUrl(rel) : downloadUrl);
+            }}
+          >
             <Download className="h-4 w-4 mr-2" /> Download latest APK anyway
           </Button>
         )}
