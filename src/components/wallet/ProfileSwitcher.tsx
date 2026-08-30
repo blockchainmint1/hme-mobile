@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronDown, Download, Loader2, Sparkles, Wallet } from "lucide-react";
+import { Check, ChevronDown, Download, Eye, Key, Loader2, Pencil, Sparkles, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,16 +21,21 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useWallet } from "@/lib/txc/wallet-context";
+import { renameStoredWallet } from "@/lib/txc/storage";
 
 export function ProfileSwitcher() {
-  const { profiles, activeProfileId, switchProfile, refreshProfiles, unlocked } = useWallet();
+  const { profiles, activeProfileId, switchProfile, refreshProfiles, rename, unlocked } =
+    useWallet();
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [needPassword, setNeedPassword] = useState<string | null>(null);
   const [password, setPassword] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftLabel, setDraftLabel] = useState("");
 
   useEffect(() => {
     if (open) refreshProfiles();
+    else setEditingId(null);
   }, [open, refreshProfiles]);
 
   const activeLabel =
@@ -61,6 +66,25 @@ export function ProfileSwitcher() {
     }
   }
 
+  function startRename(id: string, current: string) {
+    setEditingId(id);
+    setDraftLabel(current);
+  }
+
+  function saveRename(id: string) {
+    const next = draftLabel.trim();
+    const current = profiles.find((p) => p.id === id)?.label ?? "";
+    setEditingId(null);
+    if (!next || next === current) return;
+    if (id === activeProfileId) {
+      rename(next); // keeps the live session label in sync too
+    } else {
+      renameStoredWallet(next, id);
+      refreshProfiles();
+    }
+    toast.success("Wallet renamed");
+  }
+
   // A single profile is the common case — still show the name, but there's
   // nothing to switch between until a second seed is added.
   return (
@@ -82,26 +106,66 @@ export function ProfileSwitcher() {
         </SheetHeader>
 
         <div className="mt-4 grid gap-2">
-          {profiles.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => go(p.id)}
-              disabled={busyId !== null}
-              className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3 text-left transition-colors hover:border-primary/60 disabled:opacity-60"
-            >
-              <span className="min-w-0">
-                <span className="block truncate font-medium">{p.label}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {p.mode === "keyonly" ? "Imported keys" : "Seed phrase wallet"}
-                </span>
-              </span>
-              {busyId === p.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : p.isActive ? (
-                <Check className="h-4 w-4 text-primary" />
-              ) : null}
-            </button>
-          ))}
+          {profiles.map((p) =>
+            editingId === p.id ? (
+              <form
+                key={p.id}
+                className="flex items-center gap-2 rounded-xl border border-primary/60 bg-card/40 px-4 py-2.5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  saveRename(p.id);
+                }}
+              >
+                <Input
+                  value={draftLabel}
+                  onChange={(e) => setDraftLabel(e.target.value)}
+                  maxLength={40}
+                  autoFocus
+                  className="h-8"
+                />
+                <Button type="submit" size="sm" disabled={!draftLabel.trim()}>
+                  Save
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditingId(null)}
+                >
+                  Cancel
+                </Button>
+              </form>
+            ) : (
+              <div
+                key={p.id}
+                className="flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3 transition-colors hover:border-primary/60"
+              >
+                <button
+                  onClick={() => go(p.id)}
+                  disabled={busyId !== null}
+                  className="min-w-0 flex-1 text-left disabled:opacity-60"
+                >
+                  <span className="block truncate font-medium">{p.label}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {p.mode === "keyonly" ? "Imported keys" : "Seed phrase wallet"}
+                  </span>
+                </button>
+                <button
+                  onClick={() => startRename(p.id, p.label)}
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  title={`Rename ${p.label}`}
+                  aria-label={`Rename ${p.label}`}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                {busyId === p.id ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                ) : p.isActive ? (
+                  <Check className="h-4 w-4 shrink-0 text-primary" />
+                ) : null}
+              </div>
+            ),
+          )}
         </div>
 
         {needPassword && (
@@ -142,7 +206,22 @@ export function ProfileSwitcher() {
               <Download className="h-4 w-4 mr-2" /> Import a seed
             </Link>
           </Button>
+          <Button asChild variant="outline" onClick={() => setOpen(false)}>
+            <Link to="/wallet/wif-add">
+              <Key className="h-4 w-4 mr-2" /> Import private key
+            </Link>
+          </Button>
+          <Button asChild variant="outline" onClick={() => setOpen(false)}>
+            <Link to="/wallet/watch-add">
+              <Eye className="h-4 w-4 mr-2" /> Watch-only address
+            </Link>
+          </Button>
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Private keys and watch-only addresses are added to{" "}
+          <span className="font-medium text-foreground">{activeLabel}</span> as their own tiles.
+        </p>
+
       </SheetContent>
     </Sheet>
   );
