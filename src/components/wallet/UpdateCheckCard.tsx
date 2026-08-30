@@ -41,13 +41,20 @@ export function UpdateCheckCard() {
   const [latest, setLatest] = useState<AppRelease | null>(null);
   const [webStale, setWebStale] = useState(false);
   const [current, setCurrent] = useState(APP_VERSION);
+  // On native, installedVersion() is the APK/IPA shell version, which can
+  // differ from the web bundle's APP_VERSION — track it separately so the UI
+  // can show both honestly.
+  const [shell, setShell] = useState<string | null>(null);
   const native = isNative();
   const platform = nativePlatform();
   const releasePlatform = native ? (platform === "ios" ? "ios" : "android") : "web";
 
   useEffect(() => {
     installedVersion()
-      .then(setCurrent)
+      .then((v) => {
+        setCurrent(v);
+        if (v !== APP_VERSION) setShell(v);
+      })
       .catch(() => undefined);
   }, []);
 
