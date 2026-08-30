@@ -150,7 +150,11 @@ function Home() {
         <Card className="border-border/60">
           <CardHeader>
             <CardTitle>Unlock your wallet</CardTitle>
-            <CardDescription>Enter the password you set when this wallet was created.</CardDescription>
+            <CardDescription>
+              {postUpdate
+                ? "Updated to the latest version. For security, updates lock the wallet — unlock to pick up right where you left off."
+                : "Enter the password you set when this wallet was created."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={onUnlock} className="space-y-4">
