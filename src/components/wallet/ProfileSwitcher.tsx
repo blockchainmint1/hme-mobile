@@ -198,6 +198,34 @@ export function ProfileSwitcher() {
             </div>
           </form>
         )}
+        </div>
+
+        {false && (
+          <form
+            className="mt-4 space-y-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void go(needPassword, password);
+            }}
+          >
+            <p className="text-sm text-muted-foreground">
+              Enter your wallet password to switch.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Wallet password"
+                autoFocus
+              />
+              <Button type="submit" disabled={!password || busyId !== null}>
+                Unlock
+              </Button>
+            </div>
+          </form>
+        )}
 
         <div className="mt-5 grid shrink-0 gap-2 sm:grid-cols-2">
           <Button asChild variant="secondary" onClick={() => setOpen(false)}>
