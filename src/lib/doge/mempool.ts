@@ -183,19 +183,29 @@ export async function getFeeEstimates(): Promise<FeeEstimates> {
   }
   // DOGE min relay is high vs BTC — the safe floor is ~1000 sat/vB
   // (1 DOGE per KB = 1000 sat/vB). Under-paying just leaves the tx
-  // stuck in the mempool.
+  // stuck in the mempool. Blockbook's estimatefee occasionally returns
+  // wild values (we've seen 50,000+ sat/vB), which makes a normal send
+  // look unaffordable — so clamp to a sane ceiling too.
   const FLOOR = 1000;
+  const CEILING = 5000;
+  const clamp = (v: number) => Math.min(CEILING, Math.max(FLOOR, v));
   const [fastest, half, hour] = await Promise.all([
     rate(1, 2000),
     rate(3, 1500),
     rate(6, 1000),
   ]);
+  // Tiers must stay ordered slow <= medium <= fast even when the node's
+  // estimates come back inverted.
+  const slow = clamp(hour);
+  const medium = clamp(Math.max(half, slow));
+  const fast = clamp(Math.max(fastest, medium));
   return {
-    fastestFee: Math.max(FLOOR, fastest),
-    halfHourFee: Math.max(FLOOR, half),
-    hourFee: Math.max(FLOOR, hour),
+    fastestFee: fast,
+    halfHourFee: medium,
+    hourFee: slow,
     minimumFee: FLOOR,
   };
+
 }
 
 export async function broadcastTx(hex: string): Promise<string> {
