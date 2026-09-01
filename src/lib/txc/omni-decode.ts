@@ -51,15 +51,33 @@ export function decodeOmniSend(tx: MempoolTx): OmniSend | null {
   if (!payload || payload.length < 32) return null;
 
   const type = parseInt(payload.slice(4, 8), 16);
-  if (type !== 0) return null; // only Simple Send for now
-  const propertyId = parseInt(payload.slice(8, 16), 16);
-  if (!Number.isFinite(propertyId) || propertyId <= 0) return null;
+  let propertyId: number;
   let amount: bigint;
-  try {
-    amount = BigInt("0x" + payload.slice(16, 32));
-  } catch {
+  if (type === 0) {
+    // Simple Send: property(4) + amount(8)
+    propertyId = parseInt(payload.slice(8, 16), 16);
+    try {
+      amount = BigInt("0x" + payload.slice(16, 32));
+    } catch {
+      return null;
+    }
+  } else if (type === 55) {
+    // Send To Many: output-index(1) + property(4) + amount(8) per receiver.
+    // We render the first receiver entry (single-recipient is the norm for
+    // wallet-to-wallet payments); the reference address is resolved below.
+    const body = payload.slice(8);
+    if (body.length < 26) return null;
+    propertyId = parseInt(body.slice(2, 10), 16);
+    try {
+      amount = BigInt("0x" + body.slice(10, 26));
+    } catch {
+      return null;
+    }
+  } else {
     return null;
   }
+  if (!Number.isFinite(propertyId) || propertyId <= 0) return null;
+
 
   const sender = tx.vin[0]?.prevout?.scriptpubkey_address ?? null;
   // Omni Class C: the reference address is the last output with an address
