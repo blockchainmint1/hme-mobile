@@ -107,7 +107,7 @@ function CopyAddress({ address }: { address: string }) {
 }
 
 function MigratePage() {
-  const { root, unlocked } = useWallet();
+  const { root, unlocked, setKind } = useWallet();
   const qc = useQueryClient();
 
   const account = useQuery({
@@ -188,6 +188,12 @@ function MigratePage() {
       });
       const id = await broadcastTx(built.hex);
       reserveOutpoints(inputs.map((u) => ({ txid: u.txid, vout: u.vout })));
+      // The sweep used to move the current UTXOs but leave an imported
+      // wallet's primary branch unchanged. The next ordinary send would then
+      // create change on that old branch and make the migration notice return.
+      // Persist the destination branch as primary only after the node accepts
+      // the sweep; every historical branch remains scanned and spendable.
+      setKind(TARGET_KIND);
       setTxid(id);
       hapticSuccess();
       await qc.invalidateQueries({ queryKey: ["account"] });
