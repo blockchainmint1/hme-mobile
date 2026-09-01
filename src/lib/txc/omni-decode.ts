@@ -62,12 +62,12 @@ export function decodeOmniSend(tx: MempoolTx): OmniSend | null {
       return null;
     }
   } else if (type === 55) {
-    // Send To Many: output-index(1) + property(4) + amount(8) per receiver.
+    // Send To Many: property(4) then per-receiver output-index(1) + amount(8).
     // We render the first receiver entry (single-recipient is the norm for
     // wallet-to-wallet payments); the reference address is resolved below.
     const body = payload.slice(8);
     if (body.length < 26) return null;
-    propertyId = parseInt(body.slice(2, 10), 16);
+    propertyId = parseInt(body.slice(0, 8), 16);
     try {
       amount = BigInt("0x" + body.slice(10, 26));
     } catch {

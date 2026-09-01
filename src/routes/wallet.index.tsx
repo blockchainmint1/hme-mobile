@@ -847,7 +847,7 @@ function WalletHome() {
                             {meta && net !== 0 && (
                               <p className="text-[11px] text-muted-foreground">
                                 {net > 0 ? "+" : "−"}
-                                {formatTxc(Math.abs(net))} TXC
+                                {formatTxc(Math.abs(net))}
                               </p>
                             )}
                           </div>
