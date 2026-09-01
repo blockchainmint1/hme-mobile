@@ -62,14 +62,15 @@ export function decodeOmniSend(tx: MempoolTx): OmniSend | null {
       return null;
     }
   } else if (type === 55) {
-    // Send To Many: property(4) then per-receiver output-index(1) + amount(8).
-    // We render the first receiver entry (single-recipient is the norm for
-    // wallet-to-wallet payments); the reference address is resolved below.
+    // The TSD distributor's type-55 payload keeps the same property + amount
+    // field boundaries as Simple Send, followed by one trailing control byte.
+    // Do not treat the first amount byte as an output index: doing so shifts
+    // the uint64 left by one byte and inflates the displayed token amount.
     const body = payload.slice(8);
-    if (body.length < 26) return null;
+    if (body.length < 24) return null;
     propertyId = parseInt(body.slice(0, 8), 16);
     try {
-      amount = BigInt("0x" + body.slice(10, 26));
+      amount = BigInt("0x" + body.slice(8, 24));
     } catch {
       return null;
     }
