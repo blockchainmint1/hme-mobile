@@ -3,3 +3,4 @@
 - [x] Verify uploaded APK `hme-wallet-0.1.202608300600-release-2.apk` — byte-identical to the already-pinned build (md5 `49523ba1…`), nothing new to pin
 - [x] Show real app version in Settings, and show the available new version before installing (UpdateCheckCard)
 - [x] Stamp versionName/versionCode into Android builds in CI (APKs currently all ship as 1.0/1, breaking native version checks)
+- [ ] Fix TXC migration so swept funds and later transaction change stay on the main derivation path; verify tx f23581e5b3fbd3ea91963c1f1d1d8930c121ee41ec5168b6818944922a5170c6
