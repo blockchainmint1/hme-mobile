@@ -402,6 +402,19 @@ export async function scanAccount(
   // chance to tell us the reservation is obsolete.
   const spendable = await withoutReservedCoins(utxos);
   const spendableBalance = spendable.reduce((s, u) => s + u.value, 0);
+  const spendableByKind = new Map<AddressKind, number>();
+  for (const u of spendable) {
+    const utxoKind = u.kind ?? kind;
+    spendableByKind.set(utxoKind, (spendableByKind.get(utxoKind) ?? 0) + u.value);
+  }
+  // Keep branch balances consistent with the account's spendable balance.
+  // Immediately after a broadcast, an explorer can briefly keep returning the
+  // consumed inputs as UTXOs; without this adjustment the old-path warning
+  // reappears even though those coins are already reserved by the accepted tx.
+  const spendableBranches = branches.map((branch) => ({
+    ...branch,
+    balanceSats: spendableByKind.get(branch.kind) ?? 0,
+  }));
 
   return {
     ...primary,
@@ -409,7 +422,7 @@ export async function scanAccount(
     internal,
     balanceSats: spendableBalance,
     utxos: spendable,
-    branches,
+    branches: spendableBranches,
   };
 }
 
