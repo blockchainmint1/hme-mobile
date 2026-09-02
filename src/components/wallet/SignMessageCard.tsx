@@ -114,9 +114,13 @@ export function SignMessageCard() {
               {error && <p className="text-sm text-destructive">{error}</p>}
               {result && (
                 <div className="space-y-2 rounded-md border border-border/60 p-3 text-sm">
-                  <Field k="Address" v={result.address} />
+                  <Field k="Address" v={result.address} onCopy={() => copy(result.address)} />
                   <Field k="Path" v={result.path} />
-                  <Field k="Signature" v={result.signature} />
+                  <Field k="Signature" v={result.signature} onCopy={() => copy(result.signature)} />
+                  <p className="text-xs text-muted-foreground">
+                    Signing into a site? Paste the address and the signature on their own — the
+                    full block below is only for humans and files.
+                  </p>
                   <Button
                     size="sm"
                     variant="outline"
