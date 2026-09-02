@@ -1,13 +1,22 @@
 /**
- * "Check for updates" card. It asks the backend which release is newest for
- * this platform (Android/iOS/web) and compares it with the version baked into
- * the running build. On Android a newer release offers the pinned IPFS APK; on
- * the web it also compares the served assets and offers a hard reload.
+ * Updates card.
+ *
+ * One source of truth: the published release feed (`/api/public/latest-release`,
+ * backed by the `app_releases` table). The card asks it on mount and on demand,
+ * compares the answer with the version this device actually has installed, and
+ * — when a newer build exists — hands the user a single Install button.
+ *
+ * Version vocabulary shown to the user:
+ *  - native: "Installed <shell version>" (the APK/IPA actually on the phone)
+ *  - web:    "Installed <bundle version>" (the JS build this tab is running)
+ * The web-bundle stamp is only shown as a secondary detail on native, because
+ * it is never what a user needs to act on.
  */
-import { useEffect, useState } from "react";
-import { Download, RefreshCw, RotateCw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Check, Copy, Download, RefreshCw, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
 import {
   APK_URL,
   APP_VERSION,
@@ -19,19 +28,25 @@ import {
   releaseDownloadUrl,
   type AppRelease,
 } from "@/lib/app-release";
+import { copyText } from "@/lib/clipboard";
 import { isNative, nativePlatform } from "@/lib/native/platform";
 
-async function openExternal(url: string) {
+/**
+ * Open the APK link in the *system* browser. Android's in-app Custom Tab can
+ * silently drop file downloads, which is the #1 reason "update" felt broken.
+ */
+async function openDownload(url: string) {
   if (isNative()) {
     try {
       const { Browser } = await import("@capacitor/browser");
-      await Browser.open({ url });
+      await Browser.open({ url, windowName: "_system" });
       return;
     } catch {
       /* fall through */
     }
   }
-  window.open(url, "_blank", "noopener,noreferrer");
+  window.open(url, "_system", "noopener,noreferrer") ||
+    window.open(url, "_blank", "noopener,noreferrer");
 }
 
 type Status = "idle" | "checking" | "current" | "update" | "unknown";
@@ -40,60 +55,43 @@ export function UpdateCheckCard() {
   const [status, setStatus] = useState<Status>("idle");
   const [latest, setLatest] = useState<AppRelease | null>(null);
   const [webStale, setWebStale] = useState(false);
-  const [current, setCurrent] = useState(APP_VERSION);
-  // On native, installedVersion() is the APK/IPA shell version, which can
-  // differ from the web bundle's APP_VERSION — track it separately so the UI
-  // can show both honestly.
-  const [shell, setShell] = useState<string | null>(null);
+  const [installed, setInstalled] = useState(APP_VERSION);
+  const [copied, setCopied] = useState(false);
   const native = isNative();
   const platform = nativePlatform();
   const releasePlatform = native ? (platform === "ios" ? "ios" : "android") : "web";
 
+  const check = useCallback(
+    async (opts?: { quiet?: boolean }) => {
+      if (!opts?.quiet) setStatus("checking");
+      setWebStale(false);
+
+      const current = await installedVersion();
+      setInstalled(current);
+
+      const [rel, web] = await Promise.all([
+        fetchLatestRelease(releasePlatform),
+        checkForWebUpdate(),
+      ]);
+      setLatest(rel);
+      setWebStale(web === "update");
+
+      if (rel && compareVersions(rel.version, current) > 0) return setStatus("update");
+      if (web === "update") return setStatus("update");
+      if (!rel && web === "unknown") return setStatus("unknown");
+      setStatus("current");
+    },
+    [releasePlatform],
+  );
+
+  // Check automatically when the card opens — the user shouldn't have to ask.
   useEffect(() => {
-    installedVersion()
-      .then((v) => {
-        setCurrent(v);
-        if (v !== APP_VERSION) setShell(v);
-      })
-      .catch(() => undefined);
-  }, []);
-
-  async function check() {
-    setStatus("checking");
-    setWebStale(false);
-
-    // Two independent questions, asked every time:
-    //  1. Is there a newer published release for this platform?
-    //  2. Is the web bundle we're running behind what the server ships?
-    // The native shell loads its content from the server, so (2) matters
-    // inside the app too — a stale webview cache is the common failure.
-    const [rel, web] = await Promise.all([
-      fetchLatestRelease(releasePlatform),
-      checkForWebUpdate(),
-    ]);
-    setLatest(rel);
-    setWebStale(web === "update");
-
-    const installed = await installedVersion();
-    setCurrent(installed);
-
-    if (rel && compareVersions(rel.version, installed) > 0) {
-      setStatus("update");
-      return;
-    }
-    if (web === "update") {
-      setStatus("update");
-      return;
-    }
-    if (!rel && web === "unknown") {
-      setStatus("unknown");
-      return;
-    }
-    setStatus("current");
-  }
+    void check({ quiet: true });
+  }, [check]);
 
   const downloadUrl = releaseDownloadUrl(latest) || APK_URL;
-  const nativeUpdate = !!latest && compareVersions(latest.version, current) > 0;
+  const newerRelease = !!latest && compareVersions(latest.version, installed) > 0;
+  const shellDiffersFromBundle = native && installed !== APP_VERSION;
 
   return (
     <Card className="mt-5">
@@ -102,22 +100,58 @@ export function UpdateCheckCard() {
           <RotateCw className="h-5 w-5" /> Updates
         </CardTitle>
         <CardDescription>
-          App version {APP_VERSION}
-          {shell ? ` · shell ${shell}` : ""}
+          Installed {installed}
           {native ? ` · ${platform}` : " · web"}
-          {latest ? ` · latest: ${latest.version}` : ""}
+          {latest ? ` · latest ${latest.version}` : ""}
+          {shellDiffersFromBundle ? (
+            <span className="block text-xs opacity-70">app code build {APP_VERSION}</span>
+          ) : null}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={check}
-          disabled={status === "checking"}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${status === "checking" ? "animate-spin" : ""}`} />
-          {status === "checking" ? "Checking…" : "Check for updates"}
-        </Button>
+        {status === "update" && newerRelease && latest && (
+          <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-2">
+            <p className="text-sm">
+              <span className="font-medium">Version {latest.version}</span> is available
+              {latest.mandatory ? " — required update." : "."}
+            </p>
+            {latest.notes && <p className="text-sm text-muted-foreground">{latest.notes}</p>}
+
+            {releasePlatform === "ios" ? (
+              <p className="text-sm text-muted-foreground">
+                iOS updates arrive through the App Store.
+              </p>
+            ) : (
+              <>
+                <Button className="w-full" onClick={() => void openDownload(downloadUrl)}>
+                  <Download className="h-4 w-4 mr-2" /> Install {latest.version}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Your browser downloads the APK — tap the finished download and confirm
+                  &ldquo;Update&rdquo;. Your wallet and settings stay on this device.
+                </p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={async () => {
+                    await copyText(downloadUrl);
+                    setCopied(true);
+                    toast.success("Download link copied");
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Copy className="h-4 w-4 mr-2" />
+                  )}
+                  Copy download link
+                </Button>
+              </>
+            )}
+          </div>
+        )}
 
         {status === "current" && (
           <p className="text-sm text-muted-foreground">
@@ -127,67 +161,47 @@ export function UpdateCheckCard() {
 
         {status === "unknown" && (
           <p className="text-sm text-muted-foreground">
-            Couldn&apos;t reach the update server. Check your connection and try again — you can
-            still reload the app below.
+            Couldn&apos;t reach the update server. Check your connection and try again.
           </p>
         )}
 
-        {status === "update" && nativeUpdate && latest && (
-          <div className="space-y-2">
-            <p className="text-sm">
-              <span className="font-medium">Version {latest.version}</span> is available.
-              {latest.mandatory ? " This is a required update." : ""}
-            </p>
-            {latest.notes && <p className="text-sm text-muted-foreground">{latest.notes}</p>}
-          </div>
-        )}
-
-        {status === "update" && nativeUpdate && releasePlatform === "ios" && (
-          <p className="text-sm text-muted-foreground">
-            Updates for the iOS app arrive through the App Store.
-          </p>
-        )}
-
-        {status === "update" && nativeUpdate && releasePlatform === "android" && (
-          <Button className="w-full" onClick={() => openExternal(downloadUrl)}>
-            <Download className="h-4 w-4 mr-2" /> Download {latest?.version ?? "latest"} APK
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => void check()}
+          disabled={status === "checking"}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${status === "checking" ? "animate-spin" : ""}`} />
+          {status === "checking" ? "Checking…" : "Check for updates"}
+        </Button>
 
         {webStale && (
           <>
             <p className="text-sm">Newer app code is live. Reload to get it.</p>
             <Button className="w-full" onClick={() => void applyWebUpdate()}>
-              Update now
+              Update app code
             </Button>
             <p className="text-xs text-muted-foreground">
-              Your wallet stays on this device — updating only refreshes the app code.
+              Your wallet stays on this device — this only refreshes the app code. You&apos;ll be
+              asked to unlock again.
             </p>
           </>
         )}
 
-        {!webStale && status === "unknown" && (
-          <Button className="w-full" onClick={() => void applyWebUpdate()}>
-            Reload app
-          </Button>
-        )}
-
-        {native && platform === "android" && !nativeUpdate && (
+        {native && platform === "android" && !newerRelease && status !== "checking" && (
           <Button
             variant="ghost"
             className="w-full"
-            disabled={status === "checking"}
             onClick={async () => {
-              // Never trust the version baked into this build — ask the release
-              // feed right now so "anyway" really means *latest*.
+              // Never trust this build's baked-in link — ask the feed right now.
               setStatus("checking");
               const rel = await fetchLatestRelease(releasePlatform);
               if (rel) setLatest(rel);
               setStatus("idle");
-              await openExternal(rel ? releaseDownloadUrl(rel) : downloadUrl);
+              await openDownload(rel ? releaseDownloadUrl(rel) : downloadUrl);
             }}
           >
-            <Download className="h-4 w-4 mr-2" /> Download latest APK anyway
+            <Download className="h-4 w-4 mr-2" /> Reinstall latest APK
           </Button>
         )}
       </CardContent>
