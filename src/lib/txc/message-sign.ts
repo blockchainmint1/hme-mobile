@@ -11,6 +11,11 @@ import { payments } from "bitcoinjs-lib";
 import { TXC_NETWORK, scriptKindOf, type DerivationKind } from "./network";
 import { deriveAddress, rootFromSeed, seedFromMnemonic } from "./wallet";
 
+// BIP-137 message signatures are domain-separated from transaction signatures.
+// NectarPay and the TEXITcoin wallet-link protocol use this TEXITcoin-specific
+// magic string (26 bytes), not Bitcoin's 24-byte message prefix.
+const TXC_SIGNED_MESSAGE_PREFIX = "\x1aTEXITcoin Signed Message:\n";
+
 function varint(n: number): Uint8Array {
   if (n < 0xfd) return Uint8Array.of(n);
   if (n <= 0xffff) return Uint8Array.of(0xfd, n & 0xff, (n >> 8) & 0xff);
@@ -32,8 +37,7 @@ const enc = new TextEncoder();
 
 /** double-SHA256 of the magic-prefixed message, as used by Bitcoin Core. */
 export function messageHash(message: string): Uint8Array {
-  const rawPrefix = TXC_NETWORK.messagePrefix;
-  const prefix = enc.encode(rawPrefix);
+  const prefix = enc.encode(TXC_SIGNED_MESSAGE_PREFIX);
   const msg = enc.encode(message);
   // Most network definitions embed the varint length as the first byte
   // ("\x18Bitcoin Signed Message:\n"). Only prepend one when it's missing.
@@ -43,7 +47,6 @@ export function messageHash(message: string): Uint8Array {
     : concat(varint(prefix.length), prefix, varint(msg.length), msg);
   return sha256(sha256(buf));
 }
-
 
 function headerBase(kind: DerivationKind): number {
   switch (scriptKindOf(kind)) {
@@ -116,7 +119,8 @@ export function verifyMessage(address: string, message: string, signature: strin
   try {
     const sig = base64.decode(signature.trim());
     if (sig.length !== 65) return false;
-    const header = sig[0]!;
+    const header = sig[0];
+    if (header === undefined) return false;
     if (header < 27 || header > 42) return false;
     const recoveryId = ((header - 27) & 3) as 0 | 1 | 2 | 3;
     const compressed = header - 27 >= 4;
