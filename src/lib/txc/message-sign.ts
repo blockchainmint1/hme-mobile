@@ -7,6 +7,7 @@
 import * as ecc from "@bitcoinerlab/secp256k1";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { base64 } from "@scure/base";
+import { payments } from "bitcoinjs-lib";
 import { TXC_NETWORK, scriptKindOf, type DerivationKind } from "./network";
 import { deriveAddress, rootFromSeed, seedFromMnemonic } from "./wallet";
 
@@ -98,4 +99,34 @@ export function signMessageWithKey(args: {
   out[0] = headerBase(kind) + recoveryId;
   out.set(signature, 1);
   return { address, path: "", message, signature: base64.encode(out) };
+}
+
+/**
+ * Verify a base64 compact signature against a TEXITcoin address.
+ * Returns true only when the recovered key rebuilds the same address.
+ */
+export function verifyMessage(address: string, message: string, signature: string): boolean {
+  try {
+    const sig = base64.decode(signature.trim());
+    if (sig.length !== 65) return false;
+    const header = sig[0]!;
+    if (header < 27 || header > 42) return false;
+    const recoveryId = (header - 27) & 3;
+    const compressed = header - 27 >= 4;
+    const hash = messageHash(message);
+    const pubkey = ecc.recover(hash, sig.slice(1), recoveryId, compressed);
+    if (!pubkey) return false;
+
+    const candidates: string[] = [];
+    const p2pkh = payments.p2pkh({ pubkey, network: TXC_NETWORK }).address;
+    if (p2pkh) candidates.push(p2pkh);
+    const inner = payments.p2wpkh({ pubkey, network: TXC_NETWORK });
+    if (inner.address) candidates.push(inner.address);
+    const p2sh = payments.p2sh({ redeem: inner, network: TXC_NETWORK }).address;
+    if (p2sh) candidates.push(p2sh);
+
+    return candidates.includes(address.trim());
+  } catch {
+    return false;
+  }
 }
