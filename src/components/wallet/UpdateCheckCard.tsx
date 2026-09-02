@@ -28,7 +28,7 @@ import {
   releaseDownloadUrl,
   type AppRelease,
 } from "@/lib/app-release";
-import { copyText } from "@/lib/clipboard";
+import { copyToClipboard } from "@/lib/clipboard";
 import { isNative, nativePlatform } from "@/lib/native/platform";
 
 /**
@@ -135,7 +135,7 @@ export function UpdateCheckCard() {
                   size="sm"
                   className="w-full"
                   onClick={async () => {
-                    await copyText(downloadUrl);
+                    await copyToClipboard(downloadUrl);
                     setCopied(true);
                     toast.success("Download link copied");
                     setTimeout(() => setCopied(false), 2000);
