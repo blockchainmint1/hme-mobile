@@ -32,11 +32,18 @@ const enc = new TextEncoder();
 
 /** double-SHA256 of the magic-prefixed message, as used by Bitcoin Core. */
 export function messageHash(message: string): Uint8Array {
-  const prefix = enc.encode(TXC_NETWORK.messagePrefix);
+  const rawPrefix = TXC_NETWORK.messagePrefix;
+  const prefix = enc.encode(rawPrefix);
   const msg = enc.encode(message);
-  const buf = concat(varint(prefix.length), prefix, varint(msg.length), msg);
+  // Most network definitions embed the varint length as the first byte
+  // ("\x18Bitcoin Signed Message:\n"). Only prepend one when it's missing.
+  const hasLenByte = prefix.length > 0 && prefix[0] === prefix.length - 1;
+  const buf = hasLenByte
+    ? concat(prefix, varint(msg.length), msg)
+    : concat(varint(prefix.length), prefix, varint(msg.length), msg);
   return sha256(sha256(buf));
 }
+
 
 function headerBase(kind: DerivationKind): number {
   switch (scriptKindOf(kind)) {
