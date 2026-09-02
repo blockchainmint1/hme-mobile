@@ -309,6 +309,25 @@ export function deleteWallet(): void {
 }
 
 /**
+ * Forget a single profile (vault) without touching the others. Used by the
+ * settings wallet list to remove a seed that is no longer needed. Funds stay
+ * on the blockchain; the seed phrase is the only backup.
+ */
+export function deleteProfileWallet(profileId: string): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(walletKey(profileId));
+  if (profileId !== DEFAULT_PROFILE_ID) {
+    purgeProfileStorage(profileId);
+    unregisterProfile(profileId);
+  }
+  // If the active vault was removed, fall back to whichever profile remains.
+  if (profileId === activeProfileId()) {
+    const remaining = listProfileIds().find((id) => id !== profileId);
+    setActiveProfileId(remaining ?? DEFAULT_PROFILE_ID);
+  }
+}
+
+/**
  * Rename the stored wallet without re-encrypting. The label is metadata
  * only — the encrypted seed material is untouched.
  */
