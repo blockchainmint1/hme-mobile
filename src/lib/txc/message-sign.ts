@@ -120,7 +120,8 @@ export function verifyMessage(address: string, message: string, signature: strin
   try {
     const sig = base64.decode(signature.trim());
     if (sig.length !== 65) return false;
-    const header = sig[0]!;
+    const header = sig[0];
+    if (header === undefined) return false;
     if (header < 27 || header > 42) return false;
     const recoveryId = ((header - 27) & 3) as 0 | 1 | 2 | 3;
     const compressed = header - 27 >= 4;
