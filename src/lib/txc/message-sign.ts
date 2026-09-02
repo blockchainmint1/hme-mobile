@@ -48,7 +48,6 @@ export function messageHash(message: string): Uint8Array {
   return sha256(sha256(buf));
 }
 
-
 function headerBase(kind: DerivationKind): number {
   switch (scriptKindOf(kind)) {
     case "bip84":
