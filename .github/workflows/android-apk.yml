@@ -163,6 +163,27 @@ jobs:
           PY
           fi
 
+      - name: Stamp app version into Gradle
+        # Without this every APK ships as versionName "1.0" / versionCode 1,
+        # which makes in-app version checks and support debugging useless.
+        env:
+          VERSION_NAME: ${{ steps.ver.outputs.version }}
+          VERSION_CODE: ${{ steps.ver.outputs.version_code }}
+        run: |
+          python3 - <<'PY'
+          import os, re
+          p = "android/app/build.gradle"
+          s = open(p).read()
+          vn = os.environ["VERSION_NAME"]
+          vc = os.environ["VERSION_CODE"]
+          s, n1 = re.subn(r"versionCode\s+\d+", f"versionCode {vc}", s)
+          s, n2 = re.subn(r'versionName\s+"[^"]*"', f'versionName "{vn}"', s)
+          if not (n1 and n2):
+              raise SystemExit("versionCode/versionName not found in android/app/build.gradle")
+          open(p, "w").write(s)
+          print(f"Stamped versionName={vn} versionCode={vc}")
+          PY
+
       - name: Build APK
         working-directory: android
         env:

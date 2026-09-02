@@ -8,10 +8,10 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export const APP_VERSION = "0.1.202608281013";
+export const APP_VERSION = "0.1.202608300600";
 
 export const APK_URL =
-  "https://txc.mypinata.cloud/ipfs/QmUD1zv5RL9be23Uq9gYBVYW4ZeKYTDCzKadN3dEyG6trq?filename=hme-wallet-0.1.202608281013-release.apk";
+  "https://txc.mypinata.cloud/ipfs/QmdmMda49c8sdfs4vqRUBFfiTXVdGmCrUBUfuaor8A7fud?filename=hme-wallet-0.1.202608300600-release.apk";
 
 
 export type ReleasePlatform = "android" | "ios" | "web";
@@ -176,6 +176,15 @@ export async function checkForWebUpdate(): Promise<"current" | "update" | "unkno
 
 /** Drop caches (incl. service worker) and hard-reload into the new build. */
 export async function applyWebUpdate(): Promise<void> {
+  // A hard reload wipes the in-memory session key, so the wallet will lock and
+  // the user lands back on the unlock screen. Flag that this was an *update*
+  // reload (not a sign-out) so the landing screen can say so and fast-path
+  // biometrics, instead of feeling like the app ejected them.
+  try {
+    window.sessionStorage.setItem("hme.postUpdate", "1");
+  } catch {
+    /* memory-only session; still fine */
+  }
   try {
     if ("caches" in window) {
       const keys = await caches.keys();

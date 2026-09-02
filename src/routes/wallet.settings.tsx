@@ -13,6 +13,7 @@ import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
 import { HideBalancesToggle } from "@/components/wallet/WalletDetailSheet";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
+import { ProfilesCard } from "@/components/wallet/ProfilesCard";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -100,6 +101,9 @@ function SettingsPage() {
       <div className="mt-5">
         <SecurityCheckupCard />
       </div>
+
+      <ProfilesCard />
+
 
       <Card className="mt-5">
         <CardHeader>

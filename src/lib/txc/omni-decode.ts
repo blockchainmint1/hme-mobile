@@ -51,15 +51,34 @@ export function decodeOmniSend(tx: MempoolTx): OmniSend | null {
   if (!payload || payload.length < 32) return null;
 
   const type = parseInt(payload.slice(4, 8), 16);
-  if (type !== 0) return null; // only Simple Send for now
-  const propertyId = parseInt(payload.slice(8, 16), 16);
-  if (!Number.isFinite(propertyId) || propertyId <= 0) return null;
+  let propertyId: number;
   let amount: bigint;
-  try {
-    amount = BigInt("0x" + payload.slice(16, 32));
-  } catch {
+  if (type === 0) {
+    // Simple Send: property(4) + amount(8)
+    propertyId = parseInt(payload.slice(8, 16), 16);
+    try {
+      amount = BigInt("0x" + payload.slice(16, 32));
+    } catch {
+      return null;
+    }
+  } else if (type === 55) {
+    // The TSD distributor's type-55 payload keeps the same property + amount
+    // field boundaries as Simple Send, followed by one trailing control byte.
+    // Do not treat the first amount byte as an output index: doing so shifts
+    // the uint64 left by one byte and inflates the displayed token amount.
+    const body = payload.slice(8);
+    if (body.length < 24) return null;
+    propertyId = parseInt(body.slice(0, 8), 16);
+    try {
+      amount = BigInt("0x" + body.slice(8, 24));
+    } catch {
+      return null;
+    }
+  } else {
     return null;
   }
+  if (!Number.isFinite(propertyId) || propertyId <= 0) return null;
+
 
   const sender = tx.vin[0]?.prevout?.scriptpubkey_address ?? null;
   // Omni Class C: the reference address is the last output with an address

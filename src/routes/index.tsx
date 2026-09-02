@@ -41,8 +41,20 @@ function Home() {
     available: false,
     enabled: false,
   });
+  const [postUpdate, setPostUpdate] = useState(false);
 
   useEffect(() => {
+    // Set by applyWebUpdate() right before the hard reload: the reload wipes
+    // the in-memory session key, so the wallet locks. Tell the user this was
+    // an update, not a sign-out.
+    try {
+      if (window.sessionStorage.getItem("hme.postUpdate")) {
+        window.sessionStorage.removeItem("hme.postUpdate");
+        setPostUpdate(true);
+      }
+    } catch {
+      /* noop */
+    }
     setExists(hasWallet());
     getBiometricStatus().then(setBio).catch(() => undefined);
     // Hide the native launch splash once we've mounted the unlock UI so users
@@ -138,7 +150,11 @@ function Home() {
         <Card className="border-border/60">
           <CardHeader>
             <CardTitle>Unlock your wallet</CardTitle>
-            <CardDescription>Enter the password you set when this wallet was created.</CardDescription>
+            <CardDescription>
+              {postUpdate
+                ? "Updated to the latest version. For security, updates lock the wallet — unlock to pick up right where you left off."
+                : "Enter the password you set when this wallet was created."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={onUnlock} className="space-y-4">

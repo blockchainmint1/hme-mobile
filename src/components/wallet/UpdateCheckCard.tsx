@@ -41,13 +41,20 @@ export function UpdateCheckCard() {
   const [latest, setLatest] = useState<AppRelease | null>(null);
   const [webStale, setWebStale] = useState(false);
   const [current, setCurrent] = useState(APP_VERSION);
+  // On native, installedVersion() is the APK/IPA shell version, which can
+  // differ from the web bundle's APP_VERSION — track it separately so the UI
+  // can show both honestly.
+  const [shell, setShell] = useState<string | null>(null);
   const native = isNative();
   const platform = nativePlatform();
   const releasePlatform = native ? (platform === "ios" ? "ios" : "android") : "web";
 
   useEffect(() => {
     installedVersion()
-      .then(setCurrent)
+      .then((v) => {
+        setCurrent(v);
+        if (v !== APP_VERSION) setShell(v);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -95,8 +102,10 @@ export function UpdateCheckCard() {
           <RotateCw className="h-5 w-5" /> Updates
         </CardTitle>
         <CardDescription>
-          Version {current}
-          {native ? ` · ${platform} app` : " · web"}
+          App version {APP_VERSION}
+          {shell ? ` · shell ${shell}` : ""}
+          {native ? ` · ${platform}` : " · web"}
+          {latest ? ` · latest: ${latest.version}` : ""}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -164,7 +173,20 @@ export function UpdateCheckCard() {
         )}
 
         {native && platform === "android" && !nativeUpdate && (
-          <Button variant="ghost" className="w-full" onClick={() => openExternal(downloadUrl)}>
+          <Button
+            variant="ghost"
+            className="w-full"
+            disabled={status === "checking"}
+            onClick={async () => {
+              // Never trust the version baked into this build — ask the release
+              // feed right now so "anyway" really means *latest*.
+              setStatus("checking");
+              const rel = await fetchLatestRelease(releasePlatform);
+              if (rel) setLatest(rel);
+              setStatus("idle");
+              await openExternal(rel ? releaseDownloadUrl(rel) : downloadUrl);
+            }}
+          >
             <Download className="h-4 w-4 mr-2" /> Download latest APK anyway
           </Button>
         )}
