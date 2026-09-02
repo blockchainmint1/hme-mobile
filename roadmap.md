@@ -4,3 +4,5 @@
 - [x] Show real app version in Settings, and show the available new version before installing (UpdateCheckCard)
 - [x] Stamp versionName/versionCode into Android builds in CI (APKs currently all ship as 1.0/1, breaking native version checks)
 - [x] Fix TXC migration so swept funds and later transaction change stay on the main derivation path; verified tx f23581e5b3fbd3ea91963c1f1d1d8930c121ee41ec5168b6818944922a5170c6 was accepted and has one full-balance output
+- [x] Pin TXC Receive to the canonical m/44'/696969'/0' branch and persist it as primary so imported-wallet metadata can never issue another fresh old-path address
+- [x] Normalize stale encrypted/session TXC primary-path metadata while loading a seed wallet so Settings always reports m/44'/696969'/0' before Receive is opened

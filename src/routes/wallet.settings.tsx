@@ -263,7 +263,11 @@ function SettingsPage() {
             }
           />
           <Row k="Derivation" v={unlocked ? DERIVATION_PATHS[unlocked.kind] : "—"} />
+          <Link to="/wallet/txc/paths" className="block pt-1 text-sm underline">
+            Derivation inspector (xpubs &amp; address lookup)
+          </Link>
         </CardContent>
+
       </Card>
 
       <Card className="mt-5">
