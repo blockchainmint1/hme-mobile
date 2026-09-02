@@ -1,0 +1,202 @@
+import { useState } from "react";
+import { Check, Copy, PenLine } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { useWallet } from "@/lib/txc/wallet-context";
+import { signMessageWithSeed, verifyMessage, type SignedMessage } from "@/lib/txc/message-sign";
+
+export function SignMessageCard() {
+  const { unlocked } = useWallet();
+  const seedless = !unlocked || unlocked.mode === "keyonly" || !unlocked.mnemonic;
+
+  const [tab, setTab] = useState<"sign" | "verify">("sign");
+  const [message, setMessage] = useState("");
+  const [index, setIndex] = useState("0");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<SignedMessage | null>(null);
+  const { copied, copy } = useCopyFeedback();
+
+  const [vAddress, setVAddress] = useState("");
+  const [vMessage, setVMessage] = useState("");
+  const [vSignature, setVSignature] = useState("");
+  const [vResult, setVResult] = useState<boolean | null>(null);
+
+  async function onSign() {
+    if (!unlocked) return;
+    setError(null);
+    setResult(null);
+    setBusy(true);
+    try {
+      const i = Math.max(0, Math.min(1000, Number.parseInt(index || "0", 10) || 0));
+      const signed = await signMessageWithSeed({
+        mnemonic: unlocked.mnemonic,
+        passphrase: unlocked.passphrase,
+        kind: unlocked.kind,
+        change: 0,
+        index: i,
+        message,
+      });
+      setResult(signed);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not sign this message.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="mt-5">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <PenLine className="h-5 w-5" /> Sign &amp; verify message
+        </CardTitle>
+        <CardDescription>
+          Prove you control a TEXITcoin address by signing a message with its key. Signing costs
+          nothing, never touches the blockchain, and never moves funds.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant={tab === "sign" ? "default" : "outline"}
+            onClick={() => setTab("sign")}
+          >
+            Sign
+          </Button>
+          <Button
+            size="sm"
+            variant={tab === "verify" ? "default" : "outline"}
+            onClick={() => setTab("verify")}
+          >
+            Verify
+          </Button>
+        </div>
+
+        {tab === "sign" ? (
+          seedless ? (
+            <p className="text-sm text-muted-foreground">
+              Message signing needs a seed-based wallet. Key-only wallets can&apos;t sign here yet.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="sign-msg">Message</Label>
+                <Textarea
+                  id="sign-msg"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="I control this address."
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sign-index">Address index</Label>
+                <Input
+                  id="sign-index"
+                  inputMode="numeric"
+                  value={index}
+                  onChange={(e) => setIndex(e.target.value.replace(/\D/g, ""))}
+                  className="w-28"
+                />
+                <p className="text-xs text-muted-foreground">
+                  0 is your first receive address on {unlocked?.kind ?? "this"} derivation.
+                </p>
+              </div>
+              <Button onClick={onSign} disabled={busy || !message.trim()}>
+                {busy ? "Signing..." : "Sign message"}
+              </Button>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              {result && (
+                <div className="space-y-2 rounded-md border border-border/60 p-3 text-sm">
+                  <Field k="Address" v={result.address} />
+                  <Field k="Path" v={result.path} />
+                  <Field k="Signature" v={result.signature} />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      copy(
+                        `-----BEGIN SIGNED MESSAGE-----\n${result.message}\n-----BEGIN SIGNATURE-----\n${result.address}\n${result.signature}\n-----END SIGNED MESSAGE-----`,
+                      )
+                    }
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="mr-1 h-4 w-4" /> Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="mr-1 h-4 w-4" /> Copy signed message
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )
+        ) : (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="v-addr">Address</Label>
+              <Input
+                id="v-addr"
+                value={vAddress}
+                onChange={(e) => setVAddress(e.target.value)}
+                placeholder="T… or txc1…"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="v-msg">Message</Label>
+              <Textarea
+                id="v-msg"
+                rows={3}
+                value={vMessage}
+                onChange={(e) => setVMessage(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="v-sig">Signature</Label>
+              <Textarea
+                id="v-sig"
+                rows={2}
+                value={vSignature}
+                onChange={(e) => setVSignature(e.target.value)}
+                placeholder="base64 signature"
+              />
+            </div>
+            <Button
+              variant="outline"
+              disabled={!vAddress.trim() || !vSignature.trim()}
+              onClick={() => setVResult(verifyMessage(vAddress, vMessage, vSignature))}
+            >
+              Verify signature
+            </Button>
+            {vResult !== null && (
+              <p className={`text-sm ${vResult ? "text-emerald-500" : "text-destructive"}`}>
+                {vResult
+                  ? "Valid — this address signed that exact message."
+                  : "Invalid — address, message or signature doesn't match."}
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function Field({ k, v }: { k: string; v: string }) {
+  if (!v) return null;
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{k}</div>
+      <div className="break-all font-mono text-xs">{v}</div>
+    </div>
+  );
+}
