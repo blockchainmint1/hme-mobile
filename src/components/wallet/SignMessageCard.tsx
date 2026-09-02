@@ -195,11 +195,18 @@ export function SignMessageCard() {
   );
 }
 
-function Field({ k, v }: { k: string; v: string }) {
+function Field({ k, v, onCopy }: { k: string; v: string; onCopy?: () => void }) {
   if (!v) return null;
   return (
     <div>
-      <div className="text-xs text-muted-foreground">{k}</div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-xs text-muted-foreground">{k}</div>
+        {onCopy && (
+          <Button size="sm" variant="ghost" className="h-6 px-2" onClick={onCopy}>
+            <Copy className="mr-1 h-3 w-3" /> Copy
+          </Button>
+        )}
+      </div>
       <div className="break-all font-mono text-xs">{v}</div>
     </div>
   );
