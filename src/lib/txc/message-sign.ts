@@ -111,7 +111,7 @@ export function verifyMessage(address: string, message: string, signature: strin
     if (sig.length !== 65) return false;
     const header = sig[0]!;
     if (header < 27 || header > 42) return false;
-    const recoveryId = (header - 27) & 3;
+    const recoveryId = ((header - 27) & 3) as 0 | 1 | 2 | 3;
     const compressed = header - 27 >= 4;
     const hash = messageHash(message);
     const pubkey = ecc.recover(hash, sig.slice(1), recoveryId, compressed);
