@@ -79,24 +79,35 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [refreshProfiles]);
 
   const loadFromMemory = useCallback(async (w: UnlockedWallet) => {
+    // A seed wallet's primary TXC branch is always the registered SLIP-0044
+    // legacy-address path. Older encrypted envelopes and cached sessions can
+    // still carry the old app's bip44-legacy metadata, which made Settings
+    // report m/44'/0'/0' until the user happened to open Receive. Normalize
+    // during every load so receive addresses and transaction change are
+    // correct immediately, while background scanning continues to cover all
+    // historical paths.
+    const loadedWallet =
+      w.mode !== "keyonly" && w.kind !== "bip44" ? { ...w, kind: "bip44" as const } : w;
+    if (loadedWallet !== w) setStoredKind("bip44");
+
     // Key-only wallets have no mnemonic. Their BIP32 "root" is derived from a
     // random anchor and is used only as the wrapping key for imported WIFs —
     // no addresses are ever derived from it.
     let nextRoot;
-    if (w.mode === "keyonly") {
-      const bin = atob(w.anchor ?? "");
+    if (loadedWallet.mode === "keyonly") {
+      const bin = atob(loadedWallet.anchor ?? "");
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       nextRoot = rootFromSeed(bytes);
     } else {
-      const seed = await seedFromMnemonic(w.mnemonic, w.passphrase);
+      const seed = await seedFromMnemonic(loadedWallet.mnemonic, loadedWallet.passphrase);
       nextRoot = rootFromSeed(seed);
     }
     flushSync(() => {
       setRoot(nextRoot);
-      setUnlocked(w);
+      setUnlocked(loadedWallet);
     });
-    await saveSession(w);
+    await saveSession(loadedWallet);
     refreshProfiles();
   }, [refreshProfiles]);
 
