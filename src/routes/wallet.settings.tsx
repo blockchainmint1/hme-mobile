@@ -1,6 +1,23 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { BookUser, ChevronRight, Fingerprint, Palette } from "lucide-react";
+import {
+  BookUser,
+  ChevronRight,
+  Fingerprint,
+  Palette,
+  ShieldCheck,
+  Wallet,
+  Layers,
+  Coins,
+  RefreshCw,
+  Sparkles,
+  PenLine,
+  ArrowDownUp,
+  RotateCw,
+  KeyRound,
+  Trash2,
+  AlertTriangle,
+} from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChainsCard } from "@/components/wallet/ChainsCard";
 import { TokensCard } from "@/components/wallet/TokensCard";
@@ -22,6 +39,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -32,7 +55,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { MEMPOOL_BASE, DERIVATION_PATHS } from "@/lib/txc/network";
 import { unlockWallet } from "@/lib/txc/storage";
 import { disableBiometric, enableBiometric, getBiometricStatus } from "@/lib/native/biometric";
 
@@ -99,251 +121,320 @@ function SettingsPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-bold">Settings</h1>
 
-      <div className="mt-5">
-        <SecurityCheckupCard />
-      </div>
+      <Accordion type="multiple" className="mt-5 space-y-3">
+        <SettingsSection
+          value="security"
+          icon={ShieldCheck}
+          title="Security checkup"
+          description="A quick self-test of this device."
+        >
+          <SecurityCheckupCard compact />
+        </SettingsSection>
 
-      <ProfilesCard />
+        <SettingsSection
+          value="wallets"
+          icon={Wallet}
+          title="Your wallets"
+          description="Rename, switch, or add wallets."
+        >
+          <ProfilesCard compact />
+        </SettingsSection>
 
-
-      <Card className="mt-5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Palette className="h-5 w-5" /> Appearance
-          </CardTitle>
-          <CardDescription>Light, dark, or follow your system setting.</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <SettingsSection
+          value="appearance"
+          icon={Palette}
+          title="Appearance"
+          description="Light, dark, or follow your system."
+        >
           <ThemeToggle />
-        </CardContent>
-      </Card>
+        </SettingsSection>
 
-      {keyOnly ? (
-        <>
-          <Card className="mt-5">
-            <CardHeader>
-              <CardTitle>Key-only wallet</CardTitle>
-              <CardDescription>
+        {keyOnly ? (
+          <>
+            <SettingsSection
+              value="key-only"
+              icon={KeyRound}
+              title="Key-only wallet"
+              description="No seed phrase — each key is its own tile."
+            >
+              <p className="text-sm text-muted-foreground">
                 This wallet has no seed phrase, so HD chain tiles, address rotation and deep rescan
                 don&apos;t apply. Each imported private key is its own tile. Keep your own offline
                 backup of every WIF — it can&apos;t be regenerated from anything stored here.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-          <AddSeedCard />
-        </>
-      ) : (
-        <>
-          <div className="mt-5">
-            <ChainsCard />
-          </div>
+              </p>
+            </SettingsSection>
 
-          <div className="mt-5">
-            <TokensCard />
-          </div>
-
-          <div className="mt-5">
-            <TxcTokensCard />
-          </div>
-
-          <div className="mt-5">
-            <RotationPolicyCard />
-          </div>
-
-          <div className="mt-5">
-            <DeepRescanCard />
-          </div>
-        </>
-      )}
-
-      <div className="mt-5">
-        <HideBalancesToggle />
-      </div>
-
-
-
-
-      <div className="mt-5">
-        <FeaturesCard />
-      </div>
-
-      <SignMessageCard />
-
-      <TsdCashoutKeyCard />
-
-      <UpdateCheckCard />
-
-      <Card className="mt-5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Fingerprint className="h-5 w-5" /> Biometric unlock
-          </CardTitle>
-          <CardDescription>
-            {bio.available
-              ? "Unlock with Face ID / fingerprint instead of typing your password. Your password is still required to reveal your seed phrase or delete the wallet."
-              : "Face ID / fingerprint unlock is only available in the installed iOS or Android app."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="bio-toggle" className="text-sm">
-              Enable biometric unlock
-            </Label>
-            <Switch
-              id="bio-toggle"
-              checked={bio.enabled}
-              disabled={!bio.available || bioBusy}
-              onCheckedChange={onToggleBiometric}
-            />
-          </div>
-          {showBioPassword && (
-            <form
-              onSubmit={confirmEnableBiometric}
-              className="space-y-2 pt-2 border-t border-border/40"
+            <SettingsSection
+              value="add-seed"
+              icon={Sparkles}
+              title="Add a seed phrase"
+              description="Upgrade to a full HD wallet."
             >
-              <Label htmlFor="bio-pw" className="text-sm">
-                Confirm your wallet password
+              <AddSeedCard compact />
+            </SettingsSection>
+          </>
+        ) : (
+          <>
+            <SettingsSection
+              value="chains"
+              icon={Layers}
+              title="Chains"
+              description="Turn chains on or off."
+            >
+              <ChainsCard compact />
+            </SettingsSection>
+
+            <SettingsSection
+              value="tokens"
+              icon={Coins}
+              title="Tokens"
+              description="Choose which EVM tokens to show."
+            >
+              <TokensCard compact />
+            </SettingsSection>
+
+            <SettingsSection
+              value="txc-tokens"
+              icon={Coins}
+              title="TXC tokens (Omni)"
+              description="Toggle Omni Layer tokens under TXC."
+            >
+              <TxcTokensCard compact />
+            </SettingsSection>
+
+            <SettingsSection
+              value="rotation"
+              icon={RefreshCw}
+              title="Receive address rotation"
+              description="How often the Receive screen shows a fresh address."
+            >
+              <RotationPolicyCard compact />
+            </SettingsSection>
+
+            <SettingsSection
+              value="rescan"
+              icon={RefreshCw}
+              title="Deep rescan (TXC)"
+              description="Recover if a balance ever looks wrong."
+            >
+              <DeepRescanCard compact />
+            </SettingsSection>
+          </>
+        )}
+
+        <SettingsSection
+          value="hide-balances"
+          icon={ShieldCheck}
+          title="Hide balances"
+          description="Mask amounts everywhere in the app."
+        >
+          <HideBalancesToggle />
+        </SettingsSection>
+
+        <SettingsSection
+          value="features"
+          icon={Sparkles}
+          title="Extra features"
+          description="Opt-in features and safety checks."
+        >
+          <FeaturesCard compact />
+        </SettingsSection>
+
+        <SettingsSection
+          value="sign-message"
+          icon={PenLine}
+          title="Sign & verify message"
+          description="Prove you control a TEXITcoin address."
+        >
+          <SignMessageCard compact />
+        </SettingsSection>
+
+        <SettingsSection
+          value="tsd-cashout"
+          icon={ArrowDownUp}
+          title="TSD cash-out"
+          description="Turn TSD into USDC on Ethereum."
+        >
+          <TsdCashoutKeyCard compact />
+        </SettingsSection>
+
+        <SettingsSection
+          value="updates"
+          icon={RotateCw}
+          title="Updates"
+          description="Check for new app versions."
+        >
+          <UpdateCheckCard compact />
+        </SettingsSection>
+
+        <SettingsSection
+          value="biometric"
+          icon={Fingerprint}
+          title="Biometric unlock"
+          description={
+            bio.available
+              ? "Unlock with Face ID / fingerprint."
+              : "Only available in the installed iOS or Android app."
+          }
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="bio-toggle" className="text-sm">
+                Enable biometric unlock
               </Label>
-              <Input
-                id="bio-pw"
-                type="password"
-                value={bioPassword}
-                autoFocus
-                onChange={(e) => setBioPassword(e.target.value)}
-                placeholder="Wallet password"
+              <Switch
+                id="bio-toggle"
+                checked={bio.enabled}
+                disabled={!bio.available || bioBusy}
+                onCheckedChange={onToggleBiometric}
               />
-              {bioError && <p className="text-sm text-destructive">{bioError}</p>}
-              <div className="flex gap-2">
-                <Button type="submit" disabled={bioBusy || !bioPassword}>
-                  {bioBusy ? "Verifying..." : "Enable"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setShowBioPassword(false);
-                    setBioPassword("");
-                    setBioError(null);
-                  }}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <Link to="/wallet/contacts" className="mt-5 block">
-        <Card className="hover:bg-accent/30 transition-colors">
-          <CardContent className="py-4 flex items-center gap-3">
-            <BookUser className="h-5 w-5 text-muted-foreground" />
-            <div className="flex-1">
-              <div className="font-medium">Address book</div>
-              <div className="text-xs text-muted-foreground">
-                Save names for the addresses you send to most.
-              </div>
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          </CardContent>
-        </Card>
-      </Link>
-
-      <Card className="mt-5">
-        <CardHeader>
-          <CardTitle>Wallet info</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <Row k="Label" v={unlocked?.label ?? "—"} />
-          <Row
-            k="Address type"
-            v={
-              unlocked?.kind === "bip84"
-                ? "Native segwit (txc1…)"
-                : unlocked?.kind === "bip49"
-                  ? "Wrapped segwit"
-                  : "Legacy (T…)"
-            }
-          />
-          <Row k="Derivation" v={unlocked ? DERIVATION_PATHS[unlocked.kind] : "—"} />
-          <Link to="/wallet/txc/paths" className="block pt-1 text-sm underline">
-            Derivation inspector (xpubs &amp; address lookup)
-          </Link>
-        </CardContent>
-
-      </Card>
-
-      <Card className="mt-5">
-        <CardHeader>
-          <CardTitle>Backend</CardTitle>
-          <CardDescription>
-            Public TEXITcoin nodes used to read balances and broadcast.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <Row k="Explorer / REST" v={<code>{MEMPOOL_BASE}</code>} />
-        </CardContent>
-      </Card>
-
-      <Card className="mt-5 border-destructive/40">
-        <CardHeader>
-          <CardTitle className="text-destructive">Danger zone</CardTitle>
-          <CardDescription>
-            Removes the encrypted seed from this device. Make sure you have your seed phrase written
-            down first — without it you cannot recover the wallet.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive">Delete wallet and all data</Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete wallet and all data?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This permanently deletes the encrypted wallet, biometric unlock, address book,
-                  and all cached data from this device. Your funds stay on the blockchain and can
-                  only be restored on any device using your seed phrase. Type{" "}
-                  <strong>DELETE</strong> to confirm.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <div>
-                <Label htmlFor="confirm">Confirmation</Label>
+            {showBioPassword && (
+              <form
+                onSubmit={confirmEnableBiometric}
+                className="space-y-2 pt-2 border-t border-border/40"
+              >
+                <Label htmlFor="bio-pw" className="text-sm">
+                  Confirm your wallet password
+                </Label>
                 <Input
-                  id="confirm"
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder="Type DELETE"
-                  className="mt-1"
+                  id="bio-pw"
+                  type="password"
+                  value={bioPassword}
+                  autoFocus
+                  onChange={(e) => setBioPassword(e.target.value)}
+                  placeholder="Wallet password"
                 />
-              </div>
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setConfirmText("")}>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  disabled={confirmText !== "DELETE"}
-                  onClick={async () => {
-                    await disableBiometric();
-                    forget();
-                    navigate({ to: "/" });
-                  }}
-                >
-                  Delete wallet and all data
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </CardContent>
-      </Card>
+                {bioError && <p className="text-sm text-destructive">{bioError}</p>}
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={bioBusy || !bioPassword}>
+                    {bioBusy ? "Verifying..." : "Enable"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      setShowBioPassword(false);
+                      setBioPassword("");
+                      setBioError(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
+        </SettingsSection>
+
+        <SettingsSection
+          value="address-book"
+          icon={BookUser}
+          title="Address book"
+          description="Save names for addresses you send to most."
+        >
+          <Link to="/wallet/contacts" className="block">
+            <Card className="hover:bg-accent/30 transition-colors">
+              <CardContent className="py-4 flex items-center gap-3">
+                <BookUser className="h-5 w-5 text-muted-foreground" />
+                <div className="flex-1">
+                  <div className="font-medium">Open address book</div>
+                  <div className="text-xs text-muted-foreground">
+                    Manage saved contacts and their addresses.
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
+        </SettingsSection>
+
+        <SettingsSection
+          value="danger"
+          icon={AlertTriangle}
+          title="Danger zone"
+          description="Remove the encrypted wallet from this device."
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Removes the encrypted seed from this device. Make sure you have your seed phrase
+              written down first — without it you cannot recover the wallet.
+            </p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">Delete wallet and all data</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete wallet and all data?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently deletes the encrypted wallet, biometric unlock, address book,
+                    and all cached data from this device. Your funds stay on the blockchain and can
+                    only be restored on any device using your seed phrase. Type{" "}
+                    <strong>DELETE</strong> to confirm.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div>
+                  <Label htmlFor="confirm">Confirmation</Label>
+                  <Input
+                    id="confirm"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder="Type DELETE"
+                    className="mt-1"
+                  />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setConfirmText("")}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={confirmText !== "DELETE"}
+                    onClick={async () => {
+                      await disableBiometric();
+                      forget();
+                      navigate({ to: "/" });
+                    }}
+                  >
+                    Delete wallet and all data
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </SettingsSection>
+      </Accordion>
     </main>
   );
 }
 
-function Row({ k, v }: { k: string; v: React.ReactNode }) {
+function SettingsSection({
+  value,
+  icon: Icon,
+  title,
+  description,
+  children,
+}: {
+  value: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex justify-between gap-3 border-b border-border/40 pb-2 last:border-0">
-      <span className="text-muted-foreground shrink-0">{k}</span>
-      <span className="min-w-0 text-right break-all">{v}</span>
-    </div>
+    <AccordionItem value={value} className="border rounded-xl px-4">
+      <AccordionTrigger className="hover:no-underline py-4">
+        <div className="flex items-center gap-3 text-left">
+          {Icon && <Icon className="h-5 w-5 text-muted-foreground shrink-0" />}
+          <div className="min-w-0">
+            <div className="text-base font-semibold">{title}</div>
+            {description && (
+              <div className="text-xs text-muted-foreground font-normal">{description}</div>
+            )}
+          </div>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent>
+        <div className="pb-4">{children}</div>
+      </AccordionContent>
+    </AccordionItem>
   );
 }
