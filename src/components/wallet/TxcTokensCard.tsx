@@ -31,7 +31,7 @@ import {
 export function TxcTokensCard({ compact }: { compact?: boolean }) {
   const { tokens, enabled, isCustom } = useAllTxcTokens();
   return (
-    <Card>
+    <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
       {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -43,7 +43,7 @@ export function TxcTokensCard({ compact }: { compact?: boolean }) {
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent className="space-y-3">
+      <CardContent className={compact ? "space-y-3 p-0" : "space-y-3"}>
         {tokens.length === 0 && (
           <p className="text-xs text-muted-foreground">
             No tokens configured yet.

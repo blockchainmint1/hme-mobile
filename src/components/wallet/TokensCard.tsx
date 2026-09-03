@@ -40,7 +40,7 @@ const CHAINS: EvmChainId[] = ["eth", "base", "bsc"];
 
 export function TokensCard({ compact }: { compact?: boolean }) {
   return (
-    <Card>
+    <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
       {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -52,7 +52,7 @@ export function TokensCard({ compact }: { compact?: boolean }) {
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent className="space-y-5">
+      <CardContent className={compact ? "space-y-5 p-0" : "space-y-5"}>
         {CHAINS.map((c) => (
           <ChainTokens key={c} chain={c} />
         ))}

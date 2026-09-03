@@ -35,7 +35,9 @@ export function TsdCashoutKeyCard({ compact }: { compact?: boolean }) {
   }
 
   return (
-    <Card className={compact ? undefined : "mt-5"}>
+    <Card
+      className={compact ? "rounded-none border-0 bg-transparent shadow-none" : "mt-5"}
+    >
       {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -48,7 +50,7 @@ export function TsdCashoutKeyCard({ compact }: { compact?: boolean }) {
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent>
+      <CardContent className={compact ? "p-0" : undefined}>
         {key ? (
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-sm text-primary">

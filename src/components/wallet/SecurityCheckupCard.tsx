@@ -167,7 +167,7 @@ export function SecurityCheckupCard({ compact }: { compact?: boolean }) {
   }, []);
 
   const content = (
-    <CardContent className="space-y-2.5">
+    <CardContent className={compact ? "space-y-2.5 p-0" : "space-y-2.5"}>
       {!checks ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Checking…

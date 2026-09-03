@@ -41,7 +41,7 @@ export function DeepRescanCard({ compact }: { compact?: boolean }) {
   };
 
   return (
-    <Card>
+    <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
       {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -55,7 +55,7 @@ export function DeepRescanCard({ compact }: { compact?: boolean }) {
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent>
+      <CardContent className={compact ? "p-0" : undefined}>
         <Button variant="outline" onClick={rescan} disabled={busy}>
           {busy ? "Rescanning…" : "Run deep rescan"}
         </Button>

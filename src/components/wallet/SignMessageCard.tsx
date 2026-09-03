@@ -50,7 +50,9 @@ export function SignMessageCard({ compact }: { compact?: boolean }) {
   }
 
   return (
-    <Card className={compact ? undefined : "mt-5"}>
+    <Card
+      className={compact ? "rounded-none border-0 bg-transparent shadow-none" : "mt-5"}
+    >
       {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -62,7 +64,7 @@ export function SignMessageCard({ compact }: { compact?: boolean }) {
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent className="space-y-4">
+      <CardContent className={compact ? "space-y-4 p-0" : "space-y-4"}>
         <div className="flex gap-2">
           <Button
             size="sm"

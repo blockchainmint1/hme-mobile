@@ -16,7 +16,7 @@ export function RotationPolicyCard({ compact }: { compact?: boolean }) {
   const [policy, setPolicy] = useState<RotationPolicy>(() => getRotationPolicy());
 
   return (
-    <Card>
+    <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
       {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -28,7 +28,7 @@ export function RotationPolicyCard({ compact }: { compact?: boolean }) {
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent>
+      <CardContent className={compact ? "p-0" : undefined}>
         <RadioGroup
           value={policy}
           onValueChange={(v) => {
