@@ -10,8 +10,8 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 
-/** The ONLY host the wallet will exchange xpubs with. */
-const TRUSTED_HOST = "app.nectar-pay.com";
+/** Exact NectarPay hosts used by the merchant-link and wallet-login protocols. */
+const TRUSTED_HOSTS = new Set(["app.nectar-pay.com", "pay.honest.money"]);
 
 function targetFrom(request: Request): URL | null {
   const raw = new URL(request.url).searchParams.get("url");
@@ -19,7 +19,7 @@ function targetFrom(request: Request): URL | null {
   try {
     const target = new URL(raw);
     if (target.protocol !== "https:") return null;
-    if (target.hostname !== TRUSTED_HOST) return null;
+    if (!TRUSTED_HOSTS.has(target.hostname) || target.port || target.username || target.password) return null;
     return target;
   } catch {
     return null;
