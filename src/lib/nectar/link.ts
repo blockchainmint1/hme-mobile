@@ -16,7 +16,7 @@ import { ISK_NETWORK, ISK_DERIVATION_PATHS } from "@/lib/isk/network";
 import { LTC_NETWORK, LTC_DERIVATION_PATHS } from "@/lib/ltc/network";
 import { TXC_NETWORK, DERIVATION_PATHS as TXC_PATHS } from "@/lib/txc/network";
 import { TRON_COIN_TYPE } from "@/lib/tron/network";
-import { deriveSolanaAddress } from "@/lib/solana/network";
+import { deriveSolanaAddress } from "@/lib/solana/derive";
 import { seedFromMnemonic, deriveAddress, rootFromSeed } from "@/lib/txc/wallet";
 import { signMessageWithSeed } from "@/lib/txc/message-sign";
 
