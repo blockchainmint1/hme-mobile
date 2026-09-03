@@ -115,13 +115,21 @@ export async function fetchManifest(manifestUrl: string): Promise<NectarManifest
       (body?.["message"] as string) ?? (body?.["error"] as string) ?? "Could not read the link",
     );
   }
-  return validateManifest(body);
+  const manifest = validateManifest(body);
+  if (manifest.manifest_url !== manifestUrl) throw new Error("The link manifest does not match its URL.");
+  return manifest;
 }
 
 function sameHost(url: string): boolean {
   try {
     const u = new URL(url);
-    return u.protocol === "https:" && u.hostname === NECTAR_TRUSTED_HOST;
+    return (
+      u.protocol === "https:" &&
+      u.hostname === NECTAR_TRUSTED_HOST &&
+      u.port === "" &&
+      u.username === "" &&
+      u.password === ""
+    );
   } catch {
     return false;
   }
@@ -132,11 +140,14 @@ export function validateManifest(raw: Record<string, unknown>): NectarManifest {
     throw new Error(m);
   };
   if (raw["type"] !== "hm-link-xpubs") fail("This QR isn't a Nectar Pay wallet link.");
+  if (raw["from"] !== NECTAR_TRUSTED_HOST) fail("Link comes from an untrusted server.");
   if (typeof raw["challenge_id"] !== "string" || !raw["challenge_id"]) fail("Link is malformed.");
   if (typeof raw["callback_url"] !== "string" || !sameHost(raw["callback_url"] as string))
     fail("Link points at an untrusted server.");
   if (typeof raw["manifest_url"] !== "string" || !sameHost(raw["manifest_url"] as string))
     fail("Link points at an untrusted server.");
+  if (new URL(raw["callback_url"] as string).origin !== new URL(raw["manifest_url"] as string).origin)
+    fail("Link callback does not match its manifest.");
   const exp = Number(raw["exp"]);
   if (!Number.isFinite(exp) || exp * 1000 <= Date.now()) fail("This link has expired.");
   const chains = Array.isArray(raw["chains"])

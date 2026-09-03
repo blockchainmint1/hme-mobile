@@ -16,6 +16,7 @@ import {
   KeyRound,
   Trash2,
   AlertTriangle,
+  Link2,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChainsCard } from "@/components/wallet/ChainsCard";
