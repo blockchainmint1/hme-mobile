@@ -12,8 +12,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 const APK_SOURCE_URL =
-  "https://hme-wallet.lovable.app/__l5e/assets-v1/d5d6fed0-d11b-4dfb-be1b-731b9eecfc78/hme-wallet-0.1.202609020414-release.apk";
-const APK_FILENAME = "hme-wallet-0.1.202609020414-release.apk";
+  "https://hme-wallet.lovable.app/__l5e/assets-v1/9f051f23-1aba-42ee-8f66-f21bd0e3d15b/hme-wallet-0.1.202609031053-release.apk";
+const APK_FILENAME = "hme-wallet-0.1.202609031053-release.apk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
