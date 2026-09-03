@@ -45,7 +45,7 @@ function looksTampered(): boolean {
   }
 }
 
-export function SecurityCheckupCard() {
+export function SecurityCheckupCard({ compact }: { compact?: boolean }) {
   const [checks, setChecks] = useState<Check[] | null>(null);
 
   useEffect(() => {
@@ -166,6 +166,20 @@ export function SecurityCheckupCard() {
     };
   }, []);
 
+  const content = (
+    <CardContent className="space-y-2.5">
+      {!checks ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Checking…
+        </div>
+      ) : (
+        checks.map((c, i) => <CheckRow key={i} check={c} />)
+      )}
+    </CardContent>
+  );
+
+  if (compact) return content;
+
   return (
     <Card>
       <CardHeader>
@@ -176,15 +190,7 @@ export function SecurityCheckupCard() {
           A quick self-test of this device. Run it after any big change.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-2.5">
-        {!checks ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Checking…
-          </div>
-        ) : (
-          checks.map((c, i) => <CheckRow key={i} check={c} />)
-        )}
-      </CardContent>
+      {content}
     </Card>
   );
 }
