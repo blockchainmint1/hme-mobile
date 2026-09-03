@@ -22,6 +22,7 @@ import { ISK_DERIVATION_PATHS, ISK_DEFAULT_KIND } from "@/lib/isk/network";
 import { LTC_DERIVATION_PATHS, LTC_DEFAULT_KIND } from "@/lib/ltc/network";
 import { DOGE_DERIVATION_PATHS, DOGE_DEFAULT_KIND } from "@/lib/doge/network";
 import { TRON_DERIVATION_PATH } from "@/lib/tron/network";
+import { SOLANA_DERIVATION_PATH } from "@/lib/solana/network";
 
 type Common = {
   open: boolean;
@@ -43,20 +44,27 @@ export type WalletDetailProps =
       receiveAddress: string | null;
       txCount: number | null;
     })
-  | (Common & {
-      kind: "tron";
-      address: string | null;
-      balanceText: string;
-      fiatText: string | null;
-      txCount: number | null;
-    })
-  | (Common & {
-      kind: "evm";
-      chainId: EvmChainId;
-      address: string | null;
-      balanceText: string;
-      fiatText: string | null;
-    });
+   | (Common & {
+       kind: "tron";
+       address: string | null;
+       balanceText: string;
+       fiatText: string | null;
+       txCount: number | null;
+     })
+   | (Common & {
+       kind: "solana";
+       address: string | null;
+       balanceText: string;
+       fiatText: string | null;
+       txCount: number | null;
+     })
+   | (Common & {
+       kind: "evm";
+       chainId: EvmChainId;
+       address: string | null;
+       balanceText: string;
+       fiatText: string | null;
+     });
 
 export function WalletDetailSheet(props: WalletDetailProps) {
   return (
@@ -72,6 +80,8 @@ export function WalletDetailSheet(props: WalletDetailProps) {
             <EvmDetails {...props} />
           ) : props.kind === "tron" ? (
             <TronDetails {...props} />
+          ) : props.kind === "solana" ? (
+            <SolanaDetails {...props} />
           ) : (
             <BtcForkDetails {...props} />
           )}
@@ -381,6 +391,21 @@ function TronDetails(props: Extract<WalletDetailProps, { kind: "tron" }>) {
       <Field label="Native asset" value="TRX" />
       <Field label="Address type" value="Base58Check (T…)" />
       <Field label="Derivation path" value={TRON_DERIVATION_PATH} mono />
+      {props.address && <Field label="Address" value={props.address} mono copy />}
+      {props.txCount != null && <Field label="Transactions" value={String(props.txCount)} />}
+    </>
+  );
+}
+
+function SolanaDetails(props: Extract<WalletDetailProps, { kind: "solana" }>) {
+  return (
+    <>
+      <RenamableName chain="solana" />
+      <BalanceRow balance={props.balanceText} fiat={props.fiatText} />
+      <Field label="Chain" value={CHAIN_META.solana.name} />
+      <Field label="Native asset" value="SOL" />
+      <Field label="Address type" value="Ed25519 / base58" />
+      <Field label="Derivation path" value={SOLANA_DERIVATION_PATH} mono />
       {props.address && <Field label="Address" value={props.address} mono copy />}
       {props.txCount != null && <Field label="Transactions" value={String(props.txCount)} />}
     </>

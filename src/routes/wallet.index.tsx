@@ -3,6 +3,8 @@ import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
+import { deriveSolanaAccount, formatSol } from "@/lib/solana/network";
+import { SolanaActivity, SolanaTile, useSolanaData } from "@/components/wallet/SolanaTile";
 import { scanAccount } from "@/lib/txc/scan";
 import { scanIskAccount } from "@/lib/isk/scan";
 import { ISK_DEFAULT_KIND } from "@/lib/isk/network";
@@ -77,7 +79,7 @@ export const Route = createFileRoute("/wallet/")({
 });
 
 function WalletHome() {
-  const { root, unlocked } = useWallet();
+  const { root, unlocked, seed } = useWallet();
   const fetchPrice = useServerFn(getTxcPriceUsd);
   const fetchAllPrices = useServerFn(getAllPricesUsd);
   const qc = useQueryClient();
@@ -432,6 +434,11 @@ function WalletHome() {
     amount: tron.tokens[i]?.data ?? 0n,
   }));
 
+  // Solana native SOL data. The Ed25519 keypair is created only while unlocked.
+  const solanaEnabled = enabled.includes("solana");
+  const solanaAccount = useMemo(() => (seed ? deriveSolanaAccount(seed) : null), [seed]);
+  const solana = useSolanaData(solanaAccount?.address ?? null, !!unlocked && solanaEnabled);
+
   // EVM data (only for enabled EVM chains)
   const evmEnabled = enabled.filter((c) => c in EVM_CHAINS) as EvmChainId[];
   const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
@@ -440,7 +447,7 @@ function WalletHome() {
     queryKey: ["all-prices"],
     queryFn: () => fetchAllPrices(),
     staleTime: 10 * 60_000,
-    enabled: evmEnabled.length > 0,
+    enabled: evmEnabled.length > 0 || solanaEnabled,
   });
   // Native balances always run for all enabled EVM chains so the portfolio
   // total is complete on open. One RPC call each = cheap.
@@ -612,7 +619,22 @@ function WalletHome() {
                       }}
                     />
                   )}
-                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && slot.chain !== "ltc" && slot.chain !== "doge" && slot.chain !== "tron" && (
+                  {slot.kind === "chain" && slot.chain === "solana" && (
+                    <SolanaTile
+                      address={solanaAccount?.address ?? null}
+                      label={getChainLabel("solana")}
+                      balanceLamports={solana.balance.data ?? 0}
+                      loading={solana.balance.isLoading}
+                      priceUsd={allPrices.data?.prices?.SOL ?? null}
+                      refreshing={solana.balance.isFetching}
+                      onRefresh={() => void solana.refetch()}
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setTileOpen("solana");
+                      }}
+                    />
+                  )}
+                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && slot.chain !== "ltc" && slot.chain !== "doge" && slot.chain !== "tron" && slot.chain !== "solana" && (
                     <EvmTile
                       chainId={slot.chain as EvmChainId}
                       address={evmAddress}
@@ -894,14 +916,17 @@ function WalletHome() {
           {activeChain === "tron" && !activeWatch && !activeWif && (
             <TronActivity address={tronAddress} />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
+          {activeChain === "solana" && !activeWatch && !activeWif && (
+            <SolanaActivity address={solanaAccount?.address ?? null} rows={solana.history.data ?? null} />
+          )}
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && activeChain !== "solana" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
             <EvmActivity
               chainId={activeChain as EvmChainId}
               address={evmAddress}
               onOpen={(t) => setDetail({ kind: "evm", chain: activeChain as EvmChainId, transfer: t })}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
+          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && activeChain !== "solana" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
@@ -1024,7 +1049,18 @@ function WalletHome() {
           txCount={null}
         />
       )}
-      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen !== "ltc" && tileOpen !== "doge" && tileOpen !== "tron" && tileOpen in EVM_CHAINS && (
+      {tileOpen === "solana" && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="solana"
+          address={solanaAccount?.address ?? null}
+          balanceText={`${formatSol(solana.balance.data ?? 0)} SOL`}
+          fiatText={allPrices.data?.prices?.SOL != null ? formatFiat((solana.balance.data ?? 0) / 1e9 * allPrices.data.prices.SOL) : null}
+          txCount={solana.history.data?.length ?? null}
+        />
+      )}
+      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen !== "ltc" && tileOpen !== "doge" && tileOpen !== "tron" && tileOpen !== "solana" && tileOpen in EVM_CHAINS && (
         <WalletDetailSheet
           open
           onClose={() => setTileOpen(null)}
@@ -1128,6 +1164,18 @@ function BottomActions({ chain }: { chain: ChainId }) {
           <Link to="/wallet/tron/send">
             <Send className="h-4 w-4 mr-2" /> Send
           </Link>
+        </Button>
+      </>
+    );
+  }
+  if (chain === "solana") {
+    return (
+      <>
+        <Button asChild size="lg" variant="outline" className="flex-1">
+          <Link to="/wallet/solana/receive"><QrCode className="h-4 w-4 mr-2" /> Receive</Link>
+        </Button>
+        <Button asChild size="lg" className="flex-1">
+          <Link to="/wallet/solana/send"><Send className="h-4 w-4 mr-2" /> Send</Link>
         </Button>
       </>
     );
