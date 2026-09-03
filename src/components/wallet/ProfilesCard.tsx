@@ -98,15 +98,17 @@ export function ProfilesCard({ compact }: { compact?: boolean }) {
 
   return (
     <Card className={compact ? undefined : "mt-5"}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Wallet className="h-5 w-5" /> Your wallets
-        </CardTitle>
-        <CardDescription>
-          Each wallet is a separate seed with its own chains, keys and contacts. One password
-          unlocks them all.
-        </CardDescription>
-      </CardHeader>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wallet className="h-5 w-5" /> Your wallets
+          </CardTitle>
+          <CardDescription>
+            Each wallet is a separate seed with its own chains, keys and contacts. One password
+            unlocks them all.
+          </CardDescription>
+        </CardHeader>
+      )}
       <CardContent className="space-y-2">
         {profiles.map((p) => {
           const isActive = p.id === activeProfileId;
