@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
+import { fetchLoginMessage, parseLoginInput, signInToNectar, type NectarLoginRequest } from "@/lib/nectar/auth";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { signMessageWithSeed, verifyMessage, type SignedMessage } from "@/lib/txc/message-sign";
 
@@ -25,6 +27,36 @@ export function SignMessageCard({ compact }: { compact?: boolean }) {
   const [vMessage, setVMessage] = useState("");
   const [vSignature, setVSignature] = useState("");
   const [vResult, setVResult] = useState<boolean | null>(null);
+
+  async function onNectarScan(text: string) {
+    setLoginError(null);
+    setLoginDone(false);
+    setLoginRequest(null);
+    try {
+      const request = parseLoginInput(text);
+      setLoginRequest(await fetchLoginMessage(request));
+    } catch (e) {
+      setLoginError(e instanceof Error ? e.message : "Could not read this NectarPay request.");
+    }
+  }
+
+  async function onNectarSign() {
+    if (!unlocked?.mnemonic || !loginRequest) return;
+    setLoginBusy(true);
+    setLoginError(null);
+    try {
+      await signInToNectar({
+        request: loginRequest,
+        mnemonic: unlocked.mnemonic,
+        passphrase: unlocked.passphrase,
+      });
+      setLoginDone(true);
+    } catch (e) {
+      setLoginError(e instanceof Error ? e.message : "Could not sign in to NectarPay.");
+    } finally {
+      setLoginBusy(false);
+    }
+  }
 
   async function onSign() {
     if (!unlocked) return;

@@ -27,6 +27,7 @@ interface LoginChallengeResponse {
   id?: string;
   nonce?: string;
   domain?: string;
+  issued_at?: string;
   expires_at?: string;
   status?: string;
   message?: string;
@@ -166,7 +167,25 @@ export async function fetchLoginMessage(request: NectarLoginRequest): Promise<Ne
   }
   if (body.status && body.status !== "pending") throw new Error("This NectarPay sign-in request is no longer waiting.");
   const message = body.message;
-  if (!message || !message.includes(`Nonce: ${request.nonce}`)) {
+  const responseDomain = body.domain ?? request.origin;
+  const responseIssuedAt = body.issued_at;
+  const expectedMessage = responseIssuedAt
+    ? [
+        `${responseDomain} wants you to sign in with your TXC wallet.`,
+        "",
+        `Nonce: ${request.nonce}`,
+        `Issued At: ${responseIssuedAt}`,
+        "By signing, you authorize a sign-in session for payHME.",
+        "This signature does not authorize any payment.",
+      ].join("\\n")
+    : null;
+  if (
+    !message ||
+    !expectedMessage ||
+    message !== expectedMessage ||
+    responseDomain !== request.origin ||
+    !message.includes(`Nonce: ${request.nonce}`)
+  ) {
     throw new Error("NectarPay returned an invalid sign-in message.");
   }
   const expiresAt = body.expires_at ? Date.parse(body.expires_at) : request.expiresAt;
