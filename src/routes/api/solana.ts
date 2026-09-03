@@ -34,8 +34,13 @@ export const Route = createFileRoute("/api/solana")({
     handlers: {
       POST: async ({ request }) => {
         if (!isAllowedCaller(request)) return new Response("Forbidden", { status: 403 });
+        const contentLength = Number(request.headers.get("content-length") ?? 0);
+        if (contentLength > 128_000) return new Response("Request too large", { status: 413 });
+        let rawBody: string;
+        try { rawBody = await request.text(); } catch { return new Response("Invalid request", { status: 400 }); }
+        if (rawBody.length > 128_000) return new Response("Request too large", { status: 413 });
         let body: unknown;
-        try { body = await request.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
+        try { body = JSON.parse(rawBody); } catch { return new Response("Invalid JSON", { status: 400 }); }
         const calls = Array.isArray(body) ? body : [body];
         for (const call of calls) {
           const method = (call as { method?: unknown })?.method;
@@ -47,7 +52,7 @@ export const Route = createFileRoute("/api/solana")({
           const upstream = await fetch(UPSTREAM, {
             method: "POST",
             headers: { "content-type": "application/json", accept: "application/json" },
-            body: JSON.stringify(body),
+            body: rawBody,
           });
           return new Response(await upstream.text(), {
             status: upstream.status,

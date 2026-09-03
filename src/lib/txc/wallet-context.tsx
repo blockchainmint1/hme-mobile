@@ -144,12 +144,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [loadFromMemory, refreshProfiles],
   );
 
+  const clearSensitiveSeed = useCallback(() => {
+    setSeed((previous) => {
+      previous?.fill(0);
+      return null;
+    });
+  }, []);
+
   const lock = useCallback(() => {
     clearSession();
     setUnlocked(null);
     setRoot(null);
-    setSeed(null);
-  }, []);
+    clearSensitiveSeed();
+  }, [clearSensitiveSeed]);
 
   const forget = useCallback(() => {
     deleteWallet();
@@ -157,7 +164,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     clearWalletTraces();
     setUnlocked(null);
     setRoot(null);
-    setSeed(null);
+    clearSensitiveSeed();
     refreshProfiles();
   }, [refreshProfiles]);
 

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { useWallet } from "@/lib/txc/wallet-context";
-import { deriveSolanaAccount, formatSol, isValidSolanaAddress, solToLamports, explorerTxUrl } from "@/lib/solana/network";
+import { deriveSolanaAccount, formatSol, isValidSolanaAddress, solToLamports, explorerTxUrl, SOLANA_FEE_RESERVE_LAMPORTS } from "@/lib/solana/network";
 import { getSolBalance, sendSol } from "@/lib/solana/api";
 
 export const Route = createFileRoute("/wallet/solana/send")({
@@ -44,7 +44,7 @@ function SolanaSend() {
   const validTo = isValidSolanaAddress(to);
   let lamports = 0n;
   try { lamports = solToLamports(amount); } catch { lamports = 0n; }
-  const overBalance = lamports > BigInt(balance.data ?? 0);
+  const overBalance = lamports + BigInt(SOLANA_FEE_RESERVE_LAMPORTS) > BigInt(balance.data ?? 0);
   const hasAmount = lamports > 0n;
 
   async function submit() {
@@ -68,7 +68,7 @@ function SolanaSend() {
       <p className="text-sm text-muted-foreground">Available: {balance.data == null ? "…" : `${formatSol(balance.data)} SOL`}</p>
       <div className="space-y-2"><Label htmlFor="solana-to">Recipient address</Label><div className="flex gap-2"><Input id="solana-to" value={to} onChange={(e) => setTo(e.target.value.trim())} placeholder="Solana address" className="font-mono text-sm" autoCapitalize="none" autoCorrect="off" spellCheck={false} /><QrScanButton onScan={(raw) => setTo(raw.trim())} /><AddressBookButton chain="solana" onPick={setTo} /></div>{to && !validTo && <p className="text-xs text-destructive">That isn&apos;t a valid Solana address.</p>}</div>
       <div className="space-y-2"><Label htmlFor="solana-amount">Amount</Label><Input id="solana-amount" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} inputMode="decimal" placeholder="0.00" />{overBalance && <p className="text-xs text-destructive">More than your balance, before network fee.</p>}</div>
-      <p className="text-xs text-muted-foreground">A small network fee is added by Solana. Leave a little SOL in this wallet to pay it.</p>
+      <p className="text-xs text-muted-foreground">Keep a little SOL in this wallet for the network fee.</p>
       <Button className="w-full" size="lg" disabled={!account || !validTo || !hasAmount || overBalance || sending} onClick={submit}>{sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <SendIcon className="h-4 w-4 mr-2" />}Send SOL</Button>
     </CardContent></Card>
   </main>;

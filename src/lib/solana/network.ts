@@ -7,6 +7,8 @@ export const SOLANA_DERIVATION_PATH = "m/44'/501'/0'/0'";
 export const SOLANA_RPC = "/api/solana";
 export const SOLANA_EXPLORER = "https://solscan.io";
 export const LAMPORTS_PER_SOL = 1_000_000_000;
+/** Conservative rent-free reserve for the small system-transfer network fee. */
+export const SOLANA_FEE_RESERVE_LAMPORTS = 10_000;
 export const SOLANA_COIN_TYPE = 501;
 
 export interface SolanaAccount {
