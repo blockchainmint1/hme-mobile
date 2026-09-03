@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { clearReservations } from "@/lib/txc/spent-outpoints";
 
-export function DeepRescanCard() {
+export function DeepRescanCard({ compact }: { compact?: boolean }) {
   const { root, unlocked } = useWallet();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);

@@ -5,14 +5,14 @@ import { Switch } from "@/components/ui/switch";
 import { useFeature } from "@/lib/feature-prefs";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 
-export function FeaturesCard() {
+export function FeaturesCard({ compact }: { compact?: boolean }) {
   const [evmSwap, setEvmSwap] = useFeature("evmSwap");
   const [utxoSwap, setUtxoSwap] = useFeature("utxoSwap");
   const [confirmLast4, setConfirmLast4] = useFeature("confirmLast4");
   const [hideSpam, setHideSpam] = useFeature("hideSpamTokens");
   const exchangeAllowed = useExchangeFeaturesAllowed();
   return (
-    <Card>
+    <Card className={compact ? undefined : undefined}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-5 w-5" /> Extra features

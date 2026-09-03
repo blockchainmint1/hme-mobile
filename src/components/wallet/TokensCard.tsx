@@ -38,9 +38,9 @@ import type { Address } from "viem";
 
 const CHAINS: EvmChainId[] = ["eth", "base", "bsc"];
 
-export function TokensCard() {
+export function TokensCard({ compact }: { compact?: boolean }) {
   return (
-    <Card>
+    <Card className={compact ? undefined : undefined}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Coins className="h-5 w-5" /> Tokens

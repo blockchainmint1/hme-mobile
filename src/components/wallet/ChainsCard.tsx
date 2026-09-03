@@ -11,7 +11,7 @@ import {
   type ChainId,
 } from "@/lib/chain-prefs";
 
-export function ChainsCard() {
+export function ChainsCard({ compact }: { compact?: boolean }) {
   const [prefs, setPrefs] = useState<Record<ChainId, boolean>>(() => getChainPrefs());
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export function ChainsCard() {
   }, []);
 
   return (
-    <Card>
+    <Card className={compact ? undefined : undefined}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Layers className="h-5 w-5" /> Chains

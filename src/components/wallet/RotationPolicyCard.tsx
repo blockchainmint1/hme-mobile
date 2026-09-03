@@ -12,11 +12,11 @@ import {
 
 const OPTIONS: RotationPolicy[] = ["on-receive", "on-load", "manual", "never"];
 
-export function RotationPolicyCard() {
+export function RotationPolicyCard({ compact }: { compact?: boolean }) {
   const [policy, setPolicy] = useState<RotationPolicy>(() => getRotationPolicy());
 
   return (
-    <Card>
+    <Card className={compact ? undefined : undefined}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <RefreshCw className="h-5 w-5" /> Receive address rotation
