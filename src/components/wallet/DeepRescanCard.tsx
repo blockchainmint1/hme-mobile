@@ -12,7 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { clearReservations } from "@/lib/txc/spent-outpoints";
 
-export function DeepRescanCard() {
+export function DeepRescanCard({ compact }: { compact?: boolean }) {
   const { root, unlocked } = useWallet();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -42,17 +42,19 @@ export function DeepRescanCard() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <RefreshCw className="h-5 w-5" /> Deep rescan (TXC)
-        </CardTitle>
-        <CardDescription>
-          Normal refreshes only check the addresses you're actively using. Run a
-          deep rescan if a balance ever looks wrong or you've restored an older
-          backup that used many addresses. It also releases any coins the wallet
-          set aside for a transaction that never confirmed.
-        </CardDescription>
-      </CardHeader>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5" /> Deep rescan (TXC)
+          </CardTitle>
+          <CardDescription>
+            Normal refreshes only check the addresses you're actively using. Run a
+            deep rescan if a balance ever looks wrong or you've restored an older
+            backup that used many addresses. It also releases any coins the wallet
+            set aside for a transaction that never confirmed.
+          </CardDescription>
+        </CardHeader>
+      )}
       <CardContent>
         <Button variant="outline" onClick={rescan} disabled={busy}>
           {busy ? "Rescanning…" : "Run deep rescan"}

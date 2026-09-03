@@ -9,7 +9,7 @@ import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { signMessageWithSeed, verifyMessage, type SignedMessage } from "@/lib/txc/message-sign";
 
-export function SignMessageCard() {
+export function SignMessageCard({ compact }: { compact?: boolean }) {
   const { unlocked } = useWallet();
   const seedless = !unlocked || unlocked.mode === "keyonly" || !unlocked.mnemonic;
 
@@ -50,16 +50,18 @@ export function SignMessageCard() {
   }
 
   return (
-    <Card className="mt-5">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <PenLine className="h-5 w-5" /> Sign &amp; verify message
-        </CardTitle>
-        <CardDescription>
-          Prove you control a TEXITcoin address by signing a message with its key. Signing costs
-          nothing, never touches the blockchain, and never moves funds.
-        </CardDescription>
-      </CardHeader>
+    <Card className={compact ? undefined : "mt-5"}>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PenLine className="h-5 w-5" /> Sign &amp; verify message
+          </CardTitle>
+          <CardDescription>
+            Prove you control a TEXITcoin address by signing a message with its key. Signing costs
+            nothing, never touches the blockchain, and never moves funds.
+          </CardDescription>
+        </CardHeader>
+      )}
       <CardContent className="space-y-4">
         <div className="flex gap-2">
           <Button

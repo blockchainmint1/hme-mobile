@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { useFeature } from "@/lib/feature-prefs";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 
-export function FeaturesCard() {
+export function FeaturesCard({ compact }: { compact?: boolean }) {
   const [evmSwap, setEvmSwap] = useFeature("evmSwap");
   const [utxoSwap, setUtxoSwap] = useFeature("utxoSwap");
   const [confirmLast4, setConfirmLast4] = useFeature("confirmLast4");
@@ -13,14 +13,16 @@ export function FeaturesCard() {
   const exchangeAllowed = useExchangeFeaturesAllowed();
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5" /> Extra features
-        </CardTitle>
-        <CardDescription>
-          Opt-in features and safety checks. Toggle to fit how you use the wallet.
-        </CardDescription>
-      </CardHeader>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5" /> Extra features
+          </CardTitle>
+          <CardDescription>
+            Opt-in features and safety checks. Toggle to fit how you use the wallet.
+          </CardDescription>
+        </CardHeader>
+      )}
       <CardContent className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
