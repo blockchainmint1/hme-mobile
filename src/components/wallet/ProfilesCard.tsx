@@ -38,7 +38,7 @@ import {
 import { useWallet } from "@/lib/txc/wallet-context";
 import { deleteProfileWallet, renameStoredWallet } from "@/lib/txc/storage";
 
-export function ProfilesCard() {
+export function ProfilesCard({ compact }: { compact?: boolean }) {
   const { profiles, activeProfileId, switchProfile, refreshProfiles, rename, unlocked } =
     useWallet();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -97,7 +97,7 @@ export function ProfilesCard() {
   const pendingLabel = profiles.find((p) => p.id === pendingRemove)?.label ?? "This wallet";
 
   return (
-    <Card className="mt-5">
+    <Card className={compact ? undefined : "mt-5"}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Wallet className="h-5 w-5" /> Your wallets
