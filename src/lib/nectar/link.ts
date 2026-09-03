@@ -200,6 +200,21 @@ export function consentMode(manifest: NectarManifest, identityAddress: string): 
 const ZPUB_VERSIONS = { public: 0x04b24746, private: 0x04b2430c };
 const XPUB_VERSIONS = { public: 0x0488b21e, private: 0x0488ade4 };
 
+/**
+ * bip32 validates the whole network object (wif included), so synthetic
+ * serializations must carry mainnet Bitcoin defaults alongside the versions.
+ */
+function serializationNetwork(bip32Versions: { public: number; private: number }) {
+  return {
+    messagePrefix: "\x18Bitcoin Signed Message:\n",
+    bech32: "bc",
+    bip32: bip32Versions,
+    pubKeyHash: 0x00,
+    scriptHash: 0x05,
+    wif: 0x80,
+  };
+}
+
 function accountXpub(
   seed: Uint8Array,
   path: string,
@@ -207,6 +222,7 @@ function accountXpub(
 ): string {
   return bip32.fromSeed(seed, net as never).derivePath(path).neutered().toBase58();
 }
+
 
 export interface WalletKeys {
   /** Stable wallet ID across devices: TXC legacy P2PKH at m/44'/696969'/0'/0/0. */
@@ -220,16 +236,16 @@ export async function deriveWalletKeys(mnemonic: string, passphrase = ""): Promi
   const txcRoot = rootFromSeed(seed);
   const identityAddress = deriveAddress(txcRoot, "bip44", 0, 0).address;
 
-  const evm = accountXpub(seed, "m/44'/60'/0'", { bip32: XPUB_VERSIONS });
+  const evm = accountXpub(seed, "m/44'/60'/0'", serializationNetwork(XPUB_VERSIONS));
   const xpubs: Record<string, string> = {
     TXC: accountXpub(seed, TXC_PATHS.bip44, TXC_NETWORK),
-    BTC: accountXpub(seed, "m/84'/0'/0'", { bip32: ZPUB_VERSIONS }),
+    BTC: accountXpub(seed, "m/84'/0'/0'", serializationNetwork(ZPUB_VERSIONS)),
     EVM: evm,
     ZCU: evm,
     LTC: accountXpub(seed, LTC_DERIVATION_PATHS.bip84, LTC_NETWORK),
     DOGE: accountXpub(seed, DOGE_DERIVATION_PATHS.bip44, DOGE_NETWORK),
     ISK: accountXpub(seed, ISK_DERIVATION_PATHS.bip44, ISK_NETWORK),
-    TRX: accountXpub(seed, `m/44'/${TRON_COIN_TYPE}'/0'`, { bip32: XPUB_VERSIONS }),
+    TRX: accountXpub(seed, `m/44'/${TRON_COIN_TYPE}'/0'`, serializationNetwork(XPUB_VERSIONS)),
     // Solana is ed25519: no BIP32 xpub exists, so we hand over the single
     // account public key (base58) derived at m/44'/501'/0'/0'.
     SOL: deriveSolanaAddress(seed),
