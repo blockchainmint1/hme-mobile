@@ -39,8 +39,8 @@ export function deriveSolanaAddress(seed: Uint8Array): string {
 
 export function isValidSolanaAddress(address: string): boolean {
   try {
-    const key = new PublicKey(address.trim());
-    return PublicKey.isOnCurve(key.toBytes()) || key.toBytes().length === 32;
+    new PublicKey(address.trim());
+    return address.trim().length > 0;
   } catch {
     return false;
   }

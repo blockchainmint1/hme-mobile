@@ -35,6 +35,8 @@ import { clearWalletTraces } from "@/lib/query-persist";
 interface WalletContextValue {
   unlocked: UnlockedWallet | null;
   root: BIP32Interface | null;
+  /** Mnemonic-derived seed kept only while the wallet is unlocked. */
+  seed: Uint8Array | null;
   unlock: (password: string) => Promise<boolean>;
   lock: () => void;
   forget: () => void;
@@ -62,6 +64,7 @@ const Ctx = createContext<WalletContextValue | null>(null);
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [unlocked, setUnlocked] = useState<UnlockedWallet | null>(null);
   const [root, setRoot] = useState<BIP32Interface | null>(null);
+  const [seed, setSeed] = useState<Uint8Array | null>(null);
   const autoLockTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [profiles, setProfiles] = useState<WalletProfileSummary[]>([]);
   const [activeProfile, setActiveProfile] = useState<string>("default");
@@ -94,17 +97,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // random anchor and is used only as the wrapping key for imported WIFs —
     // no addresses are ever derived from it.
     let nextRoot;
+    let nextSeed: Uint8Array | null = null;
     if (loadedWallet.mode === "keyonly") {
       const bin = atob(loadedWallet.anchor ?? "");
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       nextRoot = rootFromSeed(bytes);
     } else {
-      const seed = await seedFromMnemonic(loadedWallet.mnemonic, loadedWallet.passphrase);
-      nextRoot = rootFromSeed(seed);
+      nextSeed = await seedFromMnemonic(loadedWallet.mnemonic, loadedWallet.passphrase);
+      nextRoot = rootFromSeed(nextSeed);
     }
     flushSync(() => {
       setRoot(nextRoot);
+      setSeed(nextSeed);
       setUnlocked(loadedWallet);
     });
     await saveSession(loadedWallet);
@@ -143,6 +148,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     clearSession();
     setUnlocked(null);
     setRoot(null);
+    setSeed(null);
   }, []);
 
   const forget = useCallback(() => {
@@ -151,6 +157,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     clearWalletTraces();
     setUnlocked(null);
     setRoot(null);
+    setSeed(null);
     refreshProfiles();
   }, [refreshProfiles]);
 
@@ -265,6 +272,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     () => ({
       unlocked,
       root,
+      seed,
       unlock,
       lock,
       forget,
@@ -280,6 +288,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [
       unlocked,
       root,
+      seed,
       unlock,
       lock,
       forget,

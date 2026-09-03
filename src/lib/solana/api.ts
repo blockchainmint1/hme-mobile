@@ -25,7 +25,7 @@ export function solanaConnection(): Connection {
 
 export async function getSolBalance(address: string): Promise<number> {
   const connection = solanaConnection();
-  return (await connection.getBalance(new PublicKey(address), "confirmed"));
+  return await connection.getBalance(new PublicKey(address), "confirmed");
 }
 
 export async function getSolSignatures(address: string, limit = 25): Promise<SolanaSignature[]> {
