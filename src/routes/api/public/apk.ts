@@ -12,7 +12,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 const APK_SOURCE_URL =
-  "https://hme-wallet.lovable.app/__l5e/assets-v1/9f051f23-1aba-42ee-8f66-f21bd0e3d15b/hme-wallet-0.1.202609031053-release.apk";
+  "https://txc.mypinata.cloud/ipfs/QmQwvoVEuXQmcT7bC9Ru3cF7ASYmgMB5GJeTMCtpe3Duj3?filename=hme-wallet-0.1.202609031053-release.apk";
 const APK_FILENAME = "hme-wallet-0.1.202609031053-release.apk";
 
 const corsHeaders = {
