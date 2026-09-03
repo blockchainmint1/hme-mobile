@@ -107,7 +107,11 @@ export function AddSeedCard({ compact }: { compact?: boolean }) {
   }
 
   return (
-    <Card className={compact ? undefined : "mt-5 border-primary/40"}>
+    <Card
+      className={
+        compact ? "rounded-none border-0 bg-transparent shadow-none" : "mt-5 border-primary/40"
+      }
+    >
       {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -119,7 +123,7 @@ export function AddSeedCard({ compact }: { compact?: boolean }) {
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent>
+      <CardContent className={compact ? "p-0" : undefined}>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
           <DialogTrigger asChild>
             <Button>Add seed phrase</Button>

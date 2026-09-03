@@ -21,7 +21,7 @@ export function ChainsCard({ compact }: { compact?: boolean }) {
   }, []);
 
   return (
-    <Card>
+    <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
       {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -33,7 +33,7 @@ export function ChainsCard({ compact }: { compact?: boolean }) {
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent className="space-y-3">
+      <CardContent className={compact ? "space-y-3 p-0" : "space-y-3"}>
         {CHAIN_ORDER.map((id) => {
           const meta = CHAIN_META[id];
           const isTxc = id === "txc";

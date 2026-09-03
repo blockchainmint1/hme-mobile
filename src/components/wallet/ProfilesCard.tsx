@@ -97,7 +97,9 @@ export function ProfilesCard({ compact }: { compact?: boolean }) {
   const pendingLabel = profiles.find((p) => p.id === pendingRemove)?.label ?? "This wallet";
 
   return (
-    <Card className={compact ? undefined : "mt-5"}>
+    <Card
+      className={compact ? "rounded-none border-0 bg-transparent shadow-none" : "mt-5"}
+    >
       {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -109,7 +111,7 @@ export function ProfilesCard({ compact }: { compact?: boolean }) {
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent className="space-y-2">
+      <CardContent className={compact ? "space-y-2 p-0" : "space-y-2"}>
         {profiles.map((p) => {
           const isActive = p.id === activeProfileId;
           return editingId === p.id ? (
