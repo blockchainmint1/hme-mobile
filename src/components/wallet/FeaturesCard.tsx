@@ -64,13 +64,9 @@ export function FeaturesCard({ compact }: { compact?: boolean }) {
     }
   }
 
-  const body = (
-    <>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Label htmlFor="feat-confirm-last4" className="text-sm font-medium">
-            Confirm last 4 of address
-          </Label>
+  return (
+    <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
+      {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" /> Extra features
@@ -80,7 +76,7 @@ export function FeaturesCard({ compact }: { compact?: boolean }) {
           </CardDescription>
         </CardHeader>
       )}
-      <CardContent className="space-y-4">
+      <CardContent className={compact ? "space-y-4 p-0" : "space-y-4"}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <Label htmlFor="feat-confirm-last4" className="text-sm font-medium">
