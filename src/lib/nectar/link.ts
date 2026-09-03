@@ -200,6 +200,21 @@ export function consentMode(manifest: NectarManifest, identityAddress: string): 
 const ZPUB_VERSIONS = { public: 0x04b24746, private: 0x04b2430c };
 const XPUB_VERSIONS = { public: 0x0488b21e, private: 0x0488ade4 };
 
+/**
+ * bip32 validates the whole network object (wif included), so synthetic
+ * serializations must carry mainnet Bitcoin defaults alongside the versions.
+ */
+function serializationNetwork(bip32Versions: { public: number; private: number }) {
+  return {
+    messagePrefix: "\x18Bitcoin Signed Message:\n",
+    bech32: "bc",
+    bip32: bip32Versions,
+    pubKeyHash: 0x00,
+    scriptHash: 0x05,
+    wif: 0x80,
+  };
+}
+
 function accountXpub(
   seed: Uint8Array,
   path: string,
@@ -207,6 +222,7 @@ function accountXpub(
 ): string {
   return bip32.fromSeed(seed, net as never).derivePath(path).neutered().toBase58();
 }
+
 
 export interface WalletKeys {
   /** Stable wallet ID across devices: TXC legacy P2PKH at m/44'/696969'/0'/0/0. */
