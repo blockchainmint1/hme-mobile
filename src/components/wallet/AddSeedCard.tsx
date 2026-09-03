@@ -31,7 +31,7 @@ import { toast } from "sonner";
 
 type Mode = "generate" | "import";
 
-export function AddSeedCard() {
+export function AddSeedCard({ compact }: { compact?: boolean }) {
   const { root, loadFromMemory } = useWallet();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("generate");
