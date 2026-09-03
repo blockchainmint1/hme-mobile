@@ -41,7 +41,7 @@ export function DeepRescanCard({ compact }: { compact?: boolean }) {
   };
 
   return (
-    <Card className={compact ? undefined : undefined}>
+    <Card>
       {!compact && (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

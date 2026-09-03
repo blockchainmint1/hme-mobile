@@ -17,15 +17,17 @@ export function RotationPolicyCard({ compact }: { compact?: boolean }) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <RefreshCw className="h-5 w-5" /> Receive address rotation
-        </CardTitle>
-        <CardDescription>
-          How often the Receive screen shows a fresh address. Old addresses always keep working —
-          your balance and history merge across every address this wallet has ever used.
-        </CardDescription>
-      </CardHeader>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5" /> Receive address rotation
+          </CardTitle>
+          <CardDescription>
+            How often the Receive screen shows a fresh address. Old addresses always keep working —
+            your balance and history merge across every address this wallet has ever used.
+          </CardDescription>
+        </CardHeader>
+      )}
       <CardContent>
         <RadioGroup
           value={policy}

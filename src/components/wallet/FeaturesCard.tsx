@@ -13,14 +13,16 @@ export function FeaturesCard({ compact }: { compact?: boolean }) {
   const exchangeAllowed = useExchangeFeaturesAllowed();
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5" /> Extra features
-        </CardTitle>
-        <CardDescription>
-          Opt-in features and safety checks. Toggle to fit how you use the wallet.
-        </CardDescription>
-      </CardHeader>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5" /> Extra features
+          </CardTitle>
+          <CardDescription>
+            Opt-in features and safety checks. Toggle to fit how you use the wallet.
+          </CardDescription>
+        </CardHeader>
+      )}
       <CardContent className="space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
