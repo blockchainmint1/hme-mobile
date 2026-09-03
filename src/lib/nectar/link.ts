@@ -16,6 +16,7 @@ import { ISK_NETWORK, ISK_DERIVATION_PATHS } from "@/lib/isk/network";
 import { LTC_NETWORK, LTC_DERIVATION_PATHS } from "@/lib/ltc/network";
 import { TXC_NETWORK, DERIVATION_PATHS as TXC_PATHS } from "@/lib/txc/network";
 import { TRON_COIN_TYPE } from "@/lib/tron/network";
+import { deriveSolanaAddress } from "@/lib/solana/network";
 import { seedFromMnemonic, deriveAddress, rootFromSeed } from "@/lib/txc/wallet";
 import { signMessageWithSeed } from "@/lib/txc/message-sign";
 
@@ -229,6 +230,9 @@ export async function deriveWalletKeys(mnemonic: string, passphrase = ""): Promi
     DOGE: accountXpub(seed, DOGE_DERIVATION_PATHS.bip44, DOGE_NETWORK),
     ISK: accountXpub(seed, ISK_DERIVATION_PATHS.bip44, ISK_NETWORK),
     TRX: accountXpub(seed, `m/44'/${TRON_COIN_TYPE}'/0'`, { bip32: XPUB_VERSIONS }),
+    // Solana is ed25519: no BIP32 xpub exists, so we hand over the single
+    // account public key (base58) derived at m/44'/501'/0'/0'.
+    SOL: deriveSolanaAddress(seed),
   };
   return { identityAddress, xpubs };
 }
