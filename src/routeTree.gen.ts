@@ -45,6 +45,7 @@ import { Route as ApiTronSplatRouteImport } from './routes/api/tron.$'
 import { Route as ApiPublicLatestReleaseRouteImport } from './routes/api/public/latest-release'
 import { Route as ApiPublicBuildIdRouteImport } from './routes/api/public/build-id'
 import { Route as ApiPublicApkRouteImport } from './routes/api/public/apk'
+import { Route as ApiNectarLinkRouteImport } from './routes/api/nectar.link'
 import { Route as ApiEvmChainRouteImport } from './routes/api/evm.$chain'
 import { Route as WalletWifIdSendRouteImport } from './routes/wallet.wif.$id.send'
 import { Route as WalletWifIdReceiveRouteImport } from './routes/wallet.wif.$id.receive'
@@ -234,6 +235,11 @@ const ApiPublicApkRoute = ApiPublicApkRouteImport.update({
   path: '/api/public/apk',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiNectarLinkRoute = ApiNectarLinkRouteImport.update({
+  id: '/api/nectar/link',
+  path: '/api/nectar/link',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEvmChainRoute = ApiEvmChainRouteImport.update({
   id: '/api/evm/$chain',
   path: '/api/evm/$chain',
@@ -294,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/nectar/link': typeof ApiNectarLinkRoute
   '/api/public/apk': typeof ApiPublicApkRoute
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
@@ -339,6 +346,7 @@ export interface FileRoutesByTo {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/nectar/link': typeof ApiNectarLinkRoute
   '/api/public/apk': typeof ApiPublicApkRoute
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
@@ -386,6 +394,7 @@ export interface FileRoutesById {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/nectar/link': typeof ApiNectarLinkRoute
   '/api/public/apk': typeof ApiPublicApkRoute
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
@@ -434,6 +443,7 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/api/nectar/link'
     | '/api/public/apk'
     | '/api/public/build-id'
     | '/api/public/latest-release'
@@ -479,6 +489,7 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet'
     | '/api/evm/$chain'
+    | '/api/nectar/link'
     | '/api/public/apk'
     | '/api/public/build-id'
     | '/api/public/latest-release'
@@ -525,6 +536,7 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/api/nectar/link'
     | '/api/public/apk'
     | '/api/public/build-id'
     | '/api/public/latest-release'
@@ -564,6 +576,7 @@ export interface RootRouteChildren {
   LegalTermsRoute: typeof LegalTermsRoute
   PayInvoiceIdRoute: typeof PayInvoiceIdRoute
   ApiEvmChainRoute: typeof ApiEvmChainRoute
+  ApiNectarLinkRoute: typeof ApiNectarLinkRoute
   ApiPublicApkRoute: typeof ApiPublicApkRoute
   ApiPublicBuildIdRoute: typeof ApiPublicBuildIdRoute
   ApiPublicLatestReleaseRoute: typeof ApiPublicLatestReleaseRoute
@@ -826,6 +839,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicApkRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/nectar/link': {
+      id: '/api/nectar/link'
+      path: '/api/nectar/link'
+      fullPath: '/api/nectar/link'
+      preLoaderRoute: typeof ApiNectarLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/evm/$chain': {
       id: '/api/evm/$chain'
       path: '/api/evm/$chain'
@@ -971,6 +991,7 @@ const rootRouteChildren: RootRouteChildren = {
   LegalTermsRoute: LegalTermsRoute,
   PayInvoiceIdRoute: PayInvoiceIdRoute,
   ApiEvmChainRoute: ApiEvmChainRoute,
+  ApiNectarLinkRoute: ApiNectarLinkRoute,
   ApiPublicApkRoute: ApiPublicApkRoute,
   ApiPublicBuildIdRoute: ApiPublicBuildIdRoute,
   ApiPublicLatestReleaseRoute: ApiPublicLatestReleaseRoute,
