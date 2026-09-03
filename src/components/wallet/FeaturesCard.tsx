@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Fingerprint, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
