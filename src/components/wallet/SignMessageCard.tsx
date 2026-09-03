@@ -26,6 +26,10 @@ export function SignMessageCard({ compact }: { compact?: boolean }) {
   const [loginBusy, setLoginBusy] = useState(false);
   const [loginDone, setLoginDone] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginRequest, setLoginRequest] = useState<(NectarLoginRequest & { message: string }) | null>(null);
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginDone, setLoginDone] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const [vAddress, setVAddress] = useState("");
   const [vMessage, setVMessage] = useState("");
