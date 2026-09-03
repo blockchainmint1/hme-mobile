@@ -59,6 +59,7 @@ function CreatePage() {
   const [confirmedBackup, setConfirmedBackup] = useState(false);
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
+  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scribbleProgress, setScribbleProgress] = useState(0);
@@ -129,7 +130,7 @@ function CreatePage() {
     try {
       const u = { mnemonic, passphrase: "", // SLIP-0044 legacy path (m/44'/696969'/0') — matches the TXC Web Wallet
       // and wTXC bridge, so seeds move between them cleanly.
-      kind: "bip44" as const, label: addingProfile ? `Wallet ${profiles.length + 1}` : "Main wallet" };
+      kind: "bip44" as const, label: name.trim() || (addingProfile ? `Wallet ${profiles.length + 1}` : "Main wallet") };
       if (addingProfile) {
         await saveWalletToNewProfile(u, sessionPw!);
       } else {
@@ -303,6 +304,20 @@ function CreatePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={finalize} className="space-y-4">
+            <div>
+              <Label htmlFor="wallet-name">Wallet name (optional)</Label>
+              <Input
+                id="wallet-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={addingProfile ? `Wallet ${profiles.length + 1}` : "Main wallet"}
+                maxLength={40}
+                className="mt-1"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Shown in your vault list so you can tell seeds apart.
+              </p>
+            </div>
             {addingProfile ? (
               <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
                 This wallet will be encrypted with the same password you already use on this

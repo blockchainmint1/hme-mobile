@@ -200,6 +200,7 @@ function ImportPage() {
   const [sessionPw] = useState<string | null>(() => getSessionPassword());
   const addingProfile = !!add && !!unlocked && !!sessionPw;
   const [phrase, setPhrase] = useState("");
+  const [name, setName] = useState("");
   const [passphrase, setPassphrase] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
@@ -224,7 +225,8 @@ function ImportPage() {
         mnemonic: m,
         passphrase,
         kind: "bip44" as DerivationKind,
-        label: addingProfile ? `Wallet ${profiles.length + 1}` : "Imported wallet",
+        label:
+          name.trim() || (addingProfile ? `Wallet ${profiles.length + 1}` : "Imported wallet"),
       };
       if (addingProfile) {
         await saveWalletToNewProfile(u, sessionPw!);
@@ -461,6 +463,22 @@ function ImportPage() {
               className="font-mono"
               autoFocus
             />
+
+            <div>
+              <Label htmlFor="wallet-name">Wallet name (optional)</Label>
+              <Input
+                id="wallet-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={addingProfile ? `Wallet ${profiles.length + 1}` : "Imported wallet"}
+                maxLength={40}
+                disabled={busy}
+                className="mt-1"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Shown in your vault list so you can tell seeds apart.
+              </p>
+            </div>
 
             {addingProfile ? (
               <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
