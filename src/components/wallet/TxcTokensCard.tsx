@@ -31,7 +31,7 @@ import {
 export function TxcTokensCard({ compact }: { compact?: boolean }) {
   const { tokens, enabled, isCustom } = useAllTxcTokens();
   return (
-    <Card className={compact ? undefined : undefined}>
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Coins className="h-5 w-5" /> TXC tokens (Omni)

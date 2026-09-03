@@ -12,7 +12,7 @@ export function FeaturesCard({ compact }: { compact?: boolean }) {
   const [hideSpam, setHideSpam] = useFeature("hideSpamTokens");
   const exchangeAllowed = useExchangeFeaturesAllowed();
   return (
-    <Card className={compact ? undefined : undefined}>
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Sparkles className="h-5 w-5" /> Extra features

@@ -107,16 +107,18 @@ export function AddSeedCard({ compact }: { compact?: boolean }) {
   }
 
   return (
-    <Card className="mt-5 border-primary/40">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <KeyRound className="h-5 w-5" /> Add a seed phrase
-        </CardTitle>
-        <CardDescription>
-          Upgrade this key-only wallet to a full HD wallet. Your imported private keys stay usable;
-          you just gain a seed phrase for recovery and multi-chain support.
-        </CardDescription>
-      </CardHeader>
+    <Card className={compact ? undefined : "mt-5 border-primary/40"}>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5" /> Add a seed phrase
+          </CardTitle>
+          <CardDescription>
+            Upgrade this key-only wallet to a full HD wallet. Your imported private keys stay usable;
+            you just gain a seed phrase for recovery and multi-chain support.
+          </CardDescription>
+        </CardHeader>
+      )}
       <CardContent>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
           <DialogTrigger asChild>

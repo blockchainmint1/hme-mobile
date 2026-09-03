@@ -16,7 +16,7 @@ export function RotationPolicyCard({ compact }: { compact?: boolean }) {
   const [policy, setPolicy] = useState<RotationPolicy>(() => getRotationPolicy());
 
   return (
-    <Card className={compact ? undefined : undefined}>
+    <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <RefreshCw className="h-5 w-5" /> Receive address rotation
