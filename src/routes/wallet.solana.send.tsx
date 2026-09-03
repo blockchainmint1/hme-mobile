@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { useWallet } from "@/lib/txc/wallet-context";
-import { deriveSolanaAccount, formatSol, isValidSolanaAddress, solToLamports, LAMPORTS_PER_SOL, explorerTxUrl } from "@/lib/solana/network";
+import { deriveSolanaAccount, formatSol, isValidSolanaAddress, solToLamports, explorerTxUrl } from "@/lib/solana/network";
 import { getSolBalance, sendSol } from "@/lib/solana/api";
 
 export const Route = createFileRoute("/wallet/solana/send")({
@@ -33,7 +33,14 @@ function SolanaSend() {
   const [amount, setAmount] = useState("");
   const [sending, setSending] = useState(false);
   const [signature, setSignature] = useState<string | null>(null);
-  const balance = useQuery({ queryKey: ["solana-balance", account?.address], enabled: !!account, queryFn: () => getSolBalance(account!.address) });
+  const balance = useQuery({
+    queryKey: ["solana-balance", account?.address],
+    enabled: !!account,
+    queryFn: () => {
+      if (!account) throw new Error("Wallet is locked");
+      return getSolBalance(account.address);
+    },
+  });
   const validTo = isValidSolanaAddress(to);
   let lamports = 0n;
   try { lamports = solToLamports(amount); } catch { lamports = 0n; }

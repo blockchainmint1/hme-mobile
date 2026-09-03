@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { ArrowDownLeft, ArrowUpRight, RefreshCw, Send, QrCode } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { useHideBalances, maskAmount } from "@/lib/hide-balances";
 import { formatFiat } from "@/lib/txc/units";
@@ -12,14 +11,20 @@ export function useSolanaData(address: string | null, enabled: boolean) {
   const balance = useQuery({
     queryKey: ["solana-balance", address],
     enabled: !!address && enabled,
-    queryFn: () => getSolBalance(address!),
+    queryFn: () => {
+      if (!address) throw new Error("Wallet is locked");
+      return getSolBalance(address);
+    },
     staleTime: 20_000,
     refetchInterval: 30_000,
   });
   const history = useQuery({
     queryKey: ["solana-history", address],
     enabled: !!address && enabled,
-    queryFn: () => getSolanaHistory(address!),
+    queryFn: () => {
+      if (!address) throw new Error("Wallet is locked");
+      return getSolanaHistory(address);
+    },
     staleTime: 20_000,
   });
   return { balance, history, refetch: () => Promise.all([balance.refetch(), history.refetch()]) };
