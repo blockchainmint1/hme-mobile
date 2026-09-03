@@ -20,9 +20,21 @@ export function ChainsCard({ compact }: { compact?: boolean }) {
     return () => window.removeEventListener("hme:chains-changed", h);
   }, []);
 
-  const body = (
-    <>
-      {CHAIN_ORDER.map((id) => {
+  return (
+    <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Layers className="h-5 w-5" /> Chains
+          </CardTitle>
+          <CardDescription>
+            Turn on the chains you want to see. All of them share the same seed phrase — swipe
+            between tiles on the wallet home to move between chains.
+          </CardDescription>
+        </CardHeader>
+      )}
+      <CardContent className={compact ? "space-y-3 p-0" : "space-y-3"}>
+        {CHAIN_ORDER.map((id) => {
           const meta = CHAIN_META[id];
           const isTxc = id === "txc";
           return (
