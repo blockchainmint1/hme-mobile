@@ -1,48 +1,33 @@
 /** Solana network and wallet primitives. */
-import { hmac } from "@noble/hashes/hmac.js";
-import { sha512 } from "@noble/hashes/sha2.js";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { base58 } from "@scure/base";
+import { deriveSolanaSeed, SOLANA_COIN_TYPE, SOLANA_DERIVATION_PATH } from "./derive";
 
-export const SOLANA_DERIVATION_PATH = "m/44'/501'/0'/0'";
+export { SOLANA_COIN_TYPE, SOLANA_DERIVATION_PATH };
+import { deriveSolanaAddress } from "./derive";
+export { deriveSolanaAddress };
 export const SOLANA_RPC = "/api/solana";
 export const SOLANA_EXPLORER = "https://solscan.io";
 export const LAMPORTS_PER_SOL = 1_000_000_000;
 /** Conservative rent-free reserve for the small system-transfer network fee. */
 export const SOLANA_FEE_RESERVE_LAMPORTS = 10_000;
-export const SOLANA_COIN_TYPE = 501;
 
 export interface SolanaAccount {
   address: string;
-  keypair: Keypair;
+  /** 32-byte ed25519 private seed; kept in memory only while unlocked. */
+  privateSeed: Uint8Array;
   path: string;
 }
 
-function deriveSlip10(seed: Uint8Array): Uint8Array {
-  let state = hmac(sha512, new TextEncoder().encode("ed25519 seed"), seed);
-  const segments = [44, SOLANA_COIN_TYPE, 0, 0];
-  for (const segment of segments) {
-    const data = new Uint8Array(37);
-    data[0] = 0;
-    data.set(state.slice(0, 32), 1);
-    new DataView(data.buffer).setUint32(33, segment + 0x80000000, false);
-    state = hmac(sha512, state.slice(32), data);
-  }
-  return state.slice(0, 32);
-}
-
 export function deriveSolanaAccount(seed: Uint8Array): SolanaAccount {
-  const keypair = Keypair.fromSeed(deriveSlip10(seed));
-  return { address: keypair.publicKey.toBase58(), keypair, path: SOLANA_DERIVATION_PATH };
-}
-
-export function deriveSolanaAddress(seed: Uint8Array): string {
-  return deriveSolanaAccount(seed).address;
+  const privateSeed = deriveSolanaSeed(seed);
+  return { address: deriveSolanaAddress(seed), privateSeed, path: SOLANA_DERIVATION_PATH };
 }
 
 export function isValidSolanaAddress(address: string): boolean {
+  const value = address.trim();
+  if (!value) return false;
   try {
-    new PublicKey(address.trim());
-    return address.trim().length > 0;
+    return base58.decode(value).length === 32;
   } catch {
     return false;
   }

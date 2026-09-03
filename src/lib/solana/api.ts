@@ -1,4 +1,11 @@
-import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+/**
+ * Solana RPC access through the same-origin proxy.
+ *
+ * `@solana/web3.js` is imported lazily inside each function: it pulls in
+ * `rpc-websockets`, which has no Worker-compatible export condition, so a
+ * static import breaks the SSR/Worker build.
+ */
+import type { Connection } from "@solana/web3.js";
 import { SOLANA_RPC, type SolanaAccount } from "./network";
 
 export interface SolanaTransfer {
@@ -19,17 +26,25 @@ export interface SolanaSignature {
   err: unknown;
 }
 
-export function solanaConnection(): Connection {
-  return new Connection(SOLANA_RPC, { commitment: "confirmed" });
+async function web3() {
+  return await import("@solana/web3.js");
+}
+
+export async function solanaConnection(): Promise<Connection> {
+  const { Connection: Conn } = await web3();
+  return new Conn(SOLANA_RPC, { commitment: "confirmed" });
 }
 
 export async function getSolBalance(address: string): Promise<number> {
-  const connection = solanaConnection();
+  const { PublicKey } = await web3();
+  const connection = await solanaConnection();
   return await connection.getBalance(new PublicKey(address), "confirmed");
 }
 
 export async function getSolSignatures(address: string, limit = 25): Promise<SolanaSignature[]> {
-  const rows = await solanaConnection().getSignaturesForAddress(new PublicKey(address), { limit }, "confirmed");
+  const { PublicKey } = await web3();
+  const connection = await solanaConnection();
+  const rows = await connection.getSignaturesForAddress(new PublicKey(address), { limit }, "confirmed");
   return rows.map((row) => ({
     signature: row.signature,
     slot: row.slot,
@@ -39,7 +54,8 @@ export async function getSolSignatures(address: string, limit = 25): Promise<Sol
 }
 
 export async function getSolanaHistory(address: string, limit = 25): Promise<SolanaTransfer[]> {
-  const connection = solanaConnection();
+  const { PublicKey } = await web3();
+  const connection = await solanaConnection();
   const publicKey = new PublicKey(address);
   const signatures = await connection.getSignaturesForAddress(publicKey, { limit }, "confirmed");
   const rows = await Promise.all(
@@ -90,18 +106,20 @@ export async function sendSol(
 ): Promise<string> {
   if (lamports <= 0n) throw new Error("Enter an amount");
   if (lamports > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Amount is too large");
-  const connection = solanaConnection();
+  const { Keypair, PublicKey, SystemProgram, Transaction } = await web3();
+  const keypair = Keypair.fromSeed(account.privateSeed);
+  const connection = await solanaConnection();
   const recipient = new PublicKey(to.trim());
   const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-  const transaction = new Transaction({ recentBlockhash: blockhash, feePayer: account.keypair.publicKey });
+  const transaction = new Transaction({ recentBlockhash: blockhash, feePayer: keypair.publicKey });
   transaction.add(
     SystemProgram.transfer({
-      fromPubkey: account.keypair.publicKey,
+      fromPubkey: keypair.publicKey,
       toPubkey: recipient,
       lamports: Number(lamports),
     }),
   );
-  transaction.sign(account.keypair);
+  transaction.sign(keypair);
   const signature = await connection.sendRawTransaction(transaction.serialize(), {
     skipPreflight: false,
     preflightCommitment: "confirmed",
