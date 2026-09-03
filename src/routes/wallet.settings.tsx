@@ -26,6 +26,8 @@ import { DeepRescanCard } from "@/components/wallet/DeepRescanCard";
 import { FeaturesCard } from "@/components/wallet/FeaturesCard";
 import { SecurityCheckupCard } from "@/components/wallet/SecurityCheckupCard";
 import { SignMessageCard } from "@/components/wallet/SignMessageCard";
+import { NectarLinkCard } from "@/components/wallet/NectarLinkCard";
+
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
@@ -191,6 +193,17 @@ function SettingsPage() {
         >
           <SignMessageCard compact />
         </SettingsSection>
+
+        <SettingsSection
+          value="merchant-link"
+          icon={Link2}
+          title="Merchant link"
+          description="Share watch-only keys with a Nectar Pay merchant."
+        >
+          <NectarLinkCard compact />
+        </SettingsSection>
+
+
 
         <SettingsSection
           value="tsd-cashout"
