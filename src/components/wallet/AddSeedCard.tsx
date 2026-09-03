@@ -31,7 +31,7 @@ import { toast } from "sonner";
 
 type Mode = "generate" | "import";
 
-export function AddSeedCard() {
+export function AddSeedCard({ compact }: { compact?: boolean }) {
   const { root, loadFromMemory } = useWallet();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("generate");
@@ -107,17 +107,23 @@ export function AddSeedCard() {
   }
 
   return (
-    <Card className="mt-5 border-primary/40">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <KeyRound className="h-5 w-5" /> Add a seed phrase
-        </CardTitle>
-        <CardDescription>
-          Upgrade this key-only wallet to a full HD wallet. Your imported private keys stay usable;
-          you just gain a seed phrase for recovery and multi-chain support.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Card
+      className={
+        compact ? "rounded-none border-0 bg-transparent shadow-none" : "mt-5 border-primary/40"
+      }
+    >
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5" /> Add a seed phrase
+          </CardTitle>
+          <CardDescription>
+            Upgrade this key-only wallet to a full HD wallet. Your imported private keys stay usable;
+            you just gain a seed phrase for recovery and multi-chain support.
+          </CardDescription>
+        </CardHeader>
+      )}
+      <CardContent className={compact ? "p-0" : undefined}>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
           <DialogTrigger asChild>
             <Button>Add seed phrase</Button>

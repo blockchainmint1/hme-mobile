@@ -26,12 +26,15 @@ import { Route as WalletBackupRouteImport } from './routes/wallet.backup'
 import { Route as PayInvoiceIdRouteImport } from './routes/pay.$invoiceId'
 import { Route as LegalTermsRouteImport } from './routes/legal.terms'
 import { Route as LegalPrivacyRouteImport } from './routes/legal.privacy'
+import { Route as ApiSolanaRouteImport } from './routes/api/solana'
 import { Route as WalletTxcPathsRouteImport } from './routes/wallet.txc.paths'
 import { Route as WalletTxcMigrateRouteImport } from './routes/wallet.txc.migrate'
 import { Route as WalletTxcConsolidateRouteImport } from './routes/wallet.txc.consolidate'
 import { Route as WalletTronSendRouteImport } from './routes/wallet.tron.send'
 import { Route as WalletTronReceiveRouteImport } from './routes/wallet.tron.receive'
 import { Route as WalletTronBridgeRouteImport } from './routes/wallet.tron.bridge'
+import { Route as WalletSolanaSendRouteImport } from './routes/wallet.solana.send'
+import { Route as WalletSolanaReceiveRouteImport } from './routes/wallet.solana.receive'
 import { Route as WalletLtcSwapRouteImport } from './routes/wallet.ltc.swap'
 import { Route as WalletLtcSendRouteImport } from './routes/wallet.ltc.send'
 import { Route as WalletLtcReceiveRouteImport } from './routes/wallet.ltc.receive'
@@ -44,6 +47,8 @@ import { Route as WalletDogeReceiveRouteImport } from './routes/wallet.doge.rece
 import { Route as ApiTronSplatRouteImport } from './routes/api/tron.$'
 import { Route as ApiPublicLatestReleaseRouteImport } from './routes/api/public/latest-release'
 import { Route as ApiPublicBuildIdRouteImport } from './routes/api/public/build-id'
+import { Route as ApiPublicApkRouteImport } from './routes/api/public/apk'
+import { Route as ApiNectarLinkRouteImport } from './routes/api/nectar.link'
 import { Route as ApiEvmChainRouteImport } from './routes/api/evm.$chain'
 import { Route as WalletWifIdSendRouteImport } from './routes/wallet.wif.$id.send'
 import { Route as WalletWifIdReceiveRouteImport } from './routes/wallet.wif.$id.receive'
@@ -138,6 +143,11 @@ const LegalPrivacyRoute = LegalPrivacyRouteImport.update({
   path: '/legal/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSolanaRoute = ApiSolanaRouteImport.update({
+  id: '/api/solana',
+  path: '/api/solana',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WalletTxcPathsRoute = WalletTxcPathsRouteImport.update({
   id: '/txc/paths',
   path: '/txc/paths',
@@ -166,6 +176,16 @@ const WalletTronReceiveRoute = WalletTronReceiveRouteImport.update({
 const WalletTronBridgeRoute = WalletTronBridgeRouteImport.update({
   id: '/tron/bridge',
   path: '/tron/bridge',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletSolanaSendRoute = WalletSolanaSendRouteImport.update({
+  id: '/solana/send',
+  path: '/solana/send',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletSolanaReceiveRoute = WalletSolanaReceiveRouteImport.update({
+  id: '/solana/receive',
+  path: '/solana/receive',
   getParentRoute: () => WalletRoute,
 } as any)
 const WalletLtcSwapRoute = WalletLtcSwapRouteImport.update({
@@ -228,6 +248,16 @@ const ApiPublicBuildIdRoute = ApiPublicBuildIdRouteImport.update({
   path: '/api/public/build-id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicApkRoute = ApiPublicApkRouteImport.update({
+  id: '/api/public/apk',
+  path: '/api/public/apk',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNectarLinkRoute = ApiNectarLinkRouteImport.update({
+  id: '/api/nectar/link',
+  path: '/api/nectar/link',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEvmChainRoute = ApiEvmChainRouteImport.update({
   id: '/api/evm/$chain',
   path: '/api/evm/$chain',
@@ -276,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
   '/wallet': typeof WalletRouteWithChildren
+  '/api/solana': typeof ApiSolanaRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/pay/$invoiceId': typeof PayInvoiceIdRoute
@@ -288,6 +319,8 @@ export interface FileRoutesByFullPath {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/nectar/link': typeof ApiNectarLinkRoute
+  '/api/public/apk': typeof ApiPublicApkRoute
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
@@ -300,6 +333,8 @@ export interface FileRoutesByFullPath {
   '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
   '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
+  '/wallet/solana/receive': typeof WalletSolanaReceiveRoute
+  '/wallet/solana/send': typeof WalletSolanaSendRoute
   '/wallet/tron/bridge': typeof WalletTronBridgeRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
   '/wallet/tron/send': typeof WalletTronSendRoute
@@ -320,6 +355,7 @@ export interface FileRoutesByTo {
   '/import': typeof ImportRoute
   '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
+  '/api/solana': typeof ApiSolanaRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/pay/$invoiceId': typeof PayInvoiceIdRoute
@@ -332,6 +368,8 @@ export interface FileRoutesByTo {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/nectar/link': typeof ApiNectarLinkRoute
+  '/api/public/apk': typeof ApiPublicApkRoute
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
@@ -344,6 +382,8 @@ export interface FileRoutesByTo {
   '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
   '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
+  '/wallet/solana/receive': typeof WalletSolanaReceiveRoute
+  '/wallet/solana/send': typeof WalletSolanaSendRoute
   '/wallet/tron/bridge': typeof WalletTronBridgeRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
   '/wallet/tron/send': typeof WalletTronSendRoute
@@ -366,6 +406,7 @@ export interface FileRoutesById {
   '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
   '/wallet': typeof WalletRouteWithChildren
+  '/api/solana': typeof ApiSolanaRoute
   '/legal/privacy': typeof LegalPrivacyRoute
   '/legal/terms': typeof LegalTermsRoute
   '/pay/$invoiceId': typeof PayInvoiceIdRoute
@@ -378,6 +419,8 @@ export interface FileRoutesById {
   '/wallet/wif-add': typeof WalletWifAddRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
+  '/api/nectar/link': typeof ApiNectarLinkRoute
+  '/api/public/apk': typeof ApiPublicApkRoute
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
@@ -390,6 +433,8 @@ export interface FileRoutesById {
   '/wallet/ltc/receive': typeof WalletLtcReceiveRoute
   '/wallet/ltc/send': typeof WalletLtcSendRoute
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
+  '/wallet/solana/receive': typeof WalletSolanaReceiveRoute
+  '/wallet/solana/send': typeof WalletSolanaSendRoute
   '/wallet/tron/bridge': typeof WalletTronBridgeRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
   '/wallet/tron/send': typeof WalletTronSendRoute
@@ -413,6 +458,7 @@ export interface FileRouteTypes {
     | '/import-key'
     | '/manifesto'
     | '/wallet'
+    | '/api/solana'
     | '/legal/privacy'
     | '/legal/terms'
     | '/pay/$invoiceId'
@@ -425,6 +471,8 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/api/nectar/link'
+    | '/api/public/apk'
     | '/api/public/build-id'
     | '/api/public/latest-release'
     | '/api/tron/$'
@@ -437,6 +485,8 @@ export interface FileRouteTypes {
     | '/wallet/ltc/receive'
     | '/wallet/ltc/send'
     | '/wallet/ltc/swap'
+    | '/wallet/solana/receive'
+    | '/wallet/solana/send'
     | '/wallet/tron/bridge'
     | '/wallet/tron/receive'
     | '/wallet/tron/send'
@@ -457,6 +507,7 @@ export interface FileRouteTypes {
     | '/import'
     | '/import-key'
     | '/manifesto'
+    | '/api/solana'
     | '/legal/privacy'
     | '/legal/terms'
     | '/pay/$invoiceId'
@@ -469,6 +520,8 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet'
     | '/api/evm/$chain'
+    | '/api/nectar/link'
+    | '/api/public/apk'
     | '/api/public/build-id'
     | '/api/public/latest-release'
     | '/api/tron/$'
@@ -481,6 +534,8 @@ export interface FileRouteTypes {
     | '/wallet/ltc/receive'
     | '/wallet/ltc/send'
     | '/wallet/ltc/swap'
+    | '/wallet/solana/receive'
+    | '/wallet/solana/send'
     | '/wallet/tron/bridge'
     | '/wallet/tron/receive'
     | '/wallet/tron/send'
@@ -502,6 +557,7 @@ export interface FileRouteTypes {
     | '/import-key'
     | '/manifesto'
     | '/wallet'
+    | '/api/solana'
     | '/legal/privacy'
     | '/legal/terms'
     | '/pay/$invoiceId'
@@ -514,6 +570,8 @@ export interface FileRouteTypes {
     | '/wallet/wif-add'
     | '/wallet/'
     | '/api/evm/$chain'
+    | '/api/nectar/link'
+    | '/api/public/apk'
     | '/api/public/build-id'
     | '/api/public/latest-release'
     | '/api/tron/$'
@@ -526,6 +584,8 @@ export interface FileRouteTypes {
     | '/wallet/ltc/receive'
     | '/wallet/ltc/send'
     | '/wallet/ltc/swap'
+    | '/wallet/solana/receive'
+    | '/wallet/solana/send'
     | '/wallet/tron/bridge'
     | '/wallet/tron/receive'
     | '/wallet/tron/send'
@@ -548,10 +608,13 @@ export interface RootRouteChildren {
   ImportKeyRoute: typeof ImportKeyRoute
   ManifestoRoute: typeof ManifestoRoute
   WalletRoute: typeof WalletRouteWithChildren
+  ApiSolanaRoute: typeof ApiSolanaRoute
   LegalPrivacyRoute: typeof LegalPrivacyRoute
   LegalTermsRoute: typeof LegalTermsRoute
   PayInvoiceIdRoute: typeof PayInvoiceIdRoute
   ApiEvmChainRoute: typeof ApiEvmChainRoute
+  ApiNectarLinkRoute: typeof ApiNectarLinkRoute
+  ApiPublicApkRoute: typeof ApiPublicApkRoute
   ApiPublicBuildIdRoute: typeof ApiPublicBuildIdRoute
   ApiPublicLatestReleaseRoute: typeof ApiPublicLatestReleaseRoute
   ApiTronSplatRoute: typeof ApiTronSplatRoute
@@ -680,6 +743,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LegalPrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/solana': {
+      id: '/api/solana'
+      path: '/api/solana'
+      fullPath: '/api/solana'
+      preLoaderRoute: typeof ApiSolanaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/wallet/txc/paths': {
       id: '/wallet/txc/paths'
       path: '/txc/paths'
@@ -720,6 +790,20 @@ declare module '@tanstack/react-router' {
       path: '/tron/bridge'
       fullPath: '/wallet/tron/bridge'
       preLoaderRoute: typeof WalletTronBridgeRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/solana/send': {
+      id: '/wallet/solana/send'
+      path: '/solana/send'
+      fullPath: '/wallet/solana/send'
+      preLoaderRoute: typeof WalletSolanaSendRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/solana/receive': {
+      id: '/wallet/solana/receive'
+      path: '/solana/receive'
+      fullPath: '/wallet/solana/receive'
+      preLoaderRoute: typeof WalletSolanaReceiveRouteImport
       parentRoute: typeof WalletRoute
     }
     '/wallet/ltc/swap': {
@@ -804,6 +888,20 @@ declare module '@tanstack/react-router' {
       path: '/api/public/build-id'
       fullPath: '/api/public/build-id'
       preLoaderRoute: typeof ApiPublicBuildIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/apk': {
+      id: '/api/public/apk'
+      path: '/api/public/apk'
+      fullPath: '/api/public/apk'
+      preLoaderRoute: typeof ApiPublicApkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/nectar/link': {
+      id: '/api/nectar/link'
+      path: '/api/nectar/link'
+      fullPath: '/api/nectar/link'
+      preLoaderRoute: typeof ApiNectarLinkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/evm/$chain': {
@@ -899,6 +997,8 @@ interface WalletRouteChildren {
   WalletLtcReceiveRoute: typeof WalletLtcReceiveRoute
   WalletLtcSendRoute: typeof WalletLtcSendRoute
   WalletLtcSwapRoute: typeof WalletLtcSwapRoute
+  WalletSolanaReceiveRoute: typeof WalletSolanaReceiveRoute
+  WalletSolanaSendRoute: typeof WalletSolanaSendRoute
   WalletTronBridgeRoute: typeof WalletTronBridgeRoute
   WalletTronReceiveRoute: typeof WalletTronReceiveRoute
   WalletTronSendRoute: typeof WalletTronSendRoute
@@ -927,6 +1027,8 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletLtcReceiveRoute: WalletLtcReceiveRoute,
   WalletLtcSendRoute: WalletLtcSendRoute,
   WalletLtcSwapRoute: WalletLtcSwapRoute,
+  WalletSolanaReceiveRoute: WalletSolanaReceiveRoute,
+  WalletSolanaSendRoute: WalletSolanaSendRoute,
   WalletTronBridgeRoute: WalletTronBridgeRoute,
   WalletTronReceiveRoute: WalletTronReceiveRoute,
   WalletTronSendRoute: WalletTronSendRoute,
@@ -947,10 +1049,13 @@ const rootRouteChildren: RootRouteChildren = {
   ImportKeyRoute: ImportKeyRoute,
   ManifestoRoute: ManifestoRoute,
   WalletRoute: WalletRouteWithChildren,
+  ApiSolanaRoute: ApiSolanaRoute,
   LegalPrivacyRoute: LegalPrivacyRoute,
   LegalTermsRoute: LegalTermsRoute,
   PayInvoiceIdRoute: PayInvoiceIdRoute,
   ApiEvmChainRoute: ApiEvmChainRoute,
+  ApiNectarLinkRoute: ApiNectarLinkRoute,
+  ApiPublicApkRoute: ApiPublicApkRoute,
   ApiPublicBuildIdRoute: ApiPublicBuildIdRoute,
   ApiPublicLatestReleaseRoute: ApiPublicLatestReleaseRoute,
   ApiTronSplatRoute: ApiTronSplatRoute,

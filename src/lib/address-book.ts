@@ -9,6 +9,7 @@ import { ISK_NETWORK } from "./isk/network";
 import { LTC_NETWORK } from "./ltc/network";
 import { DOGE_NETWORK } from "./doge/network";
 import { isValidTronAddress } from "./tron/address";
+import { isValidSolanaAddress } from "./solana/network";
 
 export type ContactChain =
   | "txc"
@@ -16,6 +17,7 @@ export type ContactChain =
   | "ltc"
   | "doge"
   | "tron"
+  | "solana"
   | "eth"
   | "base"
   | "bsc"
@@ -35,6 +37,7 @@ export const CHAIN_LABELS: Record<ContactChain, string> = {
   ltc: "Litecoin (LTC)",
   doge: "Dogecoin (DOGE)",
   tron: "Tron (TRX / TRC-20)",
+  solana: "Solana (SOL)",
   eth: "Ethereum (ETH)",
   base: "Base",
   bsc: "BNB Smart Chain",
@@ -83,6 +86,9 @@ export function validateAddress(chain: ContactChain, addr: string): string | nul
   }
   if (chain === "tron") {
     return isValidTronAddress(a) ? null : "Not a valid Tron address.";
+  }
+  if (chain === "solana") {
+    return isValidSolanaAddress(a) ? null : "Not a valid Solana address.";
   }
   return isAddress(a) ? null : "Not a valid EVM address.";
 }

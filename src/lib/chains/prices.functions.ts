@@ -12,7 +12,7 @@ export interface PricesResult {
   source: "cmc" | "unavailable";
 }
 
-const SYMBOLS = ["TXC", "ETH", "BNB"];
+const SYMBOLS = ["TXC", "ETH", "BNB", "SOL"];
 
 /**
  * ZCU is priced from the wZCU/USDC Uniswap V3 pool via the public wZCU API

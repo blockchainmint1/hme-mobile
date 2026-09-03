@@ -38,19 +38,21 @@ import type { Address } from "viem";
 
 const CHAINS: EvmChainId[] = ["eth", "base", "bsc"];
 
-export function TokensCard() {
+export function TokensCard({ compact }: { compact?: boolean }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Coins className="h-5 w-5" /> Tokens
-        </CardTitle>
-        <CardDescription>
-          Choose which L2 tokens to show on each EVM chain. Hidden tokens are
-          still resolvable if you scan a payment link for them.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-5">
+    <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Coins className="h-5 w-5" /> Tokens
+          </CardTitle>
+          <CardDescription>
+            Choose which L2 tokens to show on each EVM chain. Hidden tokens are
+            still resolvable if you scan a payment link for them.
+          </CardDescription>
+        </CardHeader>
+      )}
+      <CardContent className={compact ? "space-y-5 p-0" : "space-y-5"}>
         {CHAINS.map((c) => (
           <ChainTokens key={c} chain={c} />
         ))}

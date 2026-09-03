@@ -7,7 +7,7 @@ import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import { isKeyOnlyWallet } from "@/lib/txc/storage";
 
 
-export type ChainId = "txc" | EvmChainId | "isk" | "ltc" | "doge" | "tron" | "zcu";
+export type ChainId = "txc" | EvmChainId | "isk" | "ltc" | "doge" | "tron" | "solana" | "zcu";
 
 export interface ChainMeta {
   id: ChainId;
@@ -21,46 +21,19 @@ export interface ChainMeta {
 
 export const CHAIN_META: Record<ChainId, ChainMeta> = {
   txc: { id: "txc", name: "TEXITcoin", shortName: "TXC", accent: "#B45309" },
-  eth: {
-    id: "eth",
-    name: "Ethereum",
-    shortName: EVM_CHAINS.eth.shortName,
-    accent: EVM_CHAINS.eth.accent,
-  },
-  base: {
-    id: "base",
-    name: "Base",
-    shortName: EVM_CHAINS.base.shortName,
-    accent: EVM_CHAINS.base.accent,
-  },
-  bsc: {
-    id: "bsc",
-    name: "Binance Chain",
-    shortName: EVM_CHAINS.bsc.shortName,
-    accent: EVM_CHAINS.bsc.accent,
-  },
+  eth: { id: "eth", name: "Ethereum", shortName: EVM_CHAINS.eth.shortName, accent: EVM_CHAINS.eth.accent },
+  base: { id: "base", name: "Base", shortName: EVM_CHAINS.base.shortName, accent: EVM_CHAINS.base.accent },
+  bsc: { id: "bsc", name: "Binance Chain", shortName: EVM_CHAINS.bsc.shortName, accent: EVM_CHAINS.bsc.accent },
   isk: { id: "isk", name: "IskanderCoin", shortName: "ISK", accent: "#22C55E" },
   ltc: { id: "ltc", name: "Litecoin", shortName: "LTC", accent: "#345D9D" },
   doge: { id: "doge", name: "Dogecoin", shortName: "DOGE", accent: "#C2A633" },
   tron: { id: "tron", name: "Tron", shortName: "TRX", accent: "#EF0027" },
-  zcu: {
-    id: "zcu",
-    name: "Zero Chill",
-    shortName: EVM_CHAINS.zcu.shortName,
-    accent: EVM_CHAINS.zcu.accent,
-  },
+  solana: { id: "solana", name: "Solana", shortName: "SOL", accent: "#14F195" },
+  zcu: { id: "zcu", name: "Zero Chill", shortName: EVM_CHAINS.zcu.shortName, accent: EVM_CHAINS.zcu.accent },
 };
 
 export const CHAIN_ORDER: ChainId[] = [
-  "txc",
-  "eth",
-  "base",
-  "bsc",
-  "isk",
-  "ltc",
-  "doge",
-  "tron",
-  "zcu",
+  "txc", "eth", "base", "bsc", "isk", "ltc", "doge", "tron", "solana", "zcu",
 ];
 
 const ORDER_KEY_BASE = "hme.chains.order.v1";
@@ -128,6 +101,7 @@ const DEFAULT_ENABLED: Record<ChainId, boolean> = {
   ltc: false,
   doge: false,
   tron: false,
+  solana: false,
   zcu: false,
 };
 

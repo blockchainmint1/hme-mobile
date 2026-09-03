@@ -8,10 +8,14 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export const APP_VERSION = "0.1.202609020332";
+export const APP_VERSION = "0.1.202609020414";
 
-export const APK_URL =
-  "https://txc.mypinata.cloud/ipfs/QmU7iXC8ra2XCBZTxgX5H4uGUkT9z8Esj7EjLQFG2uJcHt?filename=hme-wallet-0.1.202609020332-release.apk";
+/**
+ * Download via our own endpoint, NOT the raw CDN asset: the CDN serves a
+ * generic binary content-type and Chrome saves the APK as ".zip", breaking
+ * tap-to-install. /api/public/apk streams it with the Android MIME type.
+ */
+export const APK_URL = "https://mobile.honest.money/api/public/apk";
 
 
 export type ReleasePlatform = "android" | "ios" | "web";

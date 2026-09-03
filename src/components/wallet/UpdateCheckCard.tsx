@@ -51,7 +51,7 @@ async function openDownload(url: string) {
 
 type Status = "idle" | "checking" | "current" | "update" | "unknown";
 
-export function UpdateCheckCard() {
+export function UpdateCheckCard({ compact }: { compact?: boolean }) {
   const [status, setStatus] = useState<Status>("idle");
   const [latest, setLatest] = useState<AppRelease | null>(null);
   const [webStale, setWebStale] = useState(false);
@@ -94,21 +94,25 @@ export function UpdateCheckCard() {
   const shellDiffersFromBundle = native && installed !== APP_VERSION;
 
   return (
-    <Card className="mt-5">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <RotateCw className="h-5 w-5" /> Updates
-        </CardTitle>
-        <CardDescription>
-          Installed {installed}
-          {native ? ` · ${platform}` : " · web"}
-          {latest ? ` · latest ${latest.version}` : ""}
-          {shellDiffersFromBundle ? (
-            <span className="block text-xs opacity-70">app code build {APP_VERSION}</span>
-          ) : null}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Card
+      className={compact ? "rounded-none border-0 bg-transparent shadow-none" : "mt-5"}
+    >
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RotateCw className="h-5 w-5" /> Updates
+          </CardTitle>
+          <CardDescription>
+            Installed {installed}
+            {native ? ` · ${platform}` : " · web"}
+            {latest ? ` · latest ${latest.version}` : ""}
+            {shellDiffersFromBundle ? (
+              <span className="block text-xs opacity-70">app code build {APP_VERSION}</span>
+            ) : null}
+          </CardDescription>
+        </CardHeader>
+      )}
+      <CardContent className={compact ? "space-y-3 p-0" : "space-y-3"}>
         {status === "update" && newerRelease && latest && (
           <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-2">
             <p className="text-sm">

@@ -19,6 +19,8 @@ import { EVM_CHAIN_LIST, deriveEvmAccount, evmClient, type EvmChainId } from "@/
 import { listWatchWallets, watchChangedEvent, type WatchWallet } from "@/lib/watch-only";
 import { getAddressStats } from "@/lib/txc/mempool";
 import { getEnabledChains } from "@/lib/chain-prefs";
+import { deriveSolanaAccount } from "@/lib/solana/network";
+import { getSolBalance } from "@/lib/solana/api";
 import { parsePaymentUri } from "@/lib/pay-uri";
 import { rootFingerprintHex } from "@/lib/txc/fingerprint";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
@@ -41,7 +43,7 @@ export const Route = createFileRoute("/wallet")({
 });
 
 function WalletLayout() {
-  const { unlocked, root } = useWallet();
+  const { unlocked, root, seed } = useWallet();
   const navigate = useNavigate();
   const [showPortfolio, setShowPortfolio] = useState(false);
 
@@ -66,6 +68,14 @@ function WalletLayout() {
   });
 
   const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
+  const solanaAddress = useMemo(() => (seed ? deriveSolanaAccount(seed).address : null), [seed]);
+  const solanaBalance = useQuery({
+    queryKey: ["solana-balance", solanaAddress],
+    enabled: !!solanaAddress && !!unlocked,
+    queryFn: () => getSolBalance(solanaAddress ?? ""),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+  });
   const allPricesFn = useServerFn(getAllPricesUsd);
   const allPrices = useQuery({
     queryKey: ["all-prices"],
@@ -110,6 +120,10 @@ function WalletLayout() {
         total += (Number(bal) / 1e18) * usd;
       }
     });
+    const solUsd = allPrices.data?.prices?.SOL;
+    if (solanaBalance.data != null && solUsd != null) {
+      total += (solanaBalance.data / 1e9) * solUsd;
+    }
     // Watch-only TXC balances (funded - spent, in sats).
     if (price.data?.usd) {
       watchList.forEach((_, i) => {
@@ -124,7 +138,7 @@ function WalletLayout() {
       });
     }
     return total;
-  }, [price.data, account.data, evmBalances, allPrices.data, watchList, watchBalances]);
+  }, [price.data, account.data, evmBalances, allPrices.data, solanaBalance.data, watchList, watchBalances]);
 
   // EVM chain picker when a scanned URI doesn't specify a chain.
   const [pickChain, setPickChain] = useState<

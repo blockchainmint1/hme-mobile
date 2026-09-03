@@ -12,21 +12,23 @@ import {
 
 const OPTIONS: RotationPolicy[] = ["on-receive", "on-load", "manual", "never"];
 
-export function RotationPolicyCard() {
+export function RotationPolicyCard({ compact }: { compact?: boolean }) {
   const [policy, setPolicy] = useState<RotationPolicy>(() => getRotationPolicy());
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <RefreshCw className="h-5 w-5" /> Receive address rotation
-        </CardTitle>
-        <CardDescription>
-          How often the Receive screen shows a fresh address. Old addresses always keep working —
-          your balance and history merge across every address this wallet has ever used.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5" /> Receive address rotation
+          </CardTitle>
+          <CardDescription>
+            How often the Receive screen shows a fresh address. Old addresses always keep working —
+            your balance and history merge across every address this wallet has ever used.
+          </CardDescription>
+        </CardHeader>
+      )}
+      <CardContent className={compact ? "p-0" : undefined}>
         <RadioGroup
           value={policy}
           onValueChange={(v) => {

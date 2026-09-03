@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { TSD_API_KEY_RE, maskKey, useCashoutApiKey } from "@/lib/cashout/api-key";
 
-export function TsdCashoutKeyCard() {
+export function TsdCashoutKeyCard({ compact }: { compact?: boolean }) {
   const allowed = useExchangeFeaturesAllowed();
   const [key, setKey] = useCashoutApiKey();
   const [input, setInput] = useState("");
@@ -35,18 +35,22 @@ export function TsdCashoutKeyCard() {
   }
 
   return (
-    <Card className="mt-5">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ArrowDownUp className="h-5 w-5" /> TSD cash-out
-        </CardTitle>
-        <CardDescription>
-          Turn TSD into USDC on Ethereum from the send screen. Create an account at
-          tsd.honest.money, mint an API key on your account page, and paste it here. Your account
-          decides the redemption fee — no codes needed.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Card
+      className={compact ? "rounded-none border-0 bg-transparent shadow-none" : "mt-5"}
+    >
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowDownUp className="h-5 w-5" /> TSD cash-out
+          </CardTitle>
+          <CardDescription>
+            Turn TSD into USDC on Ethereum from the send screen. Create an account at
+            tsd.honest.money, mint an API key on your account page, and paste it here. Your account
+            decides the redemption fee — no codes needed.
+          </CardDescription>
+        </CardHeader>
+      )}
+      <CardContent className={compact ? "p-0" : undefined}>
         {key ? (
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1.5 text-sm text-primary">

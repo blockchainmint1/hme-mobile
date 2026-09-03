@@ -28,20 +28,22 @@ import {
   useAllTxcTokens,
 } from "@/lib/txc/tokens";
 
-export function TxcTokensCard() {
+export function TxcTokensCard({ compact }: { compact?: boolean }) {
   const { tokens, enabled, isCustom } = useAllTxcTokens();
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Coins className="h-5 w-5" /> TXC tokens (Omni)
-        </CardTitle>
-        <CardDescription>
-          Toggle which Omni Layer tokens show under the TXC tile. Add a custom
-          property id if a new token isn't listed yet.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
+      {!compact && (
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Coins className="h-5 w-5" /> TXC tokens (Omni)
+          </CardTitle>
+          <CardDescription>
+            Toggle which Omni Layer tokens show under the TXC tile. Add a custom
+            property id if a new token isn't listed yet.
+          </CardDescription>
+        </CardHeader>
+      )}
+      <CardContent className={compact ? "space-y-3 p-0" : "space-y-3"}>
         {tokens.length === 0 && (
           <p className="text-xs text-muted-foreground">
             No tokens configured yet.
