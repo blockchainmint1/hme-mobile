@@ -9,7 +9,7 @@
 
 import { signMessageWithSeed, verifyMessage, type SignedMessage } from "@/lib/txc/message-sign";
 
-export const NECTAR_LOGIN_HOST = "app.nectar-pay.com";
+export const NECTAR_LOGIN_HOST = "pay.honest.money";
 const PROXY = "/api/nectar/link";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -177,7 +177,7 @@ export async function fetchLoginMessage(request: NectarLoginRequest): Promise<Ne
         `Issued At: ${responseIssuedAt}`,
         "By signing, you authorize a sign-in session for payHME.",
         "This signature does not authorize any payment.",
-      ].join("\\n")
+      ].join("\n")
     : null;
   if (
     !message ||
