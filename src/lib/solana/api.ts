@@ -33,7 +33,7 @@ export async function getSolSignatures(address: string, limit = 25): Promise<Sol
   return rows.map((row) => ({
     signature: row.signature,
     slot: row.slot,
-    blockTime: row.blockTime,
+    blockTime: row.blockTime ?? null,
     err: row.err,
   }));
 }
@@ -62,16 +62,17 @@ export async function getSolanaHistory(address: string, limit = 25): Promise<Sol
             if (parsed.type !== "transfer" || !parsed.info?.source || !parsed.info.destination) continue;
             const from = parsed.info.source;
             const to = parsed.info.destination;
-            return {
+            const transfer: SolanaTransfer = {
               signature: row.signature,
               slot: row.slot,
-              blockTime: row.blockTime,
+              blockTime: row.blockTime ?? null,
               from,
               to,
               lamports: parsed.info.lamports ?? 0,
               incoming: to === address,
               confirmed: true,
-            } satisfies SolanaTransfer;
+            };
+            return transfer;
           }
         } catch {
           return null;

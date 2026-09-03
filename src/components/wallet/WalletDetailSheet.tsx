@@ -45,7 +45,14 @@ export type WalletDetailProps =
       txCount: number | null;
     })
    | (Common & {
-       kind: "tron" | "solana";
+       kind: "tron";
+       address: string | null;
+       balanceText: string;
+       fiatText: string | null;
+       txCount: number | null;
+     })
+   | (Common & {
+       kind: "solana";
        address: string | null;
        balanceText: string;
        fiatText: string | null;
