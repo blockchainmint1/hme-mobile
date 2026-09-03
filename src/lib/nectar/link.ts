@@ -236,16 +236,16 @@ export async function deriveWalletKeys(mnemonic: string, passphrase = ""): Promi
   const txcRoot = rootFromSeed(seed);
   const identityAddress = deriveAddress(txcRoot, "bip44", 0, 0).address;
 
-  const evm = accountXpub(seed, "m/44'/60'/0'", { bip32: XPUB_VERSIONS });
+  const evm = accountXpub(seed, "m/44'/60'/0'", serializationNetwork(XPUB_VERSIONS));
   const xpubs: Record<string, string> = {
     TXC: accountXpub(seed, TXC_PATHS.bip44, TXC_NETWORK),
-    BTC: accountXpub(seed, "m/84'/0'/0'", { bip32: ZPUB_VERSIONS }),
+    BTC: accountXpub(seed, "m/84'/0'/0'", serializationNetwork(ZPUB_VERSIONS)),
     EVM: evm,
     ZCU: evm,
     LTC: accountXpub(seed, LTC_DERIVATION_PATHS.bip84, LTC_NETWORK),
     DOGE: accountXpub(seed, DOGE_DERIVATION_PATHS.bip44, DOGE_NETWORK),
     ISK: accountXpub(seed, ISK_DERIVATION_PATHS.bip44, ISK_NETWORK),
-    TRX: accountXpub(seed, `m/44'/${TRON_COIN_TYPE}'/0'`, { bip32: XPUB_VERSIONS }),
+    TRX: accountXpub(seed, `m/44'/${TRON_COIN_TYPE}'/0'`, serializationNetwork(XPUB_VERSIONS)),
     // Solana is ed25519: no BIP32 xpub exists, so we hand over the single
     // account public key (base58) derived at m/44'/501'/0'/0'.
     SOL: deriveSolanaAddress(seed),
