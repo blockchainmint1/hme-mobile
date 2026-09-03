@@ -3,6 +3,8 @@ import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@/lib/txc/wallet-context";
+import { deriveSolanaAccount } from "@/lib/solana/network";
+import { SolanaActivity, SolanaTile, useSolanaData } from "@/components/wallet/SolanaTile";
 import { scanAccount } from "@/lib/txc/scan";
 import { scanIskAccount } from "@/lib/isk/scan";
 import { ISK_DEFAULT_KIND } from "@/lib/isk/network";
@@ -77,7 +79,7 @@ export const Route = createFileRoute("/wallet/")({
 });
 
 function WalletHome() {
-  const { root, unlocked } = useWallet();
+  const { root, unlocked, seed } = useWallet();
   const fetchPrice = useServerFn(getTxcPriceUsd);
   const fetchAllPrices = useServerFn(getAllPricesUsd);
   const qc = useQueryClient();
@@ -432,6 +434,11 @@ function WalletHome() {
     amount: tron.tokens[i]?.data ?? 0n,
   }));
 
+  // Solana native SOL data. The Ed25519 keypair is created only while unlocked.
+  const solanaEnabled = enabled.includes("solana");
+  const solanaAccount = useMemo(() => (seed ? deriveSolanaAccount(seed) : null), [seed]);
+  const solana = useSolanaData(solanaAccount?.address ?? null, !!unlocked && solanaEnabled);
+
   // EVM data (only for enabled EVM chains)
   const evmEnabled = enabled.filter((c) => c in EVM_CHAINS) as EvmChainId[];
   const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
@@ -440,7 +447,7 @@ function WalletHome() {
     queryKey: ["all-prices"],
     queryFn: () => fetchAllPrices(),
     staleTime: 10 * 60_000,
-    enabled: evmEnabled.length > 0,
+    enabled: evmEnabled.length > 0 || solanaEnabled,
   });
   // Native balances always run for all enabled EVM chains so the portfolio
   // total is complete on open. One RPC call each = cheap.
