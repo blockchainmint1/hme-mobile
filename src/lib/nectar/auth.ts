@@ -9,7 +9,7 @@
 
 import { signMessageWithSeed, verifyMessage, type SignedMessage } from "@/lib/txc/message-sign";
 
-export const NECTAR_LOGIN_HOST = "pay.honest.money";
+export const NECTAR_LOGIN_HOSTS = new Set(["app.nectar-pay.com", "pay.honest.money"]);
 const PROXY = "/api/nectar/link";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -38,7 +38,7 @@ function trustedUrl(raw: string): URL | null {
     const url = new URL(raw);
     if (
       url.protocol !== "https:" ||
-      url.hostname !== NECTAR_LOGIN_HOST ||
+      !NECTAR_LOGIN_HOSTS.has(url.hostname) ||
       url.port ||
       url.username ||
       url.password
@@ -86,9 +86,10 @@ function validateRequest(raw: {
   if (!UUID_RE.test(challengeId)) throw new Error("This is not a valid NectarPay sign-in QR.");
   if (nonce.length < 16 || nonce.length > 128) throw new Error("The NectarPay sign-in challenge is malformed.");
   if (!callback) throw new Error("This sign-in QR points to an untrusted server.");
-  if (origin !== NECTAR_LOGIN_HOST) throw new Error("This sign-in request is not from NectarPay.");
+  if (!NECTAR_LOGIN_HOSTS.has(origin)) throw new Error("This sign-in request is not from NectarPay.");
   if (expiresAt === null || expiresAt <= Date.now()) throw new Error("This NectarPay sign-in QR has expired.");
   if (callback.searchParams.get("id") !== challengeId) throw new Error("The sign-in challenge does not match its callback.");
+  if (callback.hostname !== origin) throw new Error("The sign-in request domain does not match its callback.");
   if (callback.searchParams.get("domain") && callback.searchParams.get("domain") !== origin) {
     throw new Error("The sign-in request domain does not match its callback.");
   }
@@ -183,6 +184,7 @@ export async function fetchLoginMessage(request: NectarLoginRequest): Promise<Ne
     !message ||
     !expectedMessage ||
     message !== expectedMessage ||
+    (request.message !== undefined && request.message !== message) ||
     responseDomain !== request.origin ||
     !message.includes(`Nonce: ${request.nonce}`)
   ) {
