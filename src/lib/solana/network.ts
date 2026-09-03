@@ -1,9 +1,10 @@
 /** Solana network and wallet primitives. */
-import { Keypair, PublicKey } from "@solana/web3.js";
+import { base58 } from "@scure/base";
 import { deriveSolanaSeed, SOLANA_COIN_TYPE, SOLANA_DERIVATION_PATH } from "./derive";
 
 export { SOLANA_COIN_TYPE, SOLANA_DERIVATION_PATH };
-export { deriveSolanaAddress } from "./derive";
+import { deriveSolanaAddress } from "./derive";
+export { deriveSolanaAddress };
 export const SOLANA_RPC = "/api/solana";
 export const SOLANA_EXPLORER = "https://solscan.io";
 export const LAMPORTS_PER_SOL = 1_000_000_000;
@@ -12,19 +13,21 @@ export const SOLANA_FEE_RESERVE_LAMPORTS = 10_000;
 
 export interface SolanaAccount {
   address: string;
-  keypair: Keypair;
+  /** 32-byte ed25519 private seed; kept in memory only while unlocked. */
+  privateSeed: Uint8Array;
   path: string;
 }
 
 export function deriveSolanaAccount(seed: Uint8Array): SolanaAccount {
-  const keypair = Keypair.fromSeed(deriveSolanaSeed(seed));
-  return { address: keypair.publicKey.toBase58(), keypair, path: SOLANA_DERIVATION_PATH };
+  const privateSeed = deriveSolanaSeed(seed);
+  return { address: deriveSolanaAddress(seed), privateSeed, path: SOLANA_DERIVATION_PATH };
 }
 
 export function isValidSolanaAddress(address: string): boolean {
+  const value = address.trim();
+  if (!value) return false;
   try {
-    new PublicKey(address.trim());
-    return address.trim().length > 0;
+    return base58.decode(value).length === 32;
   } catch {
     return false;
   }
