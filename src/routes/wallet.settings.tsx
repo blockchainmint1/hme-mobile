@@ -1,9 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   BookUser,
   ChevronRight,
-  Fingerprint,
   Palette,
   ShieldCheck,
   Wallet,
@@ -29,7 +28,6 @@ import { SecurityCheckupCard } from "@/components/wallet/SecurityCheckupCard";
 import { SignMessageCard } from "@/components/wallet/SignMessageCard";
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
-import { HideBalancesToggle } from "@/components/wallet/WalletDetailSheet";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { ProfilesCard } from "@/components/wallet/ProfilesCard";
 import { useWallet } from "@/lib/txc/wallet-context";
@@ -37,7 +35,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Accordion,
   AccordionContent,
@@ -55,8 +52,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { unlockWallet } from "@/lib/txc/storage";
-import { disableBiometric, enableBiometric, getBiometricStatus } from "@/lib/native/biometric";
+import { disableBiometric } from "@/lib/native/biometric";
 
 export const Route = createFileRoute("/wallet/settings")({
   head: () => ({ meta: [{ title: "Settings — HME Wallet" }] }),
@@ -69,50 +65,6 @@ function SettingsPage() {
 
   const navigate = useNavigate();
   const [confirmText, setConfirmText] = useState("");
-  const [bio, setBio] = useState({ available: false, enabled: false });
-  const [bioBusy, setBioBusy] = useState(false);
-  const [bioError, setBioError] = useState<string | null>(null);
-  const [bioPassword, setBioPassword] = useState("");
-  const [showBioPassword, setShowBioPassword] = useState(false);
-
-  useEffect(() => {
-    getBiometricStatus()
-      .then(setBio)
-      .catch(() => undefined);
-  }, []);
-
-  async function onToggleBiometric(next: boolean) {
-    setBioError(null);
-    if (!next) {
-      setBioBusy(true);
-      await disableBiometric();
-      setBio((s) => ({ ...s, enabled: false }));
-      setBioBusy(false);
-      return;
-    }
-    setShowBioPassword(true);
-  }
-
-  async function confirmEnableBiometric(e: React.FormEvent) {
-    e.preventDefault();
-    setBioError(null);
-    setBioBusy(true);
-    try {
-      const w = await unlockWallet(bioPassword);
-      if (!w) {
-        setBioError("Wrong password.");
-        return;
-      }
-      await enableBiometric(bioPassword);
-      setBio((s) => ({ ...s, enabled: true }));
-      setShowBioPassword(false);
-      setBioPassword("");
-    } catch (err) {
-      setBioError(err instanceof Error ? err.message : "Could not enable biometrics.");
-    } finally {
-      setBioBusy(false);
-    }
-  }
 
   return (
     <main className="mx-auto max-w-xl px-4 py-8">
@@ -223,15 +175,6 @@ function SettingsPage() {
         )}
 
         <SettingsSection
-          value="hide-balances"
-          icon={ShieldCheck}
-          title="Hide balances"
-          description="Mask amounts everywhere in the app."
-        >
-          <HideBalancesToggle />
-        </SettingsSection>
-
-        <SettingsSection
           value="features"
           icon={Sparkles}
           title="Extra features"
@@ -265,66 +208,6 @@ function SettingsPage() {
           description="Check for new app versions."
         >
           <UpdateCheckCard compact />
-        </SettingsSection>
-
-        <SettingsSection
-          value="biometric"
-          icon={Fingerprint}
-          title="Biometric unlock"
-          description={
-            bio.available
-              ? "Unlock with Face ID / fingerprint."
-              : "Only available in the installed iOS or Android app."
-          }
-        >
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="bio-toggle" className="text-sm">
-                Enable biometric unlock
-              </Label>
-              <Switch
-                id="bio-toggle"
-                checked={bio.enabled}
-                disabled={!bio.available || bioBusy}
-                onCheckedChange={onToggleBiometric}
-              />
-            </div>
-            {showBioPassword && (
-              <form
-                onSubmit={confirmEnableBiometric}
-                className="space-y-2 pt-2 border-t border-border/40"
-              >
-                <Label htmlFor="bio-pw" className="text-sm">
-                  Confirm your wallet password
-                </Label>
-                <Input
-                  id="bio-pw"
-                  type="password"
-                  value={bioPassword}
-                  autoFocus
-                  onChange={(e) => setBioPassword(e.target.value)}
-                  placeholder="Wallet password"
-                />
-                {bioError && <p className="text-sm text-destructive">{bioError}</p>}
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={bioBusy || !bioPassword}>
-                    {bioBusy ? "Verifying..." : "Enable"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      setShowBioPassword(false);
-                      setBioPassword("");
-                      setBioError(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            )}
-          </div>
         </SettingsSection>
 
         <SettingsSection
