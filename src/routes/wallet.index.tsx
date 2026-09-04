@@ -737,7 +737,9 @@ function WalletHome() {
 
           {/* Coins found on old derivation paths (old app / BlueWallet import) */}
           {activeChain === "txc" && !activeWatch && !activeWif && (
-            <OldPathBanner branches={account.data?.branches} />
+            <OldPathBanner
+              branches={account.isFetchedAfterMount ? account.data?.branches : undefined}
+            />
           )}
           {activeChain === "txc" && !activeWatch && !activeWif && (
             <TxcTokens addresses={[...ownAddresses]} pendingIn={pendingOmniIn} />
