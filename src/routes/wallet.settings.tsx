@@ -217,6 +217,15 @@ function SettingsPage() {
         </SettingsSection>
 
         <SettingsSection
+          value="tsd-rewards"
+          icon={Sparkles}
+          title="TSD rewards"
+          description="Count your TSD across every address."
+        >
+          <TsdRewardsLinkCard compact />
+        </SettingsSection>
+
+        <SettingsSection
           value="updates"
           icon={RotateCw}
           title="Updates"
