@@ -235,15 +235,15 @@ function MigratePage() {
           )}
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">On old paths</span>
-            <span className="font-medium">{formatTxc(sweepTotal)} TXC</span>
+            <span className="font-medium">{formatTxc(sweepTotal)}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Network fee (est.)</span>
-            <span className="font-medium">{formatTxc(estFee)} TXC</span>
+            <span className="font-medium">{formatTxc(estFee)}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">You'll receive</span>
-            <span className="font-semibold">{formatTxc(Math.max(0, receiveSats))} TXC</span>
+            <span className="font-semibold">{formatTxc(Math.max(0, receiveSats))}</span>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -314,7 +314,7 @@ function MigratePage() {
                       {DERIVATION_PATHS[b.kind]}
                     </p>
                   </div>
-                  <p className="shrink-0 text-sm font-semibold">{formatTxc(b.balanceSats)} TXC</p>
+                  <p className="shrink-0 text-sm font-semibold">{formatTxc(b.balanceSats)}</p>
                 </div>
                 {first && (
                   <div className="mt-2">
