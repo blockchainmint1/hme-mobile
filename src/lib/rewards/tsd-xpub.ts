@@ -17,7 +17,7 @@ import { canonicalJson } from "@/lib/nectar/link";
 import { scopedKey } from "@/lib/profiles";
 import { signMessageWithSeed } from "@/lib/txc/message-sign";
 import { DERIVATION_PATHS, TXC_NETWORK } from "@/lib/txc/network";
-import { seedFromMnemonic } from "@/lib/txc/wallet";
+import { deriveAddress, rootFromSeed, seedFromMnemonic } from "@/lib/txc/wallet";
 import * as ecc from "@bitcoinerlab/secp256k1";
 import { BIP32Factory } from "bip32";
 
