@@ -16,6 +16,21 @@
  * regardless of what a "wrapped" underlying asset's decimals look like.
  */
 import { useEffect, useState } from "react";
+import type { BIP32Interface } from "bip32";
+import { deriveAddress, type DerivedAddress } from "./wallet";
+
+/**
+ * The one canonical deposit address for Omni tokens (TSD, POP, …):
+ * index 0 of the standards-correct legacy branch, m/44'/696969'/0'/0/0.
+ *
+ * Omni pins a token balance to whichever address received it, and a token
+ * send must come from a single address — so funneling every deposit to one
+ * stable address keeps the balance pooled and spendable in one transaction.
+ * TXC receiving keeps rotating for privacy; token receiving does not.
+ */
+export function getOmniDepositAddress(root: BIP32Interface): DerivedAddress {
+  return deriveAddress(root, "bip44", 0, 0);
+}
 
 export interface TxcTokenMeta {
   /** Omni property id. */
