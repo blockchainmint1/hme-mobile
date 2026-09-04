@@ -1,68 +1,63 @@
-# TSD rewards xpub link (wallet → TSD Swap)
+# TSD Swap ⇄ wallet account link (v1)
 
-Rewards are based on how much TSD a user holds. TSD is an Omni Layer token, so
-its balance is pinned to whichever address received it — a wallet's TSD can sit
-across several derived addresses. The wallet deliberately does **not** sweep
-those balances into one address: that costs TXC fees and moves user funds for
-our accounting convenience, and it can't happen while the app is closed.
+The wallet **scans** a QR code shown on the TSD Swap profile page (or the user
+pastes the same URL). TSD Swap is the issuer; the wallet is the responder.
 
-Instead the user links the **watch-only** account key for the TEXITcoin legacy
-branch. TSD Swap derives the same addresses and sums the balance on its own
-schedule, so average daily holdings are accurate across every address.
+## 1. QR payload
 
-Public key material only. No seed, no private key, no spending authority.
+An absolute `https://` URL on a trusted host (`tsd.honest.money`,
+`app.tsdswap.com`) that serves the link manifest as JSON:
 
-Auth is the same as cash-out (see `docs/tsd-cashout-api.md`): the user's own
-TSD Swap API key, forwarded server-side as `x-api-key`. Wallet-side config:
-`TSD_SWAP_URL`, defaults to `https://tsd.honest.money`.
+```json
+{
+  "v": 1,
+  "type": "tsd-link-xpub",
+  "challenge_id": "c_abc123",
+  "from": "tsd.honest.money",
+  "manifest_url": "https://tsd.honest.money/api/public/v1/link/c_abc123",
+  "callback_url": "https://tsd.honest.money/api/public/v1/link/c_abc123/claim",
+  "exp": 1757000000,
+  "account_id": "acct_123",
+  "account_name": "Bobby's TSD account"
+}
+```
 
-## `POST /api/public/v1/rewards/xpub`
+`manifest_url` must equal the scanned URL; manifest and callback must share an
+origin. Expired links are rejected client-side.
 
-Request:
+## 2. Claim (POST `callback_url`)
 
 ```json
 {
   "payload": {
     "v": 1,
-    "type": "tsd-rewards-xpub",
-    "xpub": "…",
+    "type": "tsd-link-xpub",
+    "challenge_id": "c_abc123",
+    "callback_url": "https://tsd.honest.money/api/public/v1/link/c_abc123/claim",
+    "xpub": "xpub…",
     "path": "m/44'/696969'/0'",
     "identity": "T…",
-    "issued_at": "2026-09-04T08:00:00.000Z"
+    "evm_address": "0x…",
+    "exp": 1757000000,
+    "issued_at": "2026-09-04T10:00:00.000Z"
   },
-  "signature": "base64 compact signature (65 bytes)",
+  "signature": "<base64 compact BIP-137>",
   "address": "T…"
 }
 ```
 
-Response:
+Verification on the TSD Swap side:
 
-```json
-{ "ok": true, "linkedAt": "2026-09-04T08:00:01.000Z" }
-```
+1. Recompute canonical JSON of `payload` (sorted keys, no whitespace) and
+   verify `signature` against `address` using the TEXITcoin message prefix
+   (`\x1aTEXITcoin Signed Message:\n`).
+2. `address` must equal `payload.identity`, and must derive from
+   `payload.xpub` at `0/0` (legacy P2PKH).
+3. `challenge_id` must be unopened and unexpired; single use.
+4. Store the xpub watch-only. Derive both branches with a gap limit of 20 and
+   sum Omni property 39 (TSD) daily for average-daily-balance rewards.
 
-### Verification on the TSD Swap side
+Respond `200` with `{ "account_id": "...", "account_name": "..." }`.
 
-1. `address` must equal `payload.identity`.
-2. The signature is BIP-137 over the **canonical JSON** of `payload` (keys
-   sorted, no whitespace — the same encoding used by the Nectar Pay link), with
-   the TEXITcoin message prefix `\x1aTEXITcoin Signed Message:\n`.
-3. Recover the public key and confirm it rebuilds `address` as a legacy P2PKH
-   TEXITcoin address.
-4. Confirm `address` is `payload.xpub` derived at `0/0` — this proves the
-   signer owns the account key, not just some address.
-5. Reject `issued_at` older than a few minutes to prevent replay.
-
-### Balance scanning
-
-Derive `payload.xpub` over both branches (`0/*` receive and `1/*` change) with
-a standard gap limit (20 is enough; the wallet also scans the legacy `0'`
-paths, so a wider gap is safer), then sum the Omni property 39 (TSD) balance
-across all of them. Record the daily snapshot for the average-balance reward
-calculation.
-
-## `DELETE /api/public/v1/rewards/xpub`
-
-Authenticated with `x-api-key`. Removes the stored key for that account. The
-wallet also clears its local record; unlinking must always succeed on the
-device even if the call fails.
+Only public key material is shared: no seed, no private keys, no spending
+authority.

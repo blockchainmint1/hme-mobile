@@ -44,6 +44,7 @@ import { Route as WalletEvmChainRouteImport } from './routes/wallet.evm.$chain'
 import { Route as WalletDogeSwapRouteImport } from './routes/wallet.doge.swap'
 import { Route as WalletDogeSendRouteImport } from './routes/wallet.doge.send'
 import { Route as WalletDogeReceiveRouteImport } from './routes/wallet.doge.receive'
+import { Route as ApiTsdLinkRouteImport } from './routes/api/tsd.link'
 import { Route as ApiTronSplatRouteImport } from './routes/api/tron.$'
 import { Route as ApiPublicLatestReleaseRouteImport } from './routes/api/public/latest-release'
 import { Route as ApiPublicBuildIdRouteImport } from './routes/api/public/build-id'
@@ -233,6 +234,11 @@ const WalletDogeReceiveRoute = WalletDogeReceiveRouteImport.update({
   path: '/doge/receive',
   getParentRoute: () => WalletRoute,
 } as any)
+const ApiTsdLinkRoute = ApiTsdLinkRouteImport.update({
+  id: '/api/tsd/link',
+  path: '/api/tsd/link',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTronSplatRoute = ApiTronSplatRouteImport.update({
   id: '/api/tron/$',
   path: '/api/tron/$',
@@ -324,6 +330,7 @@ export interface FileRoutesByFullPath {
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
+  '/api/tsd/link': typeof ApiTsdLinkRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/doge/swap': typeof WalletDogeSwapRoute
@@ -373,6 +380,7 @@ export interface FileRoutesByTo {
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
+  '/api/tsd/link': typeof ApiTsdLinkRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/doge/swap': typeof WalletDogeSwapRoute
@@ -424,6 +432,7 @@ export interface FileRoutesById {
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
+  '/api/tsd/link': typeof ApiTsdLinkRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/doge/swap': typeof WalletDogeSwapRoute
@@ -476,6 +485,7 @@ export interface FileRouteTypes {
     | '/api/public/build-id'
     | '/api/public/latest-release'
     | '/api/tron/$'
+    | '/api/tsd/link'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
     | '/wallet/doge/swap'
@@ -525,6 +535,7 @@ export interface FileRouteTypes {
     | '/api/public/build-id'
     | '/api/public/latest-release'
     | '/api/tron/$'
+    | '/api/tsd/link'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
     | '/wallet/doge/swap'
@@ -575,6 +586,7 @@ export interface FileRouteTypes {
     | '/api/public/build-id'
     | '/api/public/latest-release'
     | '/api/tron/$'
+    | '/api/tsd/link'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
     | '/wallet/doge/swap'
@@ -618,6 +630,7 @@ export interface RootRouteChildren {
   ApiPublicBuildIdRoute: typeof ApiPublicBuildIdRoute
   ApiPublicLatestReleaseRoute: typeof ApiPublicLatestReleaseRoute
   ApiTronSplatRoute: typeof ApiTronSplatRoute
+  ApiTsdLinkRoute: typeof ApiTsdLinkRoute
   ApiNectarPayInvoiceIdRoute: typeof ApiNectarPayInvoiceIdRoute
   ApiUtxoCoinSplatRoute: typeof ApiUtxoCoinSplatRoute
 }
@@ -869,6 +882,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalletDogeReceiveRouteImport
       parentRoute: typeof WalletRoute
     }
+    '/api/tsd/link': {
+      id: '/api/tsd/link'
+      path: '/api/tsd/link'
+      fullPath: '/api/tsd/link'
+      preLoaderRoute: typeof ApiTsdLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/tron/$': {
       id: '/api/tron/$'
       path: '/api/tron/$'
@@ -1059,6 +1079,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicBuildIdRoute: ApiPublicBuildIdRoute,
   ApiPublicLatestReleaseRoute: ApiPublicLatestReleaseRoute,
   ApiTronSplatRoute: ApiTronSplatRoute,
+  ApiTsdLinkRoute: ApiTsdLinkRoute,
   ApiNectarPayInvoiceIdRoute: ApiNectarPayInvoiceIdRoute,
   ApiUtxoCoinSplatRoute: ApiUtxoCoinSplatRoute,
 }

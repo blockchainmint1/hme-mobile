@@ -31,9 +31,8 @@ import { NectarLinkCard } from "@/components/wallet/NectarLinkCard";
 
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
-import { TsdShareXpubCard } from "@/components/wallet/TsdShareXpubCard";
+import { TsdAccountLinkCard } from "@/components/wallet/TsdAccountLinkCard";
 import { TsdNudgeToggleCard } from "@/components/wallet/TsdNudgeToggleCard";
-import { TsdRewardsLinkCard } from "@/components/wallet/TsdRewardsLinkCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { ProfilesCard } from "@/components/wallet/ProfilesCard";
 import { useWallet } from "@/lib/txc/wallet-context";
@@ -217,18 +216,9 @@ function SettingsPage() {
         >
           <div className="space-y-6">
             <TsdCashoutKeyCard compact />
-            <TsdShareXpubCard compact />
+            <TsdAccountLinkCard compact />
             <TsdNudgeToggleCard compact />
           </div>
-        </SettingsSection>
-
-        <SettingsSection
-          value="tsd-rewards"
-          icon={Sparkles}
-          title="TSD rewards"
-          description="Count your TSD across every address."
-        >
-          <TsdRewardsLinkCard compact />
         </SettingsSection>
 
         <SettingsSection
