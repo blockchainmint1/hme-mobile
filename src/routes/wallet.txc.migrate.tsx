@@ -110,11 +110,16 @@ function MigratePage() {
   const { root, unlocked, setKind } = useWallet();
   const qc = useQueryClient();
 
+  // This screen decides whether to spend coins, so it must never trust the
+  // persisted (up to 24h old) query cache: a sweep done on another device — or
+  // earlier on this one — leaves a stale old-path balance behind and the
+  // "coins on an old address" notice returns for money that is already gone.
   const account = useQuery({
     queryKey: ["account", unlocked?.kind, root ? rootFingerprintHex(root) : null],
     enabled: !!root && !!unlocked,
     queryFn: () => scanAccount(root!, unlocked!.kind),
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const fees = useQuery<FeeEstimates>({
     queryKey: ["fees"],
@@ -130,6 +135,21 @@ function MigratePage() {
 
   const branches = account.data?.branches ?? [];
   const oldBranches = branches.filter((b) => b.kind !== TARGET_KIND);
+
+  /** Addresses that currently hold spendable coins, grouped per branch. */
+  const fundedByKind = useMemo(() => {
+    const map = new Map<DerivationKind, { address: string; value: number }[]>();
+    for (const u of account.data?.utxos ?? []) {
+      const kind = (u.kind ?? unlocked?.kind ?? TARGET_KIND) as DerivationKind;
+      const list = map.get(kind) ?? [];
+      const found = list.find((a) => a.address === u.address);
+      if (found) found.value += u.value;
+      else list.push({ address: u.address, value: u.value });
+      map.set(kind, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => b.value - a.value);
+    return map;
+  }, [account.data, unlocked]);
 
   /** Every coin that isn't already on the target branch. */
   const sweepable: AccountUtxo[] = useMemo(
@@ -235,15 +255,15 @@ function MigratePage() {
           )}
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">On old paths</span>
-            <span className="font-medium">{formatTxc(sweepTotal)} TXC</span>
+            <span className="font-medium">{formatTxc(sweepTotal)}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Network fee (est.)</span>
-            <span className="font-medium">{formatTxc(estFee)} TXC</span>
+            <span className="font-medium">{formatTxc(estFee)}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">You'll receive</span>
-            <span className="font-semibold">{formatTxc(Math.max(0, receiveSats))} TXC</span>
+            <span className="font-semibold">{formatTxc(Math.max(0, receiveSats))}</span>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -292,7 +312,16 @@ function MigratePage() {
             </p>
           )}
           {branches.map((b) => {
-            const first = root ? deriveAddress(root, b.kind, 0, 0).address : null;
+            // Show the addresses that actually hold coins on this branch, not
+            // just index 0 — looking up an empty index-0 address made the
+            // balance look imaginary.
+            const funded = fundedByKind.get(b.kind) ?? [];
+            const shown =
+              funded.length > 0
+                ? funded
+                : root
+                  ? [{ address: deriveAddress(root, b.kind, 0, 0).address, value: 0 }]
+                  : [];
             return (
               <div key={b.kind} className="rounded-lg border border-border/60 bg-card/40 p-3">
                 <div className="flex items-center justify-between gap-2">
@@ -314,13 +343,20 @@ function MigratePage() {
                       {DERIVATION_PATHS[b.kind]}
                     </p>
                   </div>
-                  <p className="shrink-0 text-sm font-semibold">{formatTxc(b.balanceSats)} TXC</p>
+                  <p className="shrink-0 text-sm font-semibold">{formatTxc(b.balanceSats)}</p>
                 </div>
-                {first && (
-                  <div className="mt-2">
-                    <CopyAddress address={first} />
-                  </div>
-                )}
+                <div className="mt-2 space-y-1.5">
+                  {shown.map((a) => (
+                    <div key={a.address}>
+                      <CopyAddress address={a.address} />
+                      {a.value > 0 && (
+                        <p className="text-[10px] text-muted-foreground">
+                          holds {formatTxc(a.value)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })}

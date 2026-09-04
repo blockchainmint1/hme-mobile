@@ -31,6 +31,7 @@ import {
   useEnabledTxcTokens,
   buildSimpleSendPayload,
   formatTokenAmount,
+  getOmniDepositAddress,
   type TxcTokenMeta,
   isOmniCompatibleAddress,
 } from "@/lib/txc/tokens";
@@ -178,11 +179,14 @@ function ConsolidatePage() {
 
   const feeRate = Math.max(fees.data?.halfHourFee ?? 10, Math.max(fees.data?.minimumFee ?? 10, 10));
 
-  // Destination = index 0 of the wallet's primary receive chain — but the Omni
-  // layer can't read bech32 (txc1…) outputs, so a segwit index 0 would make
-  // every transfer confirm on-chain while never applying. Fall back to the
-  // first legacy address we own.
+  // Destination = the canonical Omni deposit address (m/44'/696969'/0'/0/0) —
+  // the same pinned address the receive screen hands out for tokens, so a
+  // consolidation pools everything where future token deposits land. Without a
+  // root key (imported-key wallets) fall back to the first legacy address we
+  // own; the Omni layer can't read bech32 (txc1…) outputs, so a segwit target
+  // would make every transfer confirm on-chain while never applying.
   const destination = useMemo(() => {
+    if (root) return getOmniDepositAddress(root).address;
     if (!unlocked) return null;
     const primary = addressInfos.find(
       (a) => a.kind === unlocked.kind && a.change === 0 && a.index === 0,
@@ -193,7 +197,7 @@ function ConsolidatePage() {
       account.data?.nextReceiveAddress,
     ].filter((a): a is string => Boolean(a));
     return candidates.find(isOmniCompatibleAddress) ?? null;
-  }, [addressInfos, unlocked, account.data]);
+  }, [root, addressInfos, unlocked, account.data]);
 
 
   const holders: Holder[] = useMemo(() => {

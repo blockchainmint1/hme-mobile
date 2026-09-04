@@ -737,7 +737,9 @@ function WalletHome() {
 
           {/* Coins found on old derivation paths (old app / BlueWallet import) */}
           {activeChain === "txc" && !activeWatch && !activeWif && (
-            <OldPathBanner branches={account.data?.branches} />
+            <OldPathBanner
+              branches={account.isFetchedAfterMount ? account.data?.branches : undefined}
+            />
           )}
           {activeChain === "txc" && !activeWatch && !activeWif && (
             <TxcTokens addresses={[...ownAddresses]} pendingIn={pendingOmniIn} />
@@ -1395,6 +1397,13 @@ function TxcTokens({
               className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
             >
               Consolidate
+            </Link>
+            <Link
+              to="/wallet/receive"
+              search={{ asset: "tsd" }}
+              className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            >
+              Receive
             </Link>
           </div>
         )}

@@ -31,6 +31,8 @@ import { NectarLinkCard } from "@/components/wallet/NectarLinkCard";
 
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
+import { TsdAccountLinkCard } from "@/components/wallet/TsdAccountLinkCard";
+import { TsdNudgeToggleCard } from "@/components/wallet/TsdNudgeToggleCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { ProfilesCard } from "@/components/wallet/ProfilesCard";
 import { useWallet } from "@/lib/txc/wallet-context";
@@ -209,10 +211,14 @@ function SettingsPage() {
         <SettingsSection
           value="tsd-cashout"
           icon={ArrowDownUp}
-          title="TSD cash-out"
-          description="Turn TSD into USDC on Ethereum."
+          title="TSD settings"
+          description="API key, shared account key and TSD reminders."
         >
-          <TsdCashoutKeyCard compact />
+          <div className="space-y-6">
+            <TsdCashoutKeyCard compact />
+            <TsdAccountLinkCard compact />
+            <TsdNudgeToggleCard compact />
+          </div>
         </SettingsSection>
 
         <SettingsSection
