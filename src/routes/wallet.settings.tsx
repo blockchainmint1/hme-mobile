@@ -31,6 +31,7 @@ import { NectarLinkCard } from "@/components/wallet/NectarLinkCard";
 
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
+import { TsdRewardsLinkCard } from "@/components/wallet/TsdRewardsLinkCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { ProfilesCard } from "@/components/wallet/ProfilesCard";
 import { useWallet } from "@/lib/txc/wallet-context";
@@ -213,6 +214,15 @@ function SettingsPage() {
           description="Turn TSD into USDC on Ethereum."
         >
           <TsdCashoutKeyCard compact />
+        </SettingsSection>
+
+        <SettingsSection
+          value="tsd-rewards"
+          icon={Sparkles}
+          title="TSD rewards"
+          description="Count your TSD across every address."
+        >
+          <TsdRewardsLinkCard compact />
         </SettingsSection>
 
         <SettingsSection
