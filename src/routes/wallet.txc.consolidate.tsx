@@ -31,6 +31,7 @@ import {
   useEnabledTxcTokens,
   buildSimpleSendPayload,
   formatTokenAmount,
+  getOmniDepositAddress,
   type TxcTokenMeta,
   isOmniCompatibleAddress,
 } from "@/lib/txc/tokens";
