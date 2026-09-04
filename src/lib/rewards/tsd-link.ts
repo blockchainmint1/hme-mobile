@@ -1,41 +1,35 @@
 /**
- * TSD Swap ⇄ wallet account link (v1).
+ * TSD Swap ⇄ wallet account link.
  *
- * The user scans a QR code (or pastes the link URL) shown on their TSD Swap
- * profile page. We read the link manifest through our same-origin proxy,
- * show what's being shared, and on approval hand over:
+ * TSD Swap issues the same `hm-link-xpubs` manifest as Nectar Pay, so we reuse
+ * the shared derivation/signing helpers in `@/lib/nectar/link` and only swap in
+ * the TSD trusted hosts and proxy. The wallet hands over watch-only account
+ * xpubs (TXC + EVM + the rest), signed by the TXC identity key. No seed, no
+ * private keys, no spending authority.
  *
- *   - the watch-only TEXITcoin account key (xpub at m/44'/696969'/0'), so
- *     TSD Swap can sum TSD across every derived address for rewards, and
- *   - the base EVM address (m/44'/60'/0'/0/0), for payouts/identity.
- *
- * Public key material only — signed by the TXC identity key (BIP-137 over
- * canonical JSON). No seed, no private keys, no spending authority.
+ * The claim response may issue a TSD Swap API key, which we store locally so
+ * cash-out lights up automatically.
  */
-import { canonicalJson } from "@/lib/nectar/link";
+import { canonicalJson, deriveWalletKeys } from "@/lib/nectar/link";
+import { setCashoutApiKey } from "@/lib/cashout/api-key";
 import { scopedKey } from "@/lib/profiles";
-import { deriveEvmAccount } from "@/lib/chains/evm";
 import { signMessageWithSeed } from "@/lib/txc/message-sign";
-import { DERIVATION_PATHS, TXC_NETWORK } from "@/lib/txc/network";
-import { deriveAddress, rootFromSeed, seedFromMnemonic } from "@/lib/txc/wallet";
-import * as ecc from "@bitcoinerlab/secp256k1";
-import { BIP32Factory } from "bip32";
-
-const bip32 = BIP32Factory(ecc);
 
 const PROXY = "/api/tsd/link";
 export const TSD_TRUSTED_HOSTS = ["tsd.honest.money", "app.tsdswap.com"];
 
 export interface TsdLinkManifest {
   v: number;
-  type: "tsd-link-xpub";
+  type: "hm-link-xpubs";
   challenge_id: string;
   from: string;
   callback_url: string;
   manifest_url: string;
+  chains: string[];
   exp: number;
   account_id?: string;
   account_name?: string;
+  purpose?: string;
 }
 
 function trustedUrl(raw: string): boolean {
@@ -56,7 +50,7 @@ function trustedUrl(raw: string): boolean {
 /** Accept a pasted URL or a scanned QR payload (URL, or `tsd:` deep link). */
 export function parseTsdLinkInput(text: string): string | null {
   const trimmed = text.trim();
-  const candidate = trimmed.replace(/^tsd:(\/\/)?/i, (m) => (m.length ? "https://" : m));
+  const candidate = trimmed.replace(/^tsd:(\/\/)?/i, () => "https://");
   if (trustedUrl(trimmed)) return new URL(trimmed).toString();
   if (trustedUrl(candidate)) return new URL(candidate).toString();
   return null;
@@ -66,7 +60,7 @@ export function validateTsdManifest(raw: Record<string, unknown>): TsdLinkManife
   const fail = (m: string): never => {
     throw new Error(m);
   };
-  if (raw["type"] !== "tsd-link-xpub") fail("That QR isn't a TSD Swap account link.");
+  if (raw["type"] !== "hm-link-xpubs") fail("That QR isn't a TSD Swap account link.");
   if (typeof raw["challenge_id"] !== "string" || !raw["challenge_id"]) fail("Link is malformed.");
   if (typeof raw["callback_url"] !== "string" || !trustedUrl(raw["callback_url"] as string))
     fail("Link points at an untrusted server.");
@@ -76,16 +70,25 @@ export function validateTsdManifest(raw: Record<string, unknown>): TsdLinkManife
     fail("Link callback does not match its manifest.");
   const exp = Number(raw["exp"]);
   if (!Number.isFinite(exp) || exp * 1000 <= Date.now()) fail("This link has expired.");
+  const chains = Array.isArray(raw["chains"])
+    ? (raw["chains"] as unknown[]).filter((c): c is string => typeof c === "string")
+    : [];
   return {
     v: Number(raw["v"]) || 1,
-    type: "tsd-link-xpub",
+    type: "hm-link-xpubs",
     challenge_id: raw["challenge_id"] as string,
     from: (raw["from"] as string) ?? new URL(raw["manifest_url"] as string).hostname,
     callback_url: raw["callback_url"] as string,
     manifest_url: raw["manifest_url"] as string,
+    chains,
     exp,
-    account_id: (raw["account_id"] as string) ?? undefined,
-    account_name: (raw["account_name"] as string) ?? undefined,
+    account_id: (raw["account"] as string) ?? (raw["account_id"] as string) ?? undefined,
+    account_name:
+      (raw["merchant"] as string) ??
+      (raw["account_name"] as string) ??
+      (raw["account"] as string) ??
+      undefined,
+    purpose: (raw["purpose"] as string) ?? undefined,
   };
 }
 
@@ -105,35 +108,11 @@ export async function fetchTsdManifest(manifestUrl: string): Promise<TsdLinkMani
   return manifest;
 }
 
-export interface TsdWalletKeys {
-  /** Watch-only TEXITcoin account key at m/44'/696969'/0'. */
-  txcXpub: string;
-  txcPath: string;
-  /** Stable wallet id: legacy P2PKH at m/44'/696969'/0'/0/0. */
-  identity: string;
-  /** Base EVM address at m/44'/60'/0'/0/0. */
-  evmAddress: string;
-}
-
-export async function deriveTsdLinkKeys(
-  mnemonic: string,
-  passphrase = "",
-): Promise<TsdWalletKeys> {
-  const seed = await seedFromMnemonic(mnemonic, passphrase);
-  const root = rootFromSeed(seed);
-  const txcPath = DERIVATION_PATHS.bip44;
-  return {
-    txcXpub: bip32.fromSeed(seed, TXC_NETWORK).derivePath(txcPath).neutered().toBase58(),
-    txcPath,
-    identity: deriveAddress(root, "bip44", 0, 0).address,
-    evmAddress: deriveEvmAccount(root).address,
-  };
-}
-
 export interface TsdLinkResult {
   ok: boolean;
   account_id?: string;
   account_name?: string;
+  api_key?: string;
 }
 
 export async function submitTsdLink(args: {
@@ -142,17 +121,16 @@ export async function submitTsdLink(args: {
   passphrase?: string;
 }): Promise<TsdLinkResult> {
   const { manifest, mnemonic, passphrase = "" } = args;
-  const keys = await deriveTsdLinkKeys(mnemonic, passphrase);
+  const keys = await deriveWalletKeys(mnemonic, passphrase);
 
   const payload = {
     v: 1,
-    type: "tsd-link-xpub",
+    type: "hm-link-xpubs",
     challenge_id: manifest.challenge_id,
+    from: manifest.from,
     callback_url: manifest.callback_url,
-    xpub: keys.txcXpub,
-    path: keys.txcPath,
-    identity: keys.identity,
-    evm_address: keys.evmAddress,
+    chains: Object.keys(keys.xpubs).sort(),
+    xpubs: keys.xpubs,
     exp: manifest.exp,
     issued_at: new Date().toISOString(),
   } as const;
@@ -176,14 +154,18 @@ export async function submitTsdLink(args: {
   if (!res.ok) {
     throw new Error(
       (body?.["message"] as string) ??
+        (body?.["hint"] as string) ??
         (body?.["error"] as string) ??
         `Link failed (${res.status})`,
     );
   }
+  const apiKey = (body?.["api_key"] as string | undefined) ?? undefined;
+  if (apiKey) setCashoutApiKey(apiKey);
   return {
     ok: true,
-    account_id: body?.["account_id"] as string | undefined,
-    account_name: body?.["account_name"] as string | undefined,
+    account_id: (body?.["account_id"] as string | undefined) ?? undefined,
+    account_name: (body?.["account_name"] as string | undefined) ?? undefined,
+    api_key: apiKey,
   };
 }
 
