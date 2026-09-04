@@ -210,8 +210,8 @@ function SettingsPage() {
         <SettingsSection
           value="tsd-cashout"
           icon={ArrowDownUp}
-          title="TSD cash-out"
-          description="Turn TSD into USDC on Ethereum."
+          title="TSD settings"
+          description="Manage your TSD Swap API key and rewards link."
         >
           <TsdCashoutKeyCard compact />
         </SettingsSection>
