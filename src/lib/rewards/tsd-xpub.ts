@@ -51,26 +51,19 @@ export async function buildRewardsLink(
   const path = DERIVATION_PATHS.bip44;
   const xpub = bip32.fromSeed(seed, TXC_NETWORK).derivePath(path).neutered().toBase58();
 
-  const signed = await signMessageWithSeed({
-    mnemonic,
-    passphrase,
-    kind: "bip44",
-    change: 0,
-    index: 0,
-    message: "placeholder",
-  });
+  const identity = deriveAddress(rootFromSeed(seed), "bip44", 0, 0).address;
 
   const payload: RewardsLinkPayload = {
     v: 1,
     type: "tsd-rewards-xpub",
     xpub,
     path,
-    identity: signed.address,
+    identity,
     issued_at: new Date().toISOString(),
   };
 
   const message = canonicalJson(payload as unknown as Parameters<typeof canonicalJson>[0]);
-  const final = await signMessageWithSeed({
+  const signed = await signMessageWithSeed({
     mnemonic,
     passphrase,
     kind: "bip44",
@@ -79,7 +72,7 @@ export async function buildRewardsLink(
     message,
   });
 
-  return { payload, message, signature: final.signature, address: final.address };
+  return { payload, message, signature: signed.signature, address: signed.address };
 }
 
 /* ------------------------------------------------------------------ */
