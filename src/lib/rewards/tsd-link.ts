@@ -82,9 +82,10 @@ export function validateTsdManifest(raw: Record<string, unknown>): TsdLinkManife
   if (typeof raw["challenge_id"] !== "string" || !raw["challenge_id"]) fail("Link is malformed.");
   if (typeof raw["callback_url"] !== "string" || !trustedUrl(raw["callback_url"] as string))
     fail("Link points at an untrusted server.");
-  if (typeof raw["manifest_url"] !== "string" || !trustedUrl(raw["manifest_url"] as string))
+  if (typeof raw["manifest_url"] === "string" && !trustedUrl(raw["manifest_url"] as string))
     fail("Link points at an untrusted server.");
-  if (new URL(raw["callback_url"] as string).origin !== new URL(raw["manifest_url"] as string).origin)
+  const manifestUrl = (raw["manifest_url"] as string) ?? (raw["callback_url"] as string);
+  if (new URL(raw["callback_url"] as string).origin !== new URL(manifestUrl).origin)
     fail("Link callback does not match its manifest.");
   const exp = Number(raw["exp"]);
   if (!Number.isFinite(exp) || exp * 1000 <= Date.now()) fail("This link has expired.");
@@ -95,9 +96,9 @@ export function validateTsdManifest(raw: Record<string, unknown>): TsdLinkManife
     v: Number(raw["v"]) || 1,
     type: "hm-link-xpubs",
     challenge_id: raw["challenge_id"] as string,
-    from: (raw["from"] as string) ?? new URL(raw["manifest_url"] as string).hostname,
+    from: (raw["from"] as string) ?? new URL(manifestUrl).hostname,
     callback_url: raw["callback_url"] as string,
-    manifest_url: raw["manifest_url"] as string,
+    manifest_url: manifestUrl,
     chains,
     exp,
     account_id: (raw["account"] as string) ?? (raw["account_id"] as string) ?? undefined,
@@ -132,7 +133,7 @@ export async function fetchTsdManifest(manifestUrl: string): Promise<TsdLinkMani
   }
   if (!body) throw new Error("That link returned a page instead of link data.");
   const manifest = validateTsdManifest(body);
-  if (manifest.manifest_url !== manifestUrl)
+  if (new URL(manifest.manifest_url).origin !== new URL(manifestUrl).origin)
     throw new Error("The link manifest does not match its URL.");
   return manifest;
 }
