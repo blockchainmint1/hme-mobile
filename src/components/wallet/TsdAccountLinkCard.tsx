@@ -128,9 +128,16 @@ export function TsdAccountLinkCard({ compact }: { compact?: boolean }) {
             <div className="rounded-lg border p-3 space-y-2">
               <div className="text-sm font-medium">
                 {manifest.account_name ?? "TSD Swap account"}
+                {manifest.account_id ? (
+                  <span className="text-muted-foreground"> · {manifest.account_id}</span>
+                ) : null}
               </div>
+              {manifest.purpose && (
+                <p className="text-xs text-muted-foreground">{manifest.purpose}</p>
+              )}
               <div className="text-xs text-muted-foreground">
-                Sharing: TEXITcoin account key (watch-only) and your EVM address.
+                Sharing: watch-only account keys (TEXITcoin, EVM and the other chains). No seed, no
+                private keys.
               </div>
               <div className="flex gap-2">
                 <Button size="sm" disabled={busy} onClick={() => void onApprove()}>
