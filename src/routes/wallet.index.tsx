@@ -1398,6 +1398,13 @@ function TxcTokens({
             >
               Consolidate
             </Link>
+            <Link
+              to="/wallet/receive"
+              search={{ asset: "tsd" }}
+              className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            >
+              Receive
+            </Link>
           </div>
         )}
       </div>
