@@ -110,11 +110,16 @@ function MigratePage() {
   const { root, unlocked, setKind } = useWallet();
   const qc = useQueryClient();
 
+  // This screen decides whether to spend coins, so it must never trust the
+  // persisted (up to 24h old) query cache: a sweep done on another device — or
+  // earlier on this one — leaves a stale old-path balance behind and the
+  // "coins on an old address" notice returns for money that is already gone.
   const account = useQuery({
     queryKey: ["account", unlocked?.kind, root ? rootFingerprintHex(root) : null],
     enabled: !!root && !!unlocked,
     queryFn: () => scanAccount(root!, unlocked!.kind),
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const fees = useQuery<FeeEstimates>({
     queryKey: ["fees"],
