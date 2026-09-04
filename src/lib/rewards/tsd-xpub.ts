@@ -75,6 +75,21 @@ export async function buildRewardsLink(
   return { payload, message, signature: signed.signature, address: signed.address };
 }
 
+/**
+ * Derive just the watch-only TEXITcoin account key (no signature), for
+ * displaying/sharing as a QR code.
+ */
+export async function deriveAccountXpub(
+  mnemonic: string,
+  passphrase = "",
+): Promise<{ xpub: string; path: string; identity: string }> {
+  const seed = await seedFromMnemonic(mnemonic, passphrase);
+  const path = DERIVATION_PATHS.bip44;
+  const xpub = bip32.fromSeed(seed, TXC_NETWORK).derivePath(path).neutered().toBase58();
+  const identity = deriveAddress(rootFromSeed(seed), "bip44", 0, 0).address;
+  return { xpub, path, identity };
+}
+
 /* ------------------------------------------------------------------ */
 /* Local record (per vault)                                            */
 /* ------------------------------------------------------------------ */

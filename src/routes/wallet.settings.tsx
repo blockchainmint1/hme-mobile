@@ -31,6 +31,8 @@ import { NectarLinkCard } from "@/components/wallet/NectarLinkCard";
 
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
+import { TsdShareXpubCard } from "@/components/wallet/TsdShareXpubCard";
+import { TsdNudgeToggleCard } from "@/components/wallet/TsdNudgeToggleCard";
 import { TsdRewardsLinkCard } from "@/components/wallet/TsdRewardsLinkCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { ProfilesCard } from "@/components/wallet/ProfilesCard";
@@ -211,9 +213,13 @@ function SettingsPage() {
           value="tsd-cashout"
           icon={ArrowDownUp}
           title="TSD settings"
-          description="Manage your TSD Swap API key and rewards link."
+          description="API key, shared account key and TSD reminders."
         >
-          <TsdCashoutKeyCard compact />
+          <div className="space-y-6">
+            <TsdCashoutKeyCard compact />
+            <TsdShareXpubCard compact />
+            <TsdNudgeToggleCard compact />
+          </div>
         </SettingsSection>
 
         <SettingsSection
