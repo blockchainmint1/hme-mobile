@@ -330,11 +330,18 @@ function MigratePage() {
                   </div>
                   <p className="shrink-0 text-sm font-semibold">{formatTxc(b.balanceSats)}</p>
                 </div>
-                {first && (
-                  <div className="mt-2">
-                    <CopyAddress address={first} />
-                  </div>
-                )}
+                <div className="mt-2 space-y-1.5">
+                  {shown.map((a) => (
+                    <div key={a.address}>
+                      <CopyAddress address={a.address} />
+                      {a.value > 0 && (
+                        <p className="text-[10px] text-muted-foreground">
+                          holds {formatTxc(a.value)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })}
