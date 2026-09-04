@@ -93,23 +93,29 @@ export function UpdateCheckCard({ compact }: { compact?: boolean }) {
   const newerRelease = !!latest && compareVersions(latest.version, installed) > 0;
   const shellDiffersFromBundle = native && installed !== APP_VERSION;
 
+  const versionLine = (
+    <>
+      Installed {installed}
+      {native ? ` · ${platform}` : " · web"}
+      {latest ? ` · latest ${latest.version}` : ""}
+      {shellDiffersFromBundle ? (
+        <span className="block text-xs opacity-70">app code build {APP_VERSION}</span>
+      ) : null}
+    </>
+  );
+
   return (
     <Card
       className={compact ? "rounded-none border-0 bg-transparent shadow-none" : "mt-5"}
     >
-      {!compact && (
+      {compact ? (
+        <p className="mb-3 text-sm text-muted-foreground">{versionLine}</p>
+      ) : (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <RotateCw className="h-5 w-5" /> Updates
           </CardTitle>
-          <CardDescription>
-            Installed {installed}
-            {native ? ` · ${platform}` : " · web"}
-            {latest ? ` · latest ${latest.version}` : ""}
-            {shellDiffersFromBundle ? (
-              <span className="block text-xs opacity-70">app code build {APP_VERSION}</span>
-            ) : null}
-          </CardDescription>
+          <CardDescription>{versionLine}</CardDescription>
         </CardHeader>
       )}
       <CardContent className={compact ? "space-y-3 p-0" : "space-y-3"}>
@@ -169,17 +175,21 @@ export function UpdateCheckCard({ compact }: { compact?: boolean }) {
           </p>
         )}
 
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => void check()}
-          disabled={status === "checking"}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${status === "checking" ? "animate-spin" : ""}`} />
-          {status === "checking" ? "Checking…" : "Check for updates"}
-        </Button>
+        {/* When an update banner (native) or app-code refresh (web) is already
+            on screen, that is the single primary action — no duplicate check button. */}
+        {!(status === "update" && newerRelease) && !webStale && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => void check()}
+            disabled={status === "checking"}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${status === "checking" ? "animate-spin" : ""}`} />
+            {status === "checking" ? "Checking…" : "Check for updates"}
+          </Button>
+        )}
 
-        {webStale && (
+        {webStale && !(status === "update" && newerRelease) && (
           <>
             <p className="text-sm">Newer app code is live. Reload to get it.</p>
             <Button className="w-full" onClick={() => void applyWebUpdate()}>
