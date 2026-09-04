@@ -56,11 +56,29 @@ export function parseTsdLinkInput(text: string): string | null {
   return null;
 }
 
+/**
+ * TSD Swap may advertise the protocol as `type`, inside a `types[]` array, or
+ * simply by `app: "tsd-swap"`. Accept all three rather than one exact string.
+ */
+function isLinkManifest(raw: Record<string, unknown>): boolean {
+  if (raw["type"] === "hm-link-xpubs") return true;
+  const types = raw["types"];
+  if (Array.isArray(types) && types.includes("hm-link-xpubs")) return true;
+  const app = typeof raw["app"] === "string" ? raw["app"].toLowerCase() : "";
+  if (app === "tsd-swap" || app === "tsdswap") return true;
+  return false;
+}
+
 export function validateTsdManifest(raw: Record<string, unknown>): TsdLinkManifest {
   const fail = (m: string): never => {
     throw new Error(m);
   };
-  if (raw["type"] !== "hm-link-xpubs") fail("That QR isn't a TSD Swap account link.");
+  if (!isLinkManifest(raw))
+    fail(
+      typeof raw["error"] === "string" || typeof raw["message"] === "string"
+        ? ((raw["message"] as string) ?? (raw["error"] as string))
+        : "That link isn't a TSD Swap account link.",
+    );
   if (typeof raw["challenge_id"] !== "string" || !raw["challenge_id"]) fail("Link is malformed.");
   if (typeof raw["callback_url"] !== "string" || !trustedUrl(raw["callback_url"] as string))
     fail("Link points at an untrusted server.");
@@ -96,12 +114,23 @@ export async function fetchTsdManifest(manifestUrl: string): Promise<TsdLinkMani
   const res = await fetch(`${PROXY}?url=${encodeURIComponent(manifestUrl)}`, {
     headers: { Accept: "application/json" },
   });
-  const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
-  if (!res.ok || !body) {
-    throw new Error(
-      (body?.["message"] as string) ?? (body?.["error"] as string) ?? "Could not read that link.",
-    );
+  const text = await res.text();
+  let body: Record<string, unknown> | null = null;
+  try {
+    body = JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    body = null;
   }
+  if (!res.ok) {
+    // Surface the server's own error text (e.g. 410 "Token expired") so the
+    // user knows to regenerate the QR instead of seeing a generic message.
+    const serverMsg =
+      (body?.["message"] as string) ??
+      (body?.["error"] as string) ??
+      (!body && text ? text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 160) : "");
+    throw new Error(serverMsg ? `${serverMsg} (${res.status})` : `Could not read that link (${res.status}).`);
+  }
+  if (!body) throw new Error("That link returned a page instead of link data.");
   const manifest = validateTsdManifest(body);
   if (manifest.manifest_url !== manifestUrl)
     throw new Error("The link manifest does not match its URL.");
