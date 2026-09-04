@@ -471,3 +471,51 @@ async function withoutReservedCoins(utxos: AccountUtxo[]): Promise<AccountUtxo[]
   return utxos.filter((u) => !(outpointKey(u.txid, u.vout) in live));
 }
 
+
+/** Collapse repeated outpoints (same txid:vout) to a single coin. */
+function dedupeOutpoints(utxos: AccountUtxo[]): AccountUtxo[] {
+  const seen = new Set<string>();
+  const out: AccountUtxo[] = [];
+  for (const u of utxos) {
+    const key = outpointKey(u.txid, u.vout);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(u);
+  }
+  return out;
+}
+
+/** Max outputs we're willing to double-check per refresh. */
+const VERIFY_LIMIT = 60;
+
+/**
+ * Ask the node whether each coin on a *secondary* derivation path is really
+ * unspent. A stale explorer UTXO index otherwise resurrects money that was
+ * already swept, and a self-transfer inside the old branch shows up twice.
+ * The primary path is left alone — it refreshes constantly and this would
+ * double the request count for no benefit.
+ */
+async function withoutSpentCoins(
+  utxos: AccountUtxo[],
+  primaryKind: AddressKind,
+): Promise<AccountUtxo[]> {
+  const suspects = utxos.filter((u) => (u.kind ?? primaryKind) !== primaryKind);
+  if (suspects.length === 0 || suspects.length > VERIFY_LIMIT) return utxos;
+
+  const spent = new Set<string>();
+  for (let i = 0; i < suspects.length; i += BATCH) {
+    const slice = suspects.slice(i, i + BATCH);
+    await Promise.all(
+      slice.map(async (u) => {
+        try {
+          const out = await getOutspend(u.txid, u.vout);
+          if (out.spent) spent.add(outpointKey(u.txid, u.vout));
+        } catch {
+          // Explorer hiccup — keep the coin; a real spend will be caught later.
+        }
+      }),
+    );
+  }
+  if (spent.size === 0) return utxos;
+  return utxos.filter((u) => !spent.has(outpointKey(u.txid, u.vout)));
+}
