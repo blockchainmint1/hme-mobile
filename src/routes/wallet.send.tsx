@@ -771,7 +771,7 @@ function SendPage() {
                     id="to"
                     value={to}
                     onChange={(e) => setTo(e.target.value)}
-                    placeholder="txc1... or T..."
+                    placeholder={isTokenSend ? "T... (legacy address)" : "txc1... or T..."}
                     className="font-mono flex-1"
                     autoComplete="off"
                     spellCheck={false}
@@ -780,6 +780,19 @@ function SendPage() {
                   <QrScanButton onScan={applyUri} />
                   <AddressBookButton chain="txc" onPick={(a) => setTo(a)} />
                 </div>
+                {isTokenSend && (
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {activeToken?.symbol} rides the Omni layer, which can't read segwit — the
+                    recipient must be a legacy <span className="font-mono">T…</span> address, never{" "}
+                    <span className="font-mono">txc1…</span>.
+                  </p>
+                )}
+                {isTokenSend && /^txc1/i.test(to.trim()) && (
+                  <p className="mt-1.5 text-xs text-destructive">
+                    That's a segwit (txc1…) address — sending {activeToken?.symbol} to it would
+                    strand the tokens. Ask the recipient for their legacy T… address.
+                  </p>
+                )}
               </div>
               <div>
                 <div className="flex items-center justify-between">
