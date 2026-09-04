@@ -136,6 +136,21 @@ function MigratePage() {
   const branches = account.data?.branches ?? [];
   const oldBranches = branches.filter((b) => b.kind !== TARGET_KIND);
 
+  /** Addresses that currently hold spendable coins, grouped per branch. */
+  const fundedByKind = useMemo(() => {
+    const map = new Map<DerivationKind, { address: string; value: number }[]>();
+    for (const u of account.data?.utxos ?? []) {
+      const kind = (u.kind ?? unlocked?.kind ?? TARGET_KIND) as DerivationKind;
+      const list = map.get(kind) ?? [];
+      const found = list.find((a) => a.address === u.address);
+      if (found) found.value += u.value;
+      else list.push({ address: u.address, value: u.value });
+      map.set(kind, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => b.value - a.value);
+    return map;
+  }, [account.data, unlocked]);
+
   /** Every coin that isn't already on the target branch. */
   const sweepable: AccountUtxo[] = useMemo(
     () => (account.data?.utxos ?? []).filter((u) => (u.kind ?? unlocked?.kind) !== TARGET_KIND),
