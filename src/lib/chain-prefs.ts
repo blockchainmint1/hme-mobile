@@ -95,6 +95,8 @@ function STORAGE_KEY(): string {
 }
 const DEFAULT_ENABLED: Record<ChainId, boolean> = {
   txc: true,
+  btc: false,
+
   eth: false,
   base: false,
   bsc: false,
