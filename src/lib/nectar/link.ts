@@ -223,6 +223,31 @@ function accountXpub(
   return bip32.fromSeed(seed, net as never).derivePath(path).neutered().toBase58();
 }
 
+/**
+ * Bitcoin Cash: BTC-style legacy params, SLIP-44 coin type 145.
+ * Standard xpub serialization — BCH never adopted custom version bytes.
+ */
+const BCH_NETWORK = {
+  ...serializationNetwork(XPUB_VERSIONS),
+  messagePrefix: "\x18Bitcoin Signed Message:\n",
+};
+const BCH_PATH = "m/44'/145'/0'";
+
+/**
+ * Dash: P2PKH 0x4c (X…), P2SH 0x10, WIF 0xcc, SLIP-44 coin type 5.
+ * Standard xpub serialization (drkv/drkp is an Electrum-Dash convention,
+ * not what watch-only indexers expect).
+ */
+const DASH_NETWORK = {
+  ...serializationNetwork(XPUB_VERSIONS),
+  messagePrefix: "\x19DarkCoin Signed Message:\n",
+  pubKeyHash: 0x4c,
+  scriptHash: 0x10,
+  wif: 0xcc,
+};
+const DASH_PATH = "m/44'/5'/0'";
+
+
 
 export interface WalletKeys {
   /** Stable wallet ID across devices: TXC legacy P2PKH at m/44'/696969'/0'/0/0. */
