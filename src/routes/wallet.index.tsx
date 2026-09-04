@@ -737,7 +737,12 @@ function WalletHome() {
 
           {/* Coins found on old derivation paths (old app / BlueWallet import) */}
           {activeChain === "txc" && !activeWatch && !activeWif && (
-            <OldPathBanner branches={account.data?.branches} />
+            {/* Only warn about old paths once we've re-scanned in this session.
+                The persisted query cache lives up to 24h and would otherwise
+                resurrect a balance that was already swept. */}
+            <OldPathBanner
+              branches={account.isFetchedAfterMount ? account.data?.branches : undefined}
+            />
           )}
           {activeChain === "txc" && !activeWatch && !activeWif && (
             <TxcTokens addresses={[...ownAddresses]} pendingIn={pendingOmniIn} />
