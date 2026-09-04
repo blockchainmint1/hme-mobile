@@ -175,17 +175,21 @@ export function UpdateCheckCard({ compact }: { compact?: boolean }) {
           </p>
         )}
 
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => void check()}
-          disabled={status === "checking"}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${status === "checking" ? "animate-spin" : ""}`} />
-          {status === "checking" ? "Checking…" : "Check for updates"}
-        </Button>
+        {/* When an update banner (native) or app-code refresh (web) is already
+            on screen, that is the single primary action — no duplicate check button. */}
+        {!(status === "update" && newerRelease) && !webStale && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => void check()}
+            disabled={status === "checking"}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${status === "checking" ? "animate-spin" : ""}`} />
+            {status === "checking" ? "Checking…" : "Check for updates"}
+          </Button>
+        )}
 
-        {webStale && (
+        {webStale && !(status === "update" && newerRelease) && (
           <>
             <p className="text-sm">Newer app code is live. Reload to get it.</p>
             <Button className="w-full" onClick={() => void applyWebUpdate()}>
