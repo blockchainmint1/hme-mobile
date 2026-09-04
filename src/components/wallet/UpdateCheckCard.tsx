@@ -93,11 +93,24 @@ export function UpdateCheckCard({ compact }: { compact?: boolean }) {
   const newerRelease = !!latest && compareVersions(latest.version, installed) > 0;
   const shellDiffersFromBundle = native && installed !== APP_VERSION;
 
+  const versionLine = (
+    <>
+      Installed {installed}
+      {native ? ` · ${platform}` : " · web"}
+      {latest ? ` · latest ${latest.version}` : ""}
+      {shellDiffersFromBundle ? (
+        <span className="block text-xs opacity-70">app code build {APP_VERSION}</span>
+      ) : null}
+    </>
+  );
+
   return (
     <Card
       className={compact ? "rounded-none border-0 bg-transparent shadow-none" : "mt-5"}
     >
-      {!compact && (
+      {compact ? (
+        <p className="mb-3 text-sm text-muted-foreground">{versionLine}</p>
+      ) : (
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <RotateCw className="h-5 w-5" /> Updates
