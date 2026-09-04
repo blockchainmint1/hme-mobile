@@ -15,12 +15,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 // Ordered upstream lists — first responder wins, the rest are failover.
-const UPSTREAMS: Record<string, string[]> = {
-  ltc: ["https://litecoinspace.org/api"],
-  btc: ["https://mempool.space/api", "https://blockstream.info/api"],
+// NowNodes is a keyed, rate-limit-free Blockbook; it goes first where we
+// speak Blockbook (BTC, DOGE). Public instances stay as failover.
+type Upstream = { base: string; key?: boolean };
+
+const UPSTREAMS: Record<string, Upstream[]> = {
+  ltc: [{ base: "https://litecoinspace.org/api" }],
+  btc: [
+    { base: "https://btcbook.nownodes.io/api/v2", key: true },
+    { base: "https://btc1.trezor.io/api/v2" },
+  ],
   doge: [
-    "https://dogecoin.atomicwallet.io/api/v2",
-    "https://blockbook.doge.zelcore.io/api/v2",
+    { base: "https://dogebook.nownodes.io/api/v2", key: true },
+    { base: "https://dogecoin.atomicwallet.io/api/v2" },
+    { base: "https://blockbook.doge.zelcore.io/api/v2" },
   ],
 };
 
