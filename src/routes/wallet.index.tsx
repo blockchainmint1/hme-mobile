@@ -1680,7 +1680,7 @@ function BtcForkTile({
       <div className="flex items-center justify-between">
         <p className={`text-sm ${v.subText}`}>{label}</p>
         <div className="flex items-center gap-2">
-          {utxoSwapEnabled && (
+          {utxoSwapEnabled && (variant === "ltc" || variant === "doge") && (
             <Link
               to={variant === "ltc" ? "/wallet/ltc/swap" : "/wallet/doge/swap"}
               onClick={(e) => e.stopPropagation()}
