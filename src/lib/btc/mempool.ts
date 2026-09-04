@@ -70,11 +70,10 @@ export interface FeeEstimates {
 }
 
 /**
- * Bitcoin Core's default minrelaytxfee is 0.001 BTC/kB = 100 sat/vB, but the
- * Esplora estimator often reports 1-5 sat/vB, which nodes reject with
- * "min relay fee not met". Floor every tier at the real relay minimum.
+ * Bitcoin's relay minimum is 1 sat/vB. mempool.space's estimator is reliable;
+ * we only guard against zero/garbage values and fall back to a modest tier.
  */
-const BTC_MIN_RELAY_SAT_VB = 100;
+const BTC_MIN_RELAY_SAT_VB = 1;
 
 export async function getFeeEstimates(): Promise<FeeEstimates> {
   const floor = (v: number | undefined, fallback: number) =>
@@ -82,20 +81,16 @@ export async function getFeeEstimates(): Promise<FeeEstimates> {
   try {
     const raw = await getJson<FeeEstimates>("/v1/fees/recommended");
     return {
-      fastestFee: floor(raw.fastestFee, 5),
-      halfHourFee: floor(raw.halfHourFee, 3),
-      hourFee: floor(raw.hourFee, 2),
+      fastestFee: floor(raw.fastestFee, 10),
+      halfHourFee: floor(raw.halfHourFee, 6),
+      hourFee: floor(raw.hourFee, 3),
       minimumFee: floor(raw.minimumFee, 1),
     };
   } catch {
-    return {
-      fastestFee: BTC_MIN_RELAY_SAT_VB,
-      halfHourFee: BTC_MIN_RELAY_SAT_VB,
-      hourFee: BTC_MIN_RELAY_SAT_VB,
-      minimumFee: BTC_MIN_RELAY_SAT_VB,
-    };
+    return { fastestFee: 10, halfHourFee: 6, hourFee: 3, minimumFee: 1 };
   }
 }
+
 
 export async function broadcastTx(hex: string): Promise<string> {
   const res = await fetch(`${BTC_MEMPOOL_API}/tx`, {
