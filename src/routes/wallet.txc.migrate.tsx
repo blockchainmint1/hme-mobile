@@ -297,7 +297,16 @@ function MigratePage() {
             </p>
           )}
           {branches.map((b) => {
-            const first = root ? deriveAddress(root, b.kind, 0, 0).address : null;
+            // Show the addresses that actually hold coins on this branch, not
+            // just index 0 — looking up an empty index-0 address made the
+            // balance look imaginary.
+            const funded = fundedByKind.get(b.kind) ?? [];
+            const shown =
+              funded.length > 0
+                ? funded
+                : root
+                  ? [{ address: deriveAddress(root, b.kind, 0, 0).address, value: 0 }]
+                  : [];
             return (
               <div key={b.kind} className="rounded-lg border border-border/60 bg-card/40 p-3">
                 <div className="flex items-center justify-between gap-2">
