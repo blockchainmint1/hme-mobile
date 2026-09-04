@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { z } from "zod";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
 import { deriveAddress } from "@/lib/txc/wallet";
 import { DERIVATION_PATHS } from "@/lib/txc/network";
+import { getOmniDepositAddress } from "@/lib/txc/tokens";
 import { QrCode } from "@/components/wallet/QrCode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
