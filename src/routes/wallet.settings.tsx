@@ -31,6 +31,8 @@ import { NectarLinkCard } from "@/components/wallet/NectarLinkCard";
 
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
+import { TsdShareXpubCard } from "@/components/wallet/TsdShareXpubCard";
+import { TsdNudgeToggleCard } from "@/components/wallet/TsdNudgeToggleCard";
 import { TsdRewardsLinkCard } from "@/components/wallet/TsdRewardsLinkCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { ProfilesCard } from "@/components/wallet/ProfilesCard";
