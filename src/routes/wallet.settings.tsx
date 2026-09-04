@@ -211,9 +211,13 @@ function SettingsPage() {
           value="tsd-cashout"
           icon={ArrowDownUp}
           title="TSD settings"
-          description="Manage your TSD Swap API key and rewards link."
+          description="API key, shared account key and TSD reminders."
         >
-          <TsdCashoutKeyCard compact />
+          <div className="space-y-6">
+            <TsdCashoutKeyCard compact />
+            <TsdShareXpubCard compact />
+            <TsdNudgeToggleCard compact />
+          </div>
         </SettingsSection>
 
         <SettingsSection
