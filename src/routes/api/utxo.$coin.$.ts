@@ -85,12 +85,15 @@ async function forward(request: Request, coin: string, path: string, search: str
 
   let lastStatus = 502;
   let lastBody = "upstream unavailable";
-  for (const base of bases) {
+  const nowNodesKey = process.env["NOWNODES_API_KEY"];
+  for (const { base, key } of bases) {
+    if (key && !nowNodesKey) continue;
     try {
       const upstream = await fetch(`${base}/${path}${search}`, {
         method,
         headers: {
           accept: "application/json, text/plain, */*",
+          ...(key && nowNodesKey ? { "api-key": nowNodesKey } : {}),
           ...(body === undefined ? {} : { "content-type": request.headers.get("content-type") ?? "text/plain" }),
         },
         ...(body === undefined ? {} : { body }),
