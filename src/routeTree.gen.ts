@@ -44,6 +44,8 @@ import { Route as WalletEvmChainRouteImport } from './routes/wallet.evm.$chain'
 import { Route as WalletDogeSwapRouteImport } from './routes/wallet.doge.swap'
 import { Route as WalletDogeSendRouteImport } from './routes/wallet.doge.send'
 import { Route as WalletDogeReceiveRouteImport } from './routes/wallet.doge.receive'
+import { Route as WalletBtcSendRouteImport } from './routes/wallet.btc.send'
+import { Route as WalletBtcReceiveRouteImport } from './routes/wallet.btc.receive'
 import { Route as ApiTsdLinkRouteImport } from './routes/api/tsd.link'
 import { Route as ApiTronSplatRouteImport } from './routes/api/tron.$'
 import { Route as ApiPublicLatestReleaseRouteImport } from './routes/api/public/latest-release'
@@ -234,6 +236,16 @@ const WalletDogeReceiveRoute = WalletDogeReceiveRouteImport.update({
   path: '/doge/receive',
   getParentRoute: () => WalletRoute,
 } as any)
+const WalletBtcSendRoute = WalletBtcSendRouteImport.update({
+  id: '/btc/send',
+  path: '/btc/send',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletBtcReceiveRoute = WalletBtcReceiveRouteImport.update({
+  id: '/btc/receive',
+  path: '/btc/receive',
+  getParentRoute: () => WalletRoute,
+} as any)
 const ApiTsdLinkRoute = ApiTsdLinkRouteImport.update({
   id: '/api/tsd/link',
   path: '/api/tsd/link',
@@ -331,6 +343,8 @@ export interface FileRoutesByFullPath {
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
   '/api/tsd/link': typeof ApiTsdLinkRoute
+  '/wallet/btc/receive': typeof WalletBtcReceiveRoute
+  '/wallet/btc/send': typeof WalletBtcSendRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/doge/swap': typeof WalletDogeSwapRoute
@@ -381,6 +395,8 @@ export interface FileRoutesByTo {
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
   '/api/tsd/link': typeof ApiTsdLinkRoute
+  '/wallet/btc/receive': typeof WalletBtcReceiveRoute
+  '/wallet/btc/send': typeof WalletBtcSendRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/doge/swap': typeof WalletDogeSwapRoute
@@ -433,6 +449,8 @@ export interface FileRoutesById {
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
   '/api/tron/$': typeof ApiTronSplatRoute
   '/api/tsd/link': typeof ApiTsdLinkRoute
+  '/wallet/btc/receive': typeof WalletBtcReceiveRoute
+  '/wallet/btc/send': typeof WalletBtcSendRoute
   '/wallet/doge/receive': typeof WalletDogeReceiveRoute
   '/wallet/doge/send': typeof WalletDogeSendRoute
   '/wallet/doge/swap': typeof WalletDogeSwapRoute
@@ -486,6 +504,8 @@ export interface FileRouteTypes {
     | '/api/public/latest-release'
     | '/api/tron/$'
     | '/api/tsd/link'
+    | '/wallet/btc/receive'
+    | '/wallet/btc/send'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
     | '/wallet/doge/swap'
@@ -536,6 +556,8 @@ export interface FileRouteTypes {
     | '/api/public/latest-release'
     | '/api/tron/$'
     | '/api/tsd/link'
+    | '/wallet/btc/receive'
+    | '/wallet/btc/send'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
     | '/wallet/doge/swap'
@@ -587,6 +609,8 @@ export interface FileRouteTypes {
     | '/api/public/latest-release'
     | '/api/tron/$'
     | '/api/tsd/link'
+    | '/wallet/btc/receive'
+    | '/wallet/btc/send'
     | '/wallet/doge/receive'
     | '/wallet/doge/send'
     | '/wallet/doge/swap'
@@ -882,6 +906,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalletDogeReceiveRouteImport
       parentRoute: typeof WalletRoute
     }
+    '/wallet/btc/send': {
+      id: '/wallet/btc/send'
+      path: '/btc/send'
+      fullPath: '/wallet/btc/send'
+      preLoaderRoute: typeof WalletBtcSendRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/btc/receive': {
+      id: '/wallet/btc/receive'
+      path: '/btc/receive'
+      fullPath: '/wallet/btc/receive'
+      preLoaderRoute: typeof WalletBtcReceiveRouteImport
+      parentRoute: typeof WalletRoute
+    }
     '/api/tsd/link': {
       id: '/api/tsd/link'
       path: '/api/tsd/link'
@@ -1008,6 +1046,8 @@ interface WalletRouteChildren {
   WalletWatchAddRoute: typeof WalletWatchAddRoute
   WalletWifAddRoute: typeof WalletWifAddRoute
   WalletIndexRoute: typeof WalletIndexRoute
+  WalletBtcReceiveRoute: typeof WalletBtcReceiveRoute
+  WalletBtcSendRoute: typeof WalletBtcSendRoute
   WalletDogeReceiveRoute: typeof WalletDogeReceiveRoute
   WalletDogeSendRoute: typeof WalletDogeSendRoute
   WalletDogeSwapRoute: typeof WalletDogeSwapRoute
@@ -1038,6 +1078,8 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletWatchAddRoute: WalletWatchAddRoute,
   WalletWifAddRoute: WalletWifAddRoute,
   WalletIndexRoute: WalletIndexRoute,
+  WalletBtcReceiveRoute: WalletBtcReceiveRoute,
+  WalletBtcSendRoute: WalletBtcSendRoute,
   WalletDogeReceiveRoute: WalletDogeReceiveRoute,
   WalletDogeSendRoute: WalletDogeSendRoute,
   WalletDogeSwapRoute: WalletDogeSwapRoute,
