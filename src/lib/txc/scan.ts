@@ -396,11 +396,21 @@ export async function scanAccount(
     branches.push({ kind: e.kind, balanceSats: e.snap.balanceSats, usedAddresses: used });
   }
 
+  // The explorer occasionally lists an output that has already been spent
+  // (its UTXO index lags behind the chain tip). When the spend was a move
+  // between two of our own addresses, the same money gets counted twice — the
+  // consumed input and the new output — which is exactly what makes an old
+  // derivation path show a phantom, often doubled, balance. Drop duplicates
+  // and confirm every old-path coin is genuinely unspent before counting it.
+  const deduped = dedupeOutpoints(utxos);
+  const verified = await withoutSpentCoins(deduped, kind);
+
   // Coins consumed by a transaction this device already broadcast can still
   // show up as unspent for a while. Spending them again is what produces
   // `txn-mempool-conflict`, so drop them here — after giving the node a
   // chance to tell us the reservation is obsolete.
-  const spendable = await withoutReservedCoins(utxos);
+  const spendable = await withoutReservedCoins(verified);
+
   const spendableBalance = spendable.reduce((s, u) => s + u.value, 0);
   const spendableByKind = new Map<AddressKind, number>();
   for (const u of spendable) {
