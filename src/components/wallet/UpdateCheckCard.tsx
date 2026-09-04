@@ -115,14 +115,7 @@ export function UpdateCheckCard({ compact }: { compact?: boolean }) {
           <CardTitle className="flex items-center gap-2">
             <RotateCw className="h-5 w-5" /> Updates
           </CardTitle>
-          <CardDescription>
-            Installed {installed}
-            {native ? ` · ${platform}` : " · web"}
-            {latest ? ` · latest ${latest.version}` : ""}
-            {shellDiffersFromBundle ? (
-              <span className="block text-xs opacity-70">app code build {APP_VERSION}</span>
-            ) : null}
-          </CardDescription>
+          <CardDescription>{versionLine}</CardDescription>
         </CardHeader>
       )}
       <CardContent className={compact ? "space-y-3 p-0" : "space-y-3"}>
