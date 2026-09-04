@@ -205,7 +205,7 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
  */
 export function parseWalletUri(input: string): { address: string; amount?: string; tokenId?: number } {
   const trimmed = input.trim();
-  const schemeMatch = trimmed.match(/^(texitcoin|txc|bitcoin|iskandercoin|isk|litecoin|ltc|dogecoin|doge):([^?]+)(\?(.*))?$/i);
+  const schemeMatch = trimmed.match(/^(texitcoin|txc|bitcoin|btc|iskandercoin|isk|litecoin|ltc|dogecoin|doge):([^?]+)(\?(.*))?$/i);
   if (schemeMatch) {
     const address = schemeMatch[2];
     const params = new URLSearchParams(schemeMatch[4] ?? "");

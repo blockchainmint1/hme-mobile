@@ -7,7 +7,7 @@ import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import { isKeyOnlyWallet } from "@/lib/txc/storage";
 
 
-export type ChainId = "txc" | EvmChainId | "isk" | "ltc" | "doge" | "tron" | "solana" | "zcu";
+export type ChainId = "txc" | "btc" | EvmChainId | "isk" | "ltc" | "doge" | "tron" | "solana" | "zcu";
 
 export interface ChainMeta {
   id: ChainId;
@@ -21,6 +21,7 @@ export interface ChainMeta {
 
 export const CHAIN_META: Record<ChainId, ChainMeta> = {
   txc: { id: "txc", name: "TEXITcoin", shortName: "TXC", accent: "#B45309" },
+  btc: { id: "btc", name: "Bitcoin", shortName: "BTC", accent: "#F7931A" },
   eth: { id: "eth", name: "Ethereum", shortName: EVM_CHAINS.eth.shortName, accent: EVM_CHAINS.eth.accent },
   base: { id: "base", name: "Base", shortName: EVM_CHAINS.base.shortName, accent: EVM_CHAINS.base.accent },
   bsc: { id: "bsc", name: "Binance Chain", shortName: EVM_CHAINS.bsc.shortName, accent: EVM_CHAINS.bsc.accent },
@@ -33,7 +34,7 @@ export const CHAIN_META: Record<ChainId, ChainMeta> = {
 };
 
 export const CHAIN_ORDER: ChainId[] = [
-  "txc", "eth", "base", "bsc", "isk", "ltc", "doge", "tron", "solana", "zcu",
+  "txc", "btc", "eth", "base", "bsc", "isk", "ltc", "doge", "tron", "solana", "zcu",
 ];
 
 const ORDER_KEY_BASE = "hme.chains.order.v1";
