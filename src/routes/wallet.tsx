@@ -159,6 +159,13 @@ function WalletLayout() {
       });
       return;
     }
+    if (intent.kind === "btc") {
+      navigate({
+        to: "/wallet/btc/send",
+        search: { to: intent.address, amount: intent.amount },
+      });
+      return;
+    }
     if (intent.kind === "isk") {
       navigate({
         to: "/wallet/isk/send",

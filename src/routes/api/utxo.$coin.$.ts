@@ -17,11 +17,13 @@ import { createFileRoute } from "@tanstack/react-router";
 // Ordered upstream lists — first responder wins, the rest are failover.
 const UPSTREAMS: Record<string, string[]> = {
   ltc: ["https://litecoinspace.org/api"],
+  btc: ["https://mempool.space/api", "https://blockstream.info/api"],
   doge: [
     "https://dogecoin.atomicwallet.io/api/v2",
     "https://blockbook.doge.zelcore.io/api/v2",
   ],
 };
+
 
 
 // Only explorer read paths + raw broadcast. Nothing else is forwarded.

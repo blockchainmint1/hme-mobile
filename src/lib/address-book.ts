@@ -7,6 +7,7 @@ import { address as addrLib } from "bitcoinjs-lib";
 import { TXC_NETWORK } from "./txc/network";
 import { ISK_NETWORK } from "./isk/network";
 import { LTC_NETWORK } from "./ltc/network";
+import { BTC_NETWORK } from "./btc/network";
 import { DOGE_NETWORK } from "./doge/network";
 import { isValidTronAddress } from "./tron/address";
 import { isValidSolanaAddress } from "./solana/network";
@@ -15,6 +16,7 @@ export type ContactChain =
   | "txc"
   | "isk"
   | "ltc"
+  | "btc"
   | "doge"
   | "tron"
   | "solana"
@@ -35,6 +37,7 @@ export const CHAIN_LABELS: Record<ContactChain, string> = {
   txc: "TEXITcoin (TXC)",
   isk: "IskanderCoin (ISK)",
   ltc: "Litecoin (LTC)",
+  btc: "Bitcoin (BTC)",
   doge: "Dogecoin (DOGE)",
   tron: "Tron (TRX / TRC-20)",
   solana: "Solana (SOL)",
@@ -66,6 +69,14 @@ export function validateAddress(chain: ContactChain, addr: string): string | nul
       return null;
     } catch {
       return "Not a valid IskanderCoin address.";
+    }
+  }
+  if (chain === "btc") {
+    try {
+      addrLib.toOutputScript(a, BTC_NETWORK);
+      return null;
+    } catch {
+      return "Not a valid Bitcoin address.";
     }
   }
   if (chain === "ltc") {

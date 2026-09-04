@@ -20,6 +20,7 @@ import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import { ALL_DERIVATION_KINDS, DERIVATION_PATHS } from "@/lib/txc/network";
 import { ISK_DERIVATION_PATHS, ISK_DEFAULT_KIND } from "@/lib/isk/network";
 import { LTC_DERIVATION_PATHS, LTC_DEFAULT_KIND } from "@/lib/ltc/network";
+import { BTC_DERIVATION_PATHS, BTC_DEFAULT_KIND } from "@/lib/btc/network";
 import { DOGE_DERIVATION_PATHS, DOGE_DEFAULT_KIND } from "@/lib/doge/network";
 import { TRON_DERIVATION_PATH } from "@/lib/tron/network";
 import { SOLANA_DERIVATION_PATH } from "@/lib/solana/network";
@@ -38,7 +39,7 @@ export type WalletDetailProps =
       txCount: number | null;
     })
   | (Common & {
-      kind: "isk" | "ltc" | "doge";
+      kind: "isk" | "ltc" | "doge" | "btc";
       balanceText: string;
       fiatText: string | null;
       receiveAddress: string | null;
@@ -334,16 +335,17 @@ function RenamableName({
 }
 
 const BTC_FORK_META: Record<
-  "isk" | "ltc" | "doge",
+  "isk" | "ltc" | "doge" | "btc",
   { chainName: string; path: string; kind: string }
 > = {
   isk: { chainName: CHAIN_META.isk.name, path: `${ISK_DERIVATION_PATHS[ISK_DEFAULT_KIND]}/0/0`, kind: ISK_DEFAULT_KIND },
+  btc: { chainName: CHAIN_META.btc.name, path: `${BTC_DERIVATION_PATHS[BTC_DEFAULT_KIND]}/0/0`, kind: BTC_DEFAULT_KIND },
   ltc: { chainName: CHAIN_META.ltc.name, path: `${LTC_DERIVATION_PATHS[LTC_DEFAULT_KIND]}/0/0`, kind: LTC_DEFAULT_KIND },
   doge: { chainName: CHAIN_META.doge.name, path: `${DOGE_DERIVATION_PATHS[DOGE_DEFAULT_KIND]}/0/0`, kind: DOGE_DEFAULT_KIND },
 };
 
 function BtcForkDetails(
-  props: Extract<WalletDetailProps, { kind: "isk" | "ltc" | "doge" }>,
+  props: Extract<WalletDetailProps, { kind: "isk" | "ltc" | "doge" | "btc" }>,
 ) {
   const meta = BTC_FORK_META[props.kind];
   return (
