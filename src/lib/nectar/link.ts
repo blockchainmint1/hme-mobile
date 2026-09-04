@@ -269,6 +269,8 @@ export async function deriveWalletKeys(mnemonic: string, passphrase = ""): Promi
     ZCU: evm,
     LTC: accountXpub(seed, LTC_DERIVATION_PATHS.bip84, LTC_NETWORK),
     DOGE: accountXpub(seed, DOGE_DERIVATION_PATHS.bip44, DOGE_NETWORK),
+    BCH: accountXpub(seed, BCH_PATH, BCH_NETWORK),
+    DASH: accountXpub(seed, DASH_PATH, DASH_NETWORK),
     ISK: accountXpub(seed, ISK_DERIVATION_PATHS.bip44, ISK_NETWORK),
     TRX: accountXpub(seed, `m/44'/${TRON_COIN_TYPE}'/0'`, serializationNetwork(XPUB_VERSIONS)),
     // Solana is ed25519: no BIP32 xpub exists, so we hand over the single
