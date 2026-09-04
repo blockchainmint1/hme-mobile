@@ -12,8 +12,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 const APK_SOURCE_URL =
-  "https://txc.mypinata.cloud/ipfs/bafybeiavh4ws3ap2dh3xlt5my5rsl7ji4j43estaxexmifxud4fll3llcy?filename=hme-wallet-0.1.202609032314-release.apk&download=true";
-const APK_FILENAME = "hme-wallet-0.1.202609032314-release.apk";
+  "https://txc.mypinata.cloud/ipfs/bafybeihvxvwzuz6ieuenbd6akiiqlmg63qa3vp5sjsepuuk34fxac3un7m?filename=hme-wallet-0.1.202609040228-release.apk&download=true";
+const APK_FILENAME = "hme-wallet-0.1.202609040228-release.apk";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

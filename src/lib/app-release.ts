@@ -8,7 +8,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export const APP_VERSION = "0.1.202609032314";
+export const APP_VERSION = "0.1.202609040228";
 
 /**
  * Download via our own endpoint, NOT the raw CDN asset: the CDN serves a
