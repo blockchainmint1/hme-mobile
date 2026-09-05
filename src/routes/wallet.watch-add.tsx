@@ -1,8 +1,9 @@
 /**
  * "Add watch-only wallet" flow.
  *
- * Watch-only tiles let people track a Cold Storage Coin or paper wallet's TXC
- * address without importing any keys. We validate the address against the TXC
+ * Watch-only tiles let people track a Cold Storage Coin or paper wallet's
+ * address without importing any keys. Works for every UTXO chain the wallet
+ * can read (TXC, ISK, BTC, LTC, DOGE) — we validate against that chain's
  * network params so bogus / wrong-network addresses can't create a dead tile.
  */
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -12,11 +13,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowLeft, Eye, Loader2, Search } from "lucide-react";
-import { address as addrLib } from "bitcoinjs-lib";
-import { TXC_NETWORK } from "@/lib/txc/network";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { addWatchWallet } from "@/lib/watch-only";
+import { WATCH_CHAINS, WATCH_CHAIN_META, type WatchChain } from "@/lib/watch/chain-io";
+import { validateAddress } from "@/lib/address-book";
 import { lookupColdStorageCoin } from "@/lib/csc/coin-lookup.functions";
 
 export const Route = createFileRoute("/wallet/watch-add")({
@@ -24,17 +32,31 @@ export const Route = createFileRoute("/wallet/watch-add")({
   component: WatchAddPage,
 });
 
-function isValidTxcAddress(addr: string): boolean {
-  try {
-    addrLib.toOutputScript(addr.trim(), TXC_NETWORK);
-    return true;
-  } catch {
-    return false;
+/** Registry blockchain codes → the chain we track it on. */
+const CSC_CHAIN_MAP: Record<string, WatchChain> = {
+  txc: "txc",
+  texitcoin: "txc",
+  isk: "isk",
+  iskandercoin: "isk",
+  btc: "btc",
+  bitcoin: "btc",
+  ltc: "ltc",
+  litecoin: "ltc",
+  doge: "doge",
+  dogecoin: "doge",
+};
+
+/** First chain whose network params accept this address, if any. */
+function detectChain(addr: string): WatchChain | null {
+  for (const c of WATCH_CHAINS) {
+    if (validateAddress(c, addr) === null) return c;
   }
+  return null;
 }
 
 function WatchAddPage() {
   const navigate = useNavigate();
+  const [chain, setChain] = useState<WatchChain>("txc");
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +64,7 @@ function WatchAddPage() {
   const [looking, setLooking] = useState(false);
   const [coinNote, setCoinNote] = useState<string | null>(null);
   const lookupCoin = useServerFn(lookupColdStorageCoin);
+  const meta = WATCH_CHAIN_META[chain];
 
   const lookUpCoinId = async () => {
     const id = coinId.trim().replace(/\s+/g, "");
@@ -56,15 +79,18 @@ function WatchAddPage() {
       if (!res.found || !res.address) {
         return setError(res.message ?? "That coin ID wasn't found.");
       }
-      if (!isValidTxcAddress(res.address)) {
+      const code = (res.blockchainCode ?? "").trim().toLowerCase();
+      const mapped = CSC_CHAIN_MAP[code] ?? detectChain(res.address);
+      if (!mapped) {
         return setError(
           `Coin ${res.assetId} is a ${res.blockchainName ?? res.blockchainCode ?? "different"} coin, so it can't be tracked here yet.`,
         );
       }
+      setChain(mapped);
       setAddress(res.address);
       if (!label.trim()) setLabel(res.productName ? `${res.productName} ${res.assetId}` : `Coin ${res.assetId}`);
       setCoinNote(
-        `Found ${res.productName ? `${res.productName} — ` : ""}coin ${res.assetId}. Address filled in below.`,
+        `Found ${res.productName ? `${res.productName} — ` : ""}coin ${res.assetId} on ${WATCH_CHAIN_META[mapped].ticker}. Address filled in below.`,
       );
     } catch {
       setError("Couldn't look up that coin ID. Try again.");
@@ -75,12 +101,15 @@ function WatchAddPage() {
 
   const handlePaste = (raw: string) => {
     setError(null);
+    let addr = raw.trim();
     try {
-      const parsed = parseWalletUri(raw);
-      setAddress(parsed.address);
+      addr = parseWalletUri(raw).address;
     } catch {
-      setAddress(raw.trim());
+      /* plain address */
     }
+    setAddress(addr);
+    const detected = detectChain(addr);
+    if (detected) setChain(detected);
   };
 
   const submit = (e: React.FormEvent) => {
@@ -88,12 +117,18 @@ function WatchAddPage() {
     setError(null);
     const cleanAddr = address.trim();
     if (!cleanAddr) return setError("Paste or scan an address first.");
-    if (!isValidTxcAddress(cleanAddr)) {
-      return setError("That's not a valid TEXITcoin address. Make sure you're using the TXC address (not BTC).");
+    const invalid = validateAddress(chain, cleanAddr);
+    if (invalid) {
+      const detected = detectChain(cleanAddr);
+      return setError(
+        detected
+          ? `That looks like a ${WATCH_CHAIN_META[detected].ticker} address — switch the network above to ${WATCH_CHAIN_META[detected].ticker}.`
+          : `That's not a valid ${meta.label} address.`,
+      );
     }
     addWatchWallet({
       label: label.trim() || "Watch-only",
-      chain: "txc",
+      chain,
       address: cleanAddr,
     });
     navigate({ to: "/wallet" });
@@ -115,7 +150,7 @@ function WatchAddPage() {
             <Eye className="h-5 w-5" /> Add watch-only wallet
           </CardTitle>
           <CardDescription>
-            Track a TXC address without importing keys. Perfect for Cold Storage Coins, paper wallets,
+            Track any address without importing keys. Perfect for Cold Storage Coins, paper wallets,
             or any address you only need to monitor. You can view balance & history — sending stays
             locked because the private key never touches this app.
           </CardDescription>
@@ -164,6 +199,22 @@ function WatchAddPage() {
 
           <form onSubmit={submit} className="space-y-4">
             <div>
+              <Label htmlFor="chain">Network</Label>
+              <Select value={chain} onValueChange={(v) => setChain(v as WatchChain)}>
+                <SelectTrigger id="chain">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WATCH_CHAINS.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {WATCH_CHAIN_META[c].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
               <Label htmlFor="label">Label (optional)</Label>
               <Input
                 id="label"
@@ -175,13 +226,17 @@ function WatchAddPage() {
             </div>
 
             <div>
-              <Label htmlFor="address">TEXITcoin address</Label>
+              <Label htmlFor="address">{meta.ticker} address</Label>
               <div className="flex gap-2">
                 <Input
                   id="address"
-                  placeholder="txc1... or T..."
+                  placeholder={meta.placeholder}
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) => {
+                    setAddress(e.target.value);
+                    const detected = detectChain(e.target.value.trim());
+                    if (detected) setChain(detected);
+                  }}
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="off"

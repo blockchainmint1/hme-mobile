@@ -11,7 +11,9 @@ import { scopedKey } from "@/lib/profiles";
  * Nothing here is sensitive — addresses are public.
  */
 
-export type WatchChain = "txc";
+export { WATCH_CHAINS, isWatchChain } from "@/lib/watch/chain-io";
+export type { WatchChain } from "@/lib/watch/chain-io";
+import { isWatchChain as isWatchChainFn, type WatchChain } from "@/lib/watch/chain-io";
 
 export interface WatchWallet {
   id: string;
@@ -35,7 +37,7 @@ function safeParse(raw: string | null): WatchWallet[] {
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(
       (w): w is WatchWallet =>
-        !!w && typeof w.id === "string" && typeof w.address === "string" && w.chain === "txc",
+        !!w && typeof w.id === "string" && typeof w.address === "string" && isWatchChainFn(w.chain),
     );
   } catch {
     return [];

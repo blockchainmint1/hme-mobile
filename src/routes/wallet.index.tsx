@@ -63,6 +63,7 @@ import {
   watchChangedEvent,
   type WatchWallet,
 } from "@/lib/watch-only";
+import { WATCH_CHAIN_META, watchApi } from "@/lib/watch/chain-io";
 import {
   listWifWallets,
   removeWifWallet,
@@ -512,14 +513,26 @@ function WalletHome() {
   const watchStats = useQueries({
     queries: watchList.map((w) => ({
       queryKey: ["watch-stats", w.chain, w.address],
-      queryFn: () => getAddressStats(w.address),
+      queryFn: () => watchApi(w.chain).getAddressStats(w.address),
     })),
   });
   const activeWatchTxs = useQuery({
-    queryKey: ["watch-txs", activeWatch?.address],
+    queryKey: ["watch-txs", activeWatch?.chain, activeWatch?.address],
     enabled: !!activeWatch,
-    queryFn: () => getAddressTxs(activeWatch!.address),
+    queryFn: () => watchApi(activeWatch!.chain).getAddressTxs(activeWatch!.address),
   });
+
+  /** Latest USD price for a watch-only tile's chain (null when unknown). */
+  const watchPriceUsd = (c: WatchWallet["chain"]): number | null =>
+    (c === "txc"
+      ? price.data?.usd
+      : c === "isk"
+        ? iskPrice.data?.usd
+        : c === "btc"
+          ? btcPrice.data?.usd
+          : c === "ltc"
+            ? ltcPrice.data?.usd
+            : dogePrice.data?.usd) ?? null;
 
   // Long-press to remove a watch-only entry (chain tiles use reorder sheet).
   const [watchRemove, setWatchRemove] = useState<WatchWallet | null>(null);
@@ -724,7 +737,7 @@ function WalletHome() {
                       loading={
                         watchStats[watchList.findIndex((w) => w.id === slot.watch.id)]?.isLoading ?? true
                       }
-                      priceUsd={price.data?.usd ?? null}
+                      priceUsd={watchPriceUsd(slot.watch.chain)}
                       onRefresh={() =>
                         watchStats[watchList.findIndex((w) => w.id === slot.watch.id)]?.refetch()
                       }
@@ -2249,8 +2262,9 @@ function WatchOnlyTile({
       stats.mempool_stats.funded_txo_sum -
       stats.mempool_stats.spent_txo_sum
     : 0;
-  const balUsd = priceUsd != null ? satsToTxc(balSats) * priceUsd : null;
-  const balText = loading && !stats ? "..." : formatTxcCompact(balSats);
+  const meta = WATCH_CHAIN_META[wallet.chain];
+  const balUsd = priceUsd != null ? meta.toCoin(balSats) * priceUsd : null;
+  const balText = loading && !stats ? "..." : meta.formatCompact(balSats);
   const fiatText = balUsd != null ? formatFiat(balUsd) : "Price unavailable";
   return (
     <button
@@ -2294,7 +2308,7 @@ function WatchOnlyTile({
         </div>
         <p className="mt-2 text-4xl font-bold tracking-tight">
           {hidden ? maskAmount(balText) : balText}
-          <span className="ml-2 text-2xl font-semibold opacity-90">TXC</span>
+          <span className="ml-2 text-2xl font-semibold opacity-90">{meta.ticker}</span>
         </p>
         <p className="text-white/70 text-sm">{hidden ? maskAmount(fiatText) : fiatText}</p>
         <p className="mt-3 text-[11px] font-mono text-white/50 truncate">
@@ -2326,6 +2340,7 @@ function WatchOnlyActivity({
   onOpen: (tx: MempoolTx, net: number, incoming: boolean) => void;
 }) {
   const own = wallet.address;
+  const meta = WATCH_CHAIN_META[wallet.chain];
   return (
     <section className="mt-8 px-4">
       <div className="flex items-center justify-between mb-3">
@@ -2346,7 +2361,7 @@ function WatchOnlyActivity({
       ) : error ? (
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground">
-            Couldn't reach mempool.texitcoin.org.
+            Couldn't reach the {meta.ticker} explorer.
           </CardContent>
         </Card>
       ) : (txs?.length ?? 0) === 0 ? (
@@ -2399,7 +2414,7 @@ function WatchOnlyActivity({
                       className={`text-sm font-semibold ${incoming ? "text-emerald-400" : ""}`}
                     >
                       {incoming ? "+" : "−"}
-                      {formatTxc(Math.abs(net))}
+                      {meta.format(Math.abs(net))}
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -2435,7 +2450,7 @@ function WatchOnlyBottomActions({ wallet }: { wallet: WatchWallet }) {
               <Eye className="h-5 w-5" /> {wallet.label}
             </DialogTitle>
             <DialogDescription>
-              Watch-only address. Share to receive TXC — signing must happen on the
+              Watch-only address. Share to receive {WATCH_CHAIN_META[wallet.chain].ticker} — signing must happen on the
               device that holds the key (e.g. your Cold Storage Coin).
             </DialogDescription>
           </DialogHeader>
