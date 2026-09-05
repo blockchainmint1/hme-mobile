@@ -11,6 +11,11 @@ import { ISK_DEFAULT_KIND } from "@/lib/isk/network";
 import { formatIsk, formatIskCompact, satsToIsk } from "@/lib/isk/units";
 import { getIskPriceUsd } from "@/lib/isk/price.functions";
 import { getAddressTxs as getIskAddressTxs, type MempoolTx as IskMempoolTx } from "@/lib/isk/mempool";
+import { scanBtcAccount } from "@/lib/btc/scan";
+import { BTC_DEFAULT_KIND } from "@/lib/btc/network";
+import { formatBtc, formatBtcCompact, satsToBtc } from "@/lib/btc/units";
+import { getBtcPriceUsd } from "@/lib/btc/price.functions";
+import { getAddressTxs as getBtcAddressTxs, type MempoolTx as BtcMempoolTx } from "@/lib/btc/mempool";
 import { scanLtcAccount } from "@/lib/ltc/scan";
 import { LTC_DEFAULT_KIND } from "@/lib/ltc/network";
 import { formatLtc, formatLtcCompact, satsToLtc } from "@/lib/ltc/units";
@@ -58,6 +63,7 @@ import {
   watchChangedEvent,
   type WatchWallet,
 } from "@/lib/watch-only";
+import { WATCH_CHAIN_META, watchApi } from "@/lib/watch/chain-io";
 import {
   listWifWallets,
   removeWifWallet,
@@ -354,6 +360,41 @@ function WalletHome() {
     ...(iskAccount.data?.internal.map((a) => a.address) ?? []),
   ]);
 
+  // BTC data
+  const btcEnabled = enabled.includes("btc");
+  const fetchBtcPrice = useServerFn(getBtcPriceUsd);
+  const btcAccount = useQuery({
+    queryKey: ["btc-account", BTC_DEFAULT_KIND, root?.neutered().toBase58().slice(0, 24)],
+    enabled: !!root && !!unlocked && btcEnabled,
+    queryFn: () => scanBtcAccount(root!, BTC_DEFAULT_KIND),
+  });
+  const btcPrice = useQuery({
+    queryKey: ["btc-price"],
+    queryFn: () => fetchBtcPrice(),
+    staleTime: 10 * 60_000,
+    enabled: btcEnabled,
+  });
+  const btcTxs = useQuery({
+    queryKey: ["btc-txs", btcAccount.data?.external.map((a) => a.address).join(",")],
+    enabled: !!btcAccount.data && activeChain === "btc",
+    queryFn: async () => {
+      const all = await Promise.all(
+        [...(btcAccount.data?.external ?? []), ...(btcAccount.data?.internal ?? [])].map((a) =>
+          getBtcAddressTxs(a.address).catch(() => [] as BtcMempoolTx[]),
+        ),
+      );
+      const map = new Map<string, BtcMempoolTx>();
+      for (const list of all) for (const tx of list) map.set(tx.txid, tx);
+      return [...map.values()].sort(
+        (a, b) => (b.status.block_time ?? 0) - (a.status.block_time ?? 0),
+      );
+    },
+  });
+  const btcOwnAddresses = new Set([
+    ...(btcAccount.data?.external.map((a) => a.address) ?? []),
+    ...(btcAccount.data?.internal.map((a) => a.address) ?? []),
+  ]);
+
   // LTC data
   const ltcEnabled = enabled.includes("ltc");
   const fetchLtcPrice = useServerFn(getLtcPriceUsd);
@@ -472,14 +513,26 @@ function WalletHome() {
   const watchStats = useQueries({
     queries: watchList.map((w) => ({
       queryKey: ["watch-stats", w.chain, w.address],
-      queryFn: () => getAddressStats(w.address),
+      queryFn: () => watchApi(w.chain).getAddressStats(w.address),
     })),
   });
   const activeWatchTxs = useQuery({
-    queryKey: ["watch-txs", activeWatch?.address],
+    queryKey: ["watch-txs", activeWatch?.chain, activeWatch?.address],
     enabled: !!activeWatch,
-    queryFn: () => getAddressTxs(activeWatch!.address),
+    queryFn: () => watchApi(activeWatch!.chain).getAddressTxs(activeWatch!.address),
   });
+
+  /** Latest USD price for a watch-only tile's chain (null when unknown). */
+  const watchPriceUsd = (c: WatchWallet["chain"]): number | null =>
+    (c === "txc"
+      ? price.data?.usd
+      : c === "isk"
+        ? iskPrice.data?.usd
+        : c === "btc"
+          ? btcPrice.data?.usd
+          : c === "ltc"
+            ? ltcPrice.data?.usd
+            : dogePrice.data?.usd) ?? null;
 
   // Long-press to remove a watch-only entry (chain tiles use reorder sheet).
   const [watchRemove, setWatchRemove] = useState<WatchWallet | null>(null);
@@ -573,6 +626,21 @@ function WalletHome() {
                       }}
                     />
                   )}
+                  {slot.kind === "chain" && slot.chain === "btc" && (
+                    <BtcForkTile
+                      variant="btc"
+                      balanceSats={btcAccount.data?.balanceSats ?? 0}
+                      loading={btcAccount.isLoading}
+                      priceUsd={btcPrice.data?.usd ?? null}
+                      onRefresh={() => btcAccount.refetch()}
+                      refreshing={btcAccount.isFetching}
+                      label={getChainLabel("btc")}
+                      onOpenDetails={() => {
+                        if (longPressFired.current) return;
+                        setTileOpen("btc");
+                      }}
+                    />
+                  )}
                   {slot.kind === "chain" && slot.chain === "ltc" && (
                     <BtcForkTile
                       variant="ltc"
@@ -634,7 +702,7 @@ function WalletHome() {
                       }}
                     />
                   )}
-                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "isk" && slot.chain !== "ltc" && slot.chain !== "doge" && slot.chain !== "tron" && slot.chain !== "solana" && (
+                  {slot.kind === "chain" && slot.chain !== "txc" && slot.chain !== "btc" && slot.chain !== "isk" && slot.chain !== "ltc" && slot.chain !== "doge" && slot.chain !== "tron" && slot.chain !== "solana" && (
                     <EvmTile
                       chainId={slot.chain as EvmChainId}
                       address={evmAddress}
@@ -669,7 +737,7 @@ function WalletHome() {
                       loading={
                         watchStats[watchList.findIndex((w) => w.id === slot.watch.id)]?.isLoading ?? true
                       }
-                      priceUsd={price.data?.usd ?? null}
+                      priceUsd={watchPriceUsd(slot.watch.chain)}
                       onRefresh={() =>
                         watchStats[watchList.findIndex((w) => w.id === slot.watch.id)]?.refetch()
                       }
@@ -895,6 +963,16 @@ function WalletHome() {
               onRefresh={() => iskAccount.refetch()}
             />
           )}
+          {activeChain === "btc" && !activeWatch && !activeWif && (
+            <BtcForkActivity
+              variant="btc"
+              loading={btcAccount.isLoading || btcTxs.isLoading}
+              error={btcAccount.isError}
+              txs={btcTxs.data ?? null}
+              ownAddresses={btcOwnAddresses}
+              onRefresh={() => btcAccount.refetch()}
+            />
+          )}
           {activeChain === "ltc" && !activeWatch && !activeWif && (
             <BtcForkActivity
               variant="ltc"
@@ -921,14 +999,14 @@ function WalletHome() {
           {activeChain === "solana" && !activeWatch && !activeWif && (
             <SolanaActivity address={solanaAccount?.address ?? null} rows={solana.history.data ?? null} />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && activeChain !== "solana" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
+          {activeChain !== "txc" && activeChain !== "btc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && activeChain !== "solana" && activeChain in EVM_CHAINS && !activeWatch && !activeWif && (
             <EvmActivity
               chainId={activeChain as EvmChainId}
               address={evmAddress}
               onOpen={(t) => setDetail({ kind: "evm", chain: activeChain as EvmChainId, transfer: t })}
             />
           )}
-          {activeChain !== "txc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && activeChain !== "solana" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
+          {activeChain !== "txc" && activeChain !== "btc" && activeChain !== "isk" && activeChain !== "ltc" && activeChain !== "doge" && activeChain !== "tron" && activeChain !== "solana" && !(activeChain in EVM_CHAINS) && !activeWatch && !activeWif && (
             <section className="mt-8 px-4">
               <Card>
                 <CardContent className="pt-6 text-sm text-muted-foreground">
@@ -1006,6 +1084,21 @@ function WalletHome() {
           txCount={iskTxs.data?.length ?? null}
         />
       )}
+      {tileOpen === "btc" && (
+        <WalletDetailSheet
+          open
+          onClose={() => setTileOpen(null)}
+          kind="btc"
+          balanceText={`${formatBtc(btcAccount.data?.balanceSats ?? 0)}`}
+          fiatText={
+            btcPrice.data?.usd != null
+              ? formatFiat(satsToBtc(btcAccount.data?.balanceSats ?? 0) * btcPrice.data.usd)
+              : null
+          }
+          receiveAddress={btcAccount.data?.nextReceiveAddress ?? null}
+          txCount={btcTxs.data?.length ?? null}
+        />
+      )}
       {tileOpen === "ltc" && (
         <WalletDetailSheet
           open
@@ -1062,7 +1155,7 @@ function WalletHome() {
           txCount={solana.history.data?.length ?? null}
         />
       )}
-      {tileOpen && tileOpen !== "txc" && tileOpen !== "isk" && tileOpen !== "ltc" && tileOpen !== "doge" && tileOpen !== "tron" && tileOpen !== "solana" && tileOpen in EVM_CHAINS && (
+      {tileOpen && tileOpen !== "txc" && tileOpen !== "btc" && tileOpen !== "isk" && tileOpen !== "ltc" && tileOpen !== "doge" && tileOpen !== "tron" && tileOpen !== "solana" && tileOpen in EVM_CHAINS && (
         <WalletDetailSheet
           open
           onClose={() => setTileOpen(null)}
@@ -1116,6 +1209,22 @@ function BottomActions({ chain }: { chain: ChainId }) {
         </Button>
         <Button asChild size="lg" className="flex-1">
           <Link to="/wallet/isk/send">
+            <Send className="h-4 w-4 mr-2" /> Send
+          </Link>
+        </Button>
+      </>
+    );
+  }
+  if (chain === "btc") {
+    return (
+      <>
+        <Button asChild size="lg" variant="outline" className="flex-1">
+          <Link to="/wallet/btc/receive">
+            <QrCode className="h-4 w-4 mr-2" /> Receive
+          </Link>
+        </Button>
+        <Button asChild size="lg" className="flex-1">
+          <Link to="/wallet/btc/send">
             <Send className="h-4 w-4 mr-2" /> Send
           </Link>
         </Button>
@@ -1507,6 +1616,18 @@ const BTC_FORK_VARIANTS = {
     formatCompact: formatIskCompact,
     format: formatIsk,
   },
+  btc: {
+    ticker: "BTC",
+    gradient: "from-orange-400 via-orange-600 to-amber-900",
+    shadow: "shadow-orange-950/30",
+    subText: "text-orange-50/80",
+    subTextFaint: "text-orange-50/70",
+    mempoolHost: "mempool.space",
+    txLabel: "Bitcoin",
+    toCoin: satsToBtc,
+    formatCompact: formatBtcCompact,
+    format: formatBtc,
+  },
   ltc: {
     ticker: "LTC",
     gradient: "from-slate-500 via-slate-700 to-slate-900",
@@ -1534,7 +1655,7 @@ const BTC_FORK_VARIANTS = {
 } as const;
 
 type BtcForkVariant = keyof typeof BTC_FORK_VARIANTS;
-type AnyBtcForkTx = IskMempoolTx | LtcMempoolTx | DogeMempoolTx;
+type AnyBtcForkTx = IskMempoolTx | LtcMempoolTx | DogeMempoolTx | BtcMempoolTx;
 
 function BtcForkTile({
   variant,
@@ -1572,7 +1693,7 @@ function BtcForkTile({
       <div className="flex items-center justify-between">
         <p className={`text-sm ${v.subText}`}>{label}</p>
         <div className="flex items-center gap-2">
-          {utxoSwapEnabled && (
+          {utxoSwapEnabled && (variant === "ltc" || variant === "doge") && (
             <Link
               to={variant === "ltc" ? "/wallet/ltc/swap" : "/wallet/doge/swap"}
               onClick={(e) => e.stopPropagation()}
@@ -2141,8 +2262,9 @@ function WatchOnlyTile({
       stats.mempool_stats.funded_txo_sum -
       stats.mempool_stats.spent_txo_sum
     : 0;
-  const balUsd = priceUsd != null ? satsToTxc(balSats) * priceUsd : null;
-  const balText = loading && !stats ? "..." : formatTxcCompact(balSats);
+  const meta = WATCH_CHAIN_META[wallet.chain];
+  const balUsd = priceUsd != null ? meta.toCoin(balSats) * priceUsd : null;
+  const balText = loading && !stats ? "..." : meta.formatCompact(balSats);
   const fiatText = balUsd != null ? formatFiat(balUsd) : "Price unavailable";
   return (
     <button
@@ -2186,7 +2308,7 @@ function WatchOnlyTile({
         </div>
         <p className="mt-2 text-4xl font-bold tracking-tight">
           {hidden ? maskAmount(balText) : balText}
-          <span className="ml-2 text-2xl font-semibold opacity-90">TXC</span>
+          <span className="ml-2 text-2xl font-semibold opacity-90">{meta.ticker}</span>
         </p>
         <p className="text-white/70 text-sm">{hidden ? maskAmount(fiatText) : fiatText}</p>
         <p className="mt-3 text-[11px] font-mono text-white/50 truncate">
@@ -2218,6 +2340,7 @@ function WatchOnlyActivity({
   onOpen: (tx: MempoolTx, net: number, incoming: boolean) => void;
 }) {
   const own = wallet.address;
+  const meta = WATCH_CHAIN_META[wallet.chain];
   return (
     <section className="mt-8 px-4">
       <div className="flex items-center justify-between mb-3">
@@ -2238,7 +2361,7 @@ function WatchOnlyActivity({
       ) : error ? (
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground">
-            Couldn't reach mempool.texitcoin.org.
+            Couldn't reach the {meta.ticker} explorer.
           </CardContent>
         </Card>
       ) : (txs?.length ?? 0) === 0 ? (
@@ -2291,7 +2414,7 @@ function WatchOnlyActivity({
                       className={`text-sm font-semibold ${incoming ? "text-emerald-400" : ""}`}
                     >
                       {incoming ? "+" : "−"}
-                      {formatTxc(Math.abs(net))}
+                      {meta.format(Math.abs(net))}
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -2327,7 +2450,7 @@ function WatchOnlyBottomActions({ wallet }: { wallet: WatchWallet }) {
               <Eye className="h-5 w-5" /> {wallet.label}
             </DialogTitle>
             <DialogDescription>
-              Watch-only address. Share to receive TXC — signing must happen on the
+              Watch-only address. Share to receive {WATCH_CHAIN_META[wallet.chain].ticker} — signing must happen on the
               device that holds the key (e.g. your Cold Storage Coin).
             </DialogDescription>
           </DialogHeader>

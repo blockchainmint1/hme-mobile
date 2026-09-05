@@ -20,6 +20,7 @@ import type { EvmChainId } from "@/lib/chains/evm";
 export type PaymentIntent =
   | { kind: "txc"; address: string; amount?: string; tokenId?: number }
   | { kind: "isk"; address: string; amount?: string }
+  | { kind: "btc"; address: string; amount?: string }
   | {
       kind: "evm";
       chain?: EvmChainId; // undefined => user must pick
@@ -44,6 +45,11 @@ function isEvmAddress(s: string): boolean {
 function isTxcAddress(s: string): boolean {
   // bech32 txc1..., legacy T..., or wrapped M...
   return /^(txc1|T|M)[0-9a-zA-Z]{20,}$/.test(s);
+}
+
+function isBtcAddress(s: string): boolean {
+  // bech32 bc1…, legacy 1…, p2sh 3…
+  return /^(bc1[0-9a-z]{20,}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(s);
 }
 
 function isIskAddress(s: string): boolean {
@@ -97,6 +103,7 @@ export function parsePaymentUri(input: string): PaymentIntent {
   // Bare addresses
   if (isEvmAddress(raw)) return { kind: "evm", address: raw };
   if (isTxcAddress(raw)) return { kind: "txc", address: raw };
+  if (isBtcAddress(raw)) return { kind: "btc", address: raw };
   if (isIskAddress(raw)) return { kind: "isk", address: raw };
 
   // Scheme URIs
@@ -105,12 +112,15 @@ export function parsePaymentUri(input: string): PaymentIntent {
   const proto = scheme[1].toLowerCase();
   const rest = scheme[2];
 
-  if (proto === "texitcoin" || proto === "txc" || proto === "bitcoin") {
+  if (proto === "texitcoin" || proto === "txc" || proto === "bitcoin" || proto === "btc") {
     const m = rest.match(/^([^?]+)(?:\?(.*))?$/);
     if (!m) return { kind: "unknown", raw };
     const address = m[1];
     const params = new URLSearchParams(m[2] ?? "");
     const amount = params.get("amount") ?? undefined;
+    // `bitcoin:` is shared: legacy TXC wallets use it with T… addresses, while
+    // a real Bitcoin address means BTC.
+    if (isBtcAddress(address)) return { kind: "btc", address, amount };
     const tokenId = parseOmniId(params);
     return { kind: "txc", address, amount, ...(tokenId ? { tokenId } : {}) };
   }

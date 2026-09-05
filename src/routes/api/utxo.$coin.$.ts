@@ -15,13 +15,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 // Ordered upstream lists — first responder wins, the rest are failover.
-const UPSTREAMS: Record<string, string[]> = {
-  ltc: ["https://litecoinspace.org/api"],
+// NowNodes is a keyed, rate-limit-free Blockbook; it goes first where we
+// speak Blockbook (BTC, DOGE). Public instances stay as failover.
+type Upstream = { base: string; key?: boolean };
+
+const UPSTREAMS: Record<string, Upstream[]> = {
+  ltc: [{ base: "https://litecoinspace.org/api" }],
+  btc: [
+    { base: "https://btcbook.nownodes.io/api/v2", key: true },
+    { base: "https://btc1.trezor.io/api/v2" },
+  ],
   doge: [
-    "https://dogecoin.atomicwallet.io/api/v2",
-    "https://blockbook.doge.zelcore.io/api/v2",
+    { base: "https://dogebook.nownodes.io/api/v2", key: true },
+    { base: "https://dogecoin.atomicwallet.io/api/v2" },
+    { base: "https://blockbook.doge.zelcore.io/api/v2" },
   ],
 };
+
 
 
 // Only explorer read paths + raw broadcast. Nothing else is forwarded.
@@ -75,12 +85,15 @@ async function forward(request: Request, coin: string, path: string, search: str
 
   let lastStatus = 502;
   let lastBody = "upstream unavailable";
-  for (const base of bases) {
+  const nowNodesKey = process.env["NOWNODES_API_KEY"];
+  for (const { base, key } of bases) {
+    if (key && !nowNodesKey) continue;
     try {
       const upstream = await fetch(`${base}/${path}${search}`, {
         method,
         headers: {
           accept: "application/json, text/plain, */*",
+          ...(key && nowNodesKey ? { "api-key": nowNodesKey } : {}),
           ...(body === undefined ? {} : { "content-type": request.headers.get("content-type") ?? "text/plain" }),
         },
         ...(body === undefined ? {} : { body }),
