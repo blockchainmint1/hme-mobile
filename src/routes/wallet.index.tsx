@@ -837,7 +837,7 @@ function WalletHome() {
               ) : account.isError ? (
                 <Card>
                   <CardContent className="pt-6 text-sm text-muted-foreground">
-                    Couldn't reach the {meta.ticker} explorer.{" "}
+                    Couldn't reach mempool.texitcoin.org.{" "}
                     <button className="underline" onClick={() => account.refetch()}>
                       try again
                     </button>
