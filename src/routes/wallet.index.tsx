@@ -961,6 +961,7 @@ function WalletHome() {
               txs={iskTxs.data ?? null}
               ownAddresses={iskOwnAddresses}
               onRefresh={() => iskAccount.refetch()}
+              onOpen={(tx, net, incoming) => setDetail(utxoTxDetail("isk", tx, net, incoming))}
             />
           )}
           {activeChain === "btc" && !activeWatch && !activeWif && (
@@ -971,6 +972,7 @@ function WalletHome() {
               txs={btcTxs.data ?? null}
               ownAddresses={btcOwnAddresses}
               onRefresh={() => btcAccount.refetch()}
+              onOpen={(tx, net, incoming) => setDetail(utxoTxDetail("btc", tx, net, incoming))}
             />
           )}
           {activeChain === "ltc" && !activeWatch && !activeWif && (
@@ -981,6 +983,7 @@ function WalletHome() {
               txs={ltcTxs.data ?? null}
               ownAddresses={ltcOwnAddresses}
               onRefresh={() => ltcAccount.refetch()}
+              onOpen={(tx, net, incoming) => setDetail(utxoTxDetail("ltc", tx, net, incoming))}
             />
           )}
           {activeChain === "doge" && !activeWatch && !activeWif && (
@@ -991,6 +994,7 @@ function WalletHome() {
               txs={dogeTxs.data ?? null}
               ownAddresses={dogeOwnAddresses}
               onRefresh={() => dogeAccount.refetch()}
+              onOpen={(tx, net, incoming) => setDetail(utxoTxDetail("doge", tx, net, incoming))}
             />
           )}
           {activeChain === "tron" && !activeWatch && !activeWif && (
