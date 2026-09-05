@@ -52,13 +52,52 @@ export function TxDetailSheet({
 }
 
 function TxcDetail({ detail }: { detail: Extract<TxDetail, { kind: "txc" }> }) {
-  const { tx, net, incoming } = detail;
+  return (
+    <UtxoDetailBody
+      tx={detail.tx}
+      net={detail.net}
+      incoming={detail.incoming}
+      formatAmount={(sats) => `${formatTxc(sats)} TXC`}
+      explorerUrl={explorerTxUrl(detail.tx.txid)}
+      explorerName="mempool.texitcoin.org"
+    />
+  );
+}
+
+function UtxoDetail({ detail }: { detail: Extract<TxDetail, { kind: "utxo" }> }) {
+  return (
+    <UtxoDetailBody
+      tx={detail.tx}
+      net={detail.net}
+      incoming={detail.incoming}
+      formatAmount={detail.formatAmount}
+      explorerUrl={detail.explorerTxUrl(detail.tx.txid)}
+      explorerName={detail.explorerName}
+    />
+  );
+}
+
+function UtxoDetailBody({
+  tx,
+  net,
+  incoming,
+  formatAmount,
+  explorerUrl,
+  explorerName,
+}: {
+  tx: MempoolTx;
+  net: number;
+  incoming: boolean;
+  formatAmount: (sats: number) => string;
+  explorerUrl: string;
+  explorerName: string;
+}) {
   return (
     <div className="space-y-4">
       <Header
         incoming={incoming}
         title={incoming ? "Received" : "Sent"}
-        amount={`${incoming ? "+" : "−"}${formatTxc(Math.abs(net))} TXC`}
+        amount={`${incoming ? "+" : "−"}${formatAmount(Math.abs(net))}`}
         subtitle={
           tx.status.confirmed
             ? new Date((tx.status.block_time ?? 0) * 1000).toLocaleString()
@@ -66,11 +105,11 @@ function TxcDetail({ detail }: { detail: Extract<TxDetail, { kind: "txc" }> }) {
         }
       />
       <Field label="Status" value={tx.status.confirmed ? `Confirmed · block ${tx.status.block_height}` : "Unconfirmed"} />
-      <Field label="Network fee" value={`${formatTxc(tx.fee)} TXC`} />
+      <Field label="Network fee" value={formatAmount(tx.fee)} />
       <Field label="Transaction ID" value={tx.txid} mono copy />
       <Button asChild variant="outline" className="w-full">
-        <a href={explorerTxUrl(tx.txid)} target="_blank" rel="noreferrer">
-          <ExternalLink className="h-4 w-4 mr-2" /> View on mempool.texitcoin.org
+        <a href={explorerUrl} target="_blank" rel="noreferrer">
+          <ExternalLink className="h-4 w-4 mr-2" /> View on {explorerName}
         </a>
       </Button>
     </div>
