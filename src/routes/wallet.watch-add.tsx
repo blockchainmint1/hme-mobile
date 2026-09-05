@@ -7,15 +7,17 @@
  */
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, Eye, Loader2, Search } from "lucide-react";
 import { address as addrLib } from "bitcoinjs-lib";
 import { TXC_NETWORK } from "@/lib/txc/network";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { addWatchWallet } from "@/lib/watch-only";
+import { lookupColdStorageCoin } from "@/lib/csc/coin-lookup.functions";
 
 export const Route = createFileRoute("/wallet/watch-add")({
   head: () => ({ meta: [{ title: "Add watch-only wallet — HME Wallet" }] }),
@@ -36,6 +38,40 @@ function WatchAddPage() {
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [coinId, setCoinId] = useState("");
+  const [looking, setLooking] = useState(false);
+  const [coinNote, setCoinNote] = useState<string | null>(null);
+  const lookupCoin = useServerFn(lookupColdStorageCoin);
+
+  const lookUpCoinId = async () => {
+    const id = coinId.trim().replace(/\s+/g, "");
+    setError(null);
+    setCoinNote(null);
+    if (!/^[0-9A-Za-z]{6}$/.test(id)) {
+      return setError("Enter the six characters printed on the coin's sticker.");
+    }
+    setLooking(true);
+    try {
+      const res = await lookupCoin({ data: { coinId: id } });
+      if (!res.found || !res.address) {
+        return setError(res.message ?? "That coin ID wasn't found.");
+      }
+      if (!isValidTxcAddress(res.address)) {
+        return setError(
+          `Coin ${res.assetId} is a ${res.blockchainName ?? res.blockchainCode ?? "different"} coin, so it can't be tracked here yet.`,
+        );
+      }
+      setAddress(res.address);
+      if (!label.trim()) setLabel(res.productName ? `${res.productName} ${res.assetId}` : `Coin ${res.assetId}`);
+      setCoinNote(
+        `Found ${res.productName ? `${res.productName} — ` : ""}coin ${res.assetId}. Address filled in below.`,
+      );
+    } catch {
+      setError("Couldn't look up that coin ID. Try again.");
+    } finally {
+      setLooking(false);
+    }
+  };
 
   const handlePaste = (raw: string) => {
     setError(null);
@@ -85,6 +121,47 @@ function WatchAddPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-5 rounded-xl border border-border/60 bg-muted/30 p-4">
+            <Label htmlFor="coinId">Cold Storage Coin ID</Label>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Type the six characters printed on the coin's sticker and we'll fill in the address
+              for you.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                id="coinId"
+                placeholder="e.g. 7Kd2Xp"
+                value={coinId}
+                onChange={(e) => setCoinId(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void lookUpCoinId();
+                  }
+                }}
+                maxLength={6}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void lookUpCoinId()}
+                disabled={looking || coinId.trim().length !== 6}
+              >
+                {looking ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+                <span className="ml-1">Look up</span>
+              </Button>
+            </div>
+            {coinNote && <p className="mt-2 text-sm text-primary">{coinNote}</p>}
+          </div>
+
           <form onSubmit={submit} className="space-y-4">
             <div>
               <Label htmlFor="label">Label (optional)</Label>
