@@ -193,7 +193,7 @@ function SendBtcPage() {
                 <Label htmlFor="to">Bitcoin address</Label>
                 <div className="mt-1 flex gap-2">
                   <Input id="to" value={to} onChange={(e) => setTo(e.target.value)}
-                    placeholder="ltc1q… or L… / M…"
+                    placeholder="bc1q… or 1… / 3…"
                     className="font-mono flex-1" autoComplete="off" spellCheck={false} />
                   <QrScanButton onScan={applyUri} />
                   <AddressBookButton chain="btc" onPick={(a) => setTo(a)} />
