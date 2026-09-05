@@ -38,6 +38,40 @@ function WatchAddPage() {
   const [address, setAddress] = useState("");
   const [label, setLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [coinId, setCoinId] = useState("");
+  const [looking, setLooking] = useState(false);
+  const [coinNote, setCoinNote] = useState<string | null>(null);
+  const lookupCoin = useServerFn(lookupColdStorageCoin);
+
+  const lookUpCoinId = async () => {
+    const id = coinId.trim().replace(/\s+/g, "");
+    setError(null);
+    setCoinNote(null);
+    if (!/^[0-9A-Za-z]{6}$/.test(id)) {
+      return setError("Enter the six characters printed on the coin's sticker.");
+    }
+    setLooking(true);
+    try {
+      const res = await lookupCoin({ data: { coinId: id } });
+      if (!res.found || !res.address) {
+        return setError(res.message ?? "That coin ID wasn't found.");
+      }
+      if (!isValidTxcAddress(res.address)) {
+        return setError(
+          `Coin ${res.assetId} is a ${res.blockchainName ?? res.blockchainCode ?? "different"} coin, so it can't be tracked here yet.`,
+        );
+      }
+      setAddress(res.address);
+      if (!label.trim()) setLabel(res.productName ? `${res.productName} ${res.assetId}` : `Coin ${res.assetId}`);
+      setCoinNote(
+        `Found ${res.productName ? `${res.productName} — ` : ""}coin ${res.assetId}. Address filled in below.`,
+      );
+    } catch {
+      setError("Couldn't look up that coin ID. Try again.");
+    } finally {
+      setLooking(false);
+    }
+  };
 
   const handlePaste = (raw: string) => {
     setError(null);
