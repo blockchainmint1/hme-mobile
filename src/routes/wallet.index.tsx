@@ -2361,7 +2361,7 @@ function WatchOnlyActivity({
       ) : error ? (
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground">
-            Couldn't reach mempool.texitcoin.org.
+            Couldn't reach the {meta.ticker} explorer.
           </CardContent>
         </Card>
       ) : (txs?.length ?? 0) === 0 ? (
