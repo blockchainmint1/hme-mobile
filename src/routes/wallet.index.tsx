@@ -961,6 +961,7 @@ function WalletHome() {
               txs={iskTxs.data ?? null}
               ownAddresses={iskOwnAddresses}
               onRefresh={() => iskAccount.refetch()}
+              onOpen={(tx, net, incoming) => setDetail(utxoTxDetail("isk", tx, net, incoming))}
             />
           )}
           {activeChain === "btc" && !activeWatch && !activeWif && (
@@ -971,6 +972,7 @@ function WalletHome() {
               txs={btcTxs.data ?? null}
               ownAddresses={btcOwnAddresses}
               onRefresh={() => btcAccount.refetch()}
+              onOpen={(tx, net, incoming) => setDetail(utxoTxDetail("btc", tx, net, incoming))}
             />
           )}
           {activeChain === "ltc" && !activeWatch && !activeWif && (
@@ -981,6 +983,7 @@ function WalletHome() {
               txs={ltcTxs.data ?? null}
               ownAddresses={ltcOwnAddresses}
               onRefresh={() => ltcAccount.refetch()}
+              onOpen={(tx, net, incoming) => setDetail(utxoTxDetail("ltc", tx, net, incoming))}
             />
           )}
           {activeChain === "doge" && !activeWatch && !activeWif && (
@@ -991,6 +994,7 @@ function WalletHome() {
               txs={dogeTxs.data ?? null}
               ownAddresses={dogeOwnAddresses}
               onRefresh={() => dogeAccount.refetch()}
+              onOpen={(tx, net, incoming) => setDetail(utxoTxDetail("doge", tx, net, incoming))}
             />
           )}
           {activeChain === "tron" && !activeWatch && !activeWif && (
@@ -1657,6 +1661,25 @@ const BTC_FORK_VARIANTS = {
 type BtcForkVariant = keyof typeof BTC_FORK_VARIANTS;
 type AnyBtcForkTx = IskMempoolTx | LtcMempoolTx | DogeMempoolTx | BtcMempoolTx;
 
+/** Build the in-page detail sheet payload for any BTC-fork chain transaction. */
+function utxoTxDetail(
+  variant: BtcForkVariant,
+  tx: AnyBtcForkTx,
+  net: number,
+  incoming: boolean,
+): TxDetail {
+  const v = BTC_FORK_VARIANTS[variant];
+  return {
+    kind: "utxo",
+    tx,
+    net,
+    incoming,
+    formatAmount: (sats) => v.format(sats),
+    explorerTxUrl: (txid) => `https://${v.mempoolHost}/tx/${txid}`,
+    explorerName: v.mempoolHost,
+  };
+}
+
 function BtcForkTile({
   variant,
   balanceSats,
@@ -1743,6 +1766,7 @@ function BtcForkActivity({
   txs,
   ownAddresses,
   onRefresh,
+  onOpen,
 }: {
   variant: BtcForkVariant;
   loading: boolean;
@@ -1750,6 +1774,7 @@ function BtcForkActivity({
   txs: AnyBtcForkTx[] | null;
   ownAddresses: Set<string>;
   onRefresh: () => void;
+  onOpen: (tx: AnyBtcForkTx, net: number, incoming: boolean) => void;
 }) {
   const v = BTC_FORK_VARIANTS[variant];
   return (
@@ -1801,7 +1826,10 @@ function BtcForkActivity({
             const incoming = net > 0;
             return (
               <li key={tx.txid}>
-                <div className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3">
+                <button
+                  className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 text-left hover:bg-accent/40 transition-colors"
+                  onClick={() => onOpen(tx, net, incoming)}
+                >
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center ${
                       incoming
@@ -1831,7 +1859,8 @@ function BtcForkActivity({
                       {v.format(Math.abs(net))}
                     </p>
                   </div>
-                </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
               </li>
             );
           })}
