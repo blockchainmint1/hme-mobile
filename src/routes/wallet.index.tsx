@@ -1743,6 +1743,7 @@ function BtcForkActivity({
   txs,
   ownAddresses,
   onRefresh,
+  onOpen,
 }: {
   variant: BtcForkVariant;
   loading: boolean;
@@ -1750,6 +1751,7 @@ function BtcForkActivity({
   txs: AnyBtcForkTx[] | null;
   ownAddresses: Set<string>;
   onRefresh: () => void;
+  onOpen: (tx: AnyBtcForkTx, net: number, incoming: boolean) => void;
 }) {
   const v = BTC_FORK_VARIANTS[variant];
   return (
@@ -1801,7 +1803,10 @@ function BtcForkActivity({
             const incoming = net > 0;
             return (
               <li key={tx.txid}>
-                <div className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3">
+                <button
+                  className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 text-left hover:bg-accent/40 transition-colors"
+                  onClick={() => onOpen(tx, net, incoming)}
+                >
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center ${
                       incoming
