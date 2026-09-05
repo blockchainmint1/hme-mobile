@@ -121,6 +121,47 @@ function WatchAddPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-5 rounded-xl border border-border/60 bg-muted/30 p-4">
+            <Label htmlFor="coinId">Cold Storage Coin ID</Label>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Type the six characters printed on the coin's sticker and we'll fill in the address
+              for you.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                id="coinId"
+                placeholder="e.g. 7Kd2Xp"
+                value={coinId}
+                onChange={(e) => setCoinId(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void lookUpCoinId();
+                  }
+                }}
+                maxLength={6}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void lookUpCoinId()}
+                disabled={looking || coinId.trim().length !== 6}
+              >
+                {looking ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+                <span className="ml-1">Look up</span>
+              </Button>
+            </div>
+            {coinNote && <p className="mt-2 text-sm text-primary">{coinNote}</p>}
+          </div>
+
           <form onSubmit={submit} className="space-y-4">
             <div>
               <Label htmlFor="label">Label (optional)</Label>
