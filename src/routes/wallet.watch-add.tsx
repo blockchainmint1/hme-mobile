@@ -7,15 +7,17 @@
  */
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, Eye, Loader2, Search } from "lucide-react";
 import { address as addrLib } from "bitcoinjs-lib";
 import { TXC_NETWORK } from "@/lib/txc/network";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { addWatchWallet } from "@/lib/watch-only";
+import { lookupColdStorageCoin } from "@/lib/csc/coin-lookup.functions";
 
 export const Route = createFileRoute("/wallet/watch-add")({
   head: () => ({ meta: [{ title: "Add watch-only wallet — HME Wallet" }] }),
