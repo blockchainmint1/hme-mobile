@@ -1657,6 +1657,25 @@ const BTC_FORK_VARIANTS = {
 type BtcForkVariant = keyof typeof BTC_FORK_VARIANTS;
 type AnyBtcForkTx = IskMempoolTx | LtcMempoolTx | DogeMempoolTx | BtcMempoolTx;
 
+/** Build the in-page detail sheet payload for any BTC-fork chain transaction. */
+function utxoTxDetail(
+  variant: BtcForkVariant,
+  tx: AnyBtcForkTx,
+  net: number,
+  incoming: boolean,
+): TxDetail {
+  const v = BTC_FORK_VARIANTS[variant];
+  return {
+    kind: "utxo",
+    tx,
+    net,
+    incoming,
+    formatAmount: (sats) => v.format(sats),
+    explorerTxUrl: (txid) => `https://${v.mempoolHost}/tx/${txid}`,
+    explorerName: v.mempoolHost,
+  };
+}
+
 function BtcForkTile({
   variant,
   balanceSats,
