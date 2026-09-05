@@ -43,6 +43,7 @@ export function TxDetailSheet({
         </DrawerHeader>
         <div className="px-4 pb-6 overflow-y-auto">
           {detail?.kind === "txc" && <TxcDetail detail={detail} />}
+          {detail?.kind === "utxo" && <UtxoDetail detail={detail} />}
           {detail?.kind === "evm" && <EvmDetail detail={detail} />}
         </div>
       </DrawerContent>
