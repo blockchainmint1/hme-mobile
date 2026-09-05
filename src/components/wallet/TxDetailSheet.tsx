@@ -15,6 +15,16 @@ import { copyToClipboard } from "@/lib/clipboard";
 
 export type TxDetail =
   | { kind: "txc"; tx: MempoolTx; net: number; incoming: boolean }
+  | {
+      /** Other UTXO chains (BTC, LTC, DOGE, ISK) — same Esplora tx shape. */
+      kind: "utxo";
+      tx: MempoolTx;
+      net: number;
+      incoming: boolean;
+      formatAmount: (sats: number) => string;
+      explorerTxUrl: (txid: string) => string;
+      explorerName: string;
+    }
   | { kind: "evm"; chain: EvmChainId; transfer: EvmTransfer };
 
 export function TxDetailSheet({
