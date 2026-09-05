@@ -230,27 +230,20 @@ function SettingsPage() {
           <UpdateCheckCard compact />
         </SettingsSection>
 
-        <SettingsSection
-          value="address-book"
-          icon={BookUser}
-          title="Address book"
-          description="Save names for addresses you send to most."
-        >
-          <Link to="/wallet/contacts" className="block">
-            <Card className="hover:bg-accent/30 transition-colors">
-              <CardContent className="py-4 flex items-center gap-3">
-                <BookUser className="h-5 w-5 text-muted-foreground" />
-                <div className="flex-1">
-                  <div className="font-medium">Open address book</div>
-                  <div className="text-xs text-muted-foreground">
-                    Manage saved contacts and their addresses.
-                  </div>
+        <Link to="/wallet/contacts" className="block">
+          <Card className="hover:bg-accent/30 transition-colors">
+            <CardContent className="py-4 flex items-center gap-3">
+              <BookUser className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-semibold">Address book</div>
+                <div className="text-xs text-muted-foreground">
+                  Save names for addresses you send to most.
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
-        </SettingsSection>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
 
         <SettingsSection
           value="danger"
