@@ -255,6 +255,7 @@ async function fetchBscHistory(address: string): Promise<EvmTransfer[]> {
     if (r.status !== "fulfilled") continue;
     const tx = r.value as BlockbookTx;
     if (!tx?.txid) continue;
+    try {
     const timestamp = tx.blockTime ? new Date(tx.blockTime * 1000).toISOString() : null;
 
     // Native BNB movement.
