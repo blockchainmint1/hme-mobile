@@ -44,6 +44,7 @@ import {
   getSwapQuotes,
 } from "@/lib/swap-providers/swap.functions";
 import { UTXO_SWAP_COINS } from "./utxo-swap-config";
+import { recordSwap, updateSwap, useSwapHistory, type SavedSwap } from "@/lib/swap-history";
 
 type PlacedOrder = SwapOrder & { ref?: Record<string, string> };
 
@@ -238,6 +239,19 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
       });
       const txid = await cfg.broadcast(built.hex);
       hapticSuccess();
+      // Persist everything needed to resume tracking this swap later —
+      // leaving the screen or locking the wallet must not lose it.
+      recordSwap({
+        txid,
+        coin,
+        provider: order.provider,
+        orderId: order.orderId,
+        token: order.ref?.["token"] ?? null,
+        amountSats: order.amountSats,
+        amountOut: order.amountOut,
+        dest,
+        destination: evmAddress!,
+      });
       void qc.invalidateQueries({ queryKey: [cfg.accountQueryKey] });
       void qc.invalidateQueries({ queryKey: [cfg.txsQueryKey] });
       setStage({ kind: "sent", txid, order, dest });
