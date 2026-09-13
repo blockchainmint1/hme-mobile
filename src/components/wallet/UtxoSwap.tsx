@@ -2,11 +2,11 @@
  * Swap LTC or DOGE into a stablecoin through the cheapest available route.
  *
  * We ask every configured route for a quote at once — THORChain plus the
- * non-custodial instant exchanges (SideShift, ChangeNOW, FixedFloat) — and rank
- * them by what actually lands in the wallet. The chosen route hands back a
- * deposit address (and, for THORChain, a memo); we then send an ordinary
- * LTC/DOGE transaction signed on this device. Nothing custodial, no external
- * site, and the stablecoin is paid out to this wallet's own EVM address.
+ * non-custodial instant exchanges (SideShift, FixedFloat) — and rank them by
+ * what actually lands in the wallet. The chosen route hands back a deposit
+ * address (and, for THORChain, a memo); we then send an ordinary LTC/DOGE
+ * transaction signed on this device. Nothing custodial, no external site, and
+ * the stablecoin is paid out to this wallet's own EVM address.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
