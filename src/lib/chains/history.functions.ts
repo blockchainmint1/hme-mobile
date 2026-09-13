@@ -196,6 +196,8 @@ interface BlockbookTx {
   vin?: { addresses?: string[]; value?: string }[];
   vout?: { addresses?: string[]; value?: string }[];
   tokenTransfers?: {
+    /** Newer Blockbook builds use `contract`; older ones used `token`. */
+    contract?: string;
     token?: string;
     symbol?: string;
     decimals?: number;
