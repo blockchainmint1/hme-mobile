@@ -697,6 +697,17 @@ function SwapProgress({
     retry: 3,
   });
 
+  // Keep the saved record in sync so the list shows live progress.
+  useEffect(() => {
+    const d = status.data;
+    if (!d) return;
+    updateSwap(txid, {
+      done: d.outboundSent,
+      failed: !!d.failed,
+      outboundTxid: d.outboundTxid ?? null,
+    });
+  }, [status.data, txid]);
+
   const label = SWAP_PROVIDERS[order.provider].label;
   const steps = [
     { label: `${cfg.ticker} sent`, done: true },
