@@ -331,6 +331,10 @@ async function fetchBscHistory(address: string): Promise<EvmTransfer[]> {
         spamReason: reason,
       });
     }
+    } catch {
+      // One malformed tx shouldn't blank out the whole activity list.
+      continue;
+    }
   }
 
   return rows.sort((a, b) => b.blockNum - a.blockNum).slice(0, 50);
