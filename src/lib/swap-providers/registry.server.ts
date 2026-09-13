@@ -20,12 +20,6 @@ import {
   sideshiftStatus,
 } from "./sideshift.server";
 import {
-  changenowCreate,
-  changenowEnabled,
-  changenowQuote,
-  changenowStatus,
-} from "./changenow.server";
-import {
   fixedfloatCreate,
   fixedfloatEnabled,
   fixedfloatQuote,
@@ -66,7 +60,6 @@ export async function quoteAllProviders(req: QuoteRequest): Promise<QuoteResult>
   if (sideshiftQuoteEnabled() && sideshiftOrderEnabled()) {
     tasks.push({ provider: "sideshift", run: () => sideshiftQuote(req) });
   }
-  if (changenowEnabled()) tasks.push({ provider: "changenow", run: () => changenowQuote(req) });
   if (fixedfloatEnabled()) tasks.push({ provider: "fixedfloat", run: () => fixedfloatQuote(req) });
 
   const settled = await Promise.all(
@@ -137,7 +130,6 @@ export async function createProviderOrder(args: {
       dest: req.dest,
     });
   }
-  if (provider === "changenow") return changenowCreate(req);
   return fixedfloatCreate(req);
 }
 
@@ -159,7 +151,6 @@ export async function providerOrderStatus(args: {
   }
   if (!args.orderId) throw new Error("Missing swap order id.");
   if (args.provider === "sideshift") return sideshiftStatus(args.orderId);
-  if (args.provider === "changenow") return changenowStatus(args.orderId);
   if (!args.token) throw new Error("Missing FixedFloat order token.");
   return fixedfloatStatus(args.orderId, args.token);
 }

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const providerId = z.enum(["thorchain", "sideshift", "changenow", "fixedfloat"]);
+export const providerId = z.enum(["thorchain", "sideshift", "fixedfloat"]);
 
 export const destSchema = z.object({
   asset: z.string().min(3).max(120),
