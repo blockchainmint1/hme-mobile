@@ -305,7 +305,8 @@ async function fetchBscHistory(address: string): Promise<EvmTransfer[]> {
       if (!outgoing && !incoming) continue;
       const decimals = t.decimals ?? 18;
       const valueStr = scaledWei(t.value ?? "0", decimals);
-      const contract = t.token ? t.token.toLowerCase() : null;
+      const contractRaw = t.contract ?? t.token ?? null;
+      const contract = contractRaw ? contractRaw.toLowerCase() : null;
       const { spam, reason } = classifySpam(
         "bsc",
         "erc20",
