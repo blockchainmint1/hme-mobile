@@ -236,8 +236,11 @@ async function fetchBscHistory(address: string): Promise<EvmTransfer[]> {
     base,
     apiKey,
     `/api/v2/address/${address}?details=txslight&pageSize=25`,
-  )) as { txs?: string[] };
-  const txids = Array.isArray(addrBody?.txs) ? addrBody.txs!.slice(0, 25) : [];
+  )) as { transactions?: (string | { txid?: string })[] };
+  const txids = (Array.isArray(addrBody?.transactions) ? addrBody.transactions! : [])
+    .map((t) => (typeof t === "string" ? t : t?.txid))
+    .filter((t): t is string => typeof t === "string" && t.length > 0)
+    .slice(0, 25);
   if (txids.length === 0) return [];
 
   // Step 2: fetch each tx for value/token detail (best-effort, parallel).
