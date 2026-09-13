@@ -159,6 +159,7 @@ export function useAllTokensForChain(chain: EvmChainId): {
   useEffect(() => {
     const h = () =>
       setSnapshot({ tokens: getKnownTokens(chain), hidden: readHidden() });
+    h();
     window.addEventListener(EVT, h);
     return () => window.removeEventListener(EVT, h);
   }, [chain]);
