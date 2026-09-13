@@ -347,6 +347,16 @@ export const getEvmHistory = createServerFn({ method: "POST" })
       }
     }
 
+    // BNB Chain: Alchemy's getAssetTransfers doesn't support it — use the
+    // NOWNodes Blockbook indexer instead.
+    if (data.chain === "bsc") {
+      try {
+        return { transfers: await fetchBscHistory(data.address), supported: true };
+      } catch {
+        return { transfers: [], supported: true, unavailable: true };
+      }
+    }
+
     const key = process.env.ALCHEMY_KEY;
     const builder = ALCHEMY_URL[data.chain];
     const url = key ? builder(key) : null;
