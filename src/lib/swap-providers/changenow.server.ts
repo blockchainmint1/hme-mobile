@@ -45,7 +45,9 @@ async function call<T>(path: string, init?: { method: "POST"; body: unknown }): 
   try {
     json = JSON.parse(text);
   } catch {
-    throw new Error(`ChangeNOW returned an unreadable response (${res.status})`);
+    // ChangeNOW answers auth failures with plain text, so surface it as-is.
+    const snippet = text.trim().slice(0, 120) || `status ${res.status}`;
+    throw new Error(res.status === 401 ? `ChangeNOW rejected the API key (${snippet})` : snippet);
   }
   if (!res.ok) {
     const msg =
