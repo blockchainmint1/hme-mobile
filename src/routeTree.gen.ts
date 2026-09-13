@@ -50,7 +50,6 @@ import { Route as WalletBtcSendRouteImport } from './routes/wallet.btc.send'
 import { Route as WalletBtcReceiveRouteImport } from './routes/wallet.btc.receive'
 import { Route as ApiTsdLinkRouteImport } from './routes/api/tsd.link'
 import { Route as ApiTronSplatRouteImport } from './routes/api/tron.$'
-import { Route as ApiPublicSwapSelftestRouteImport } from './routes/api/public/swap-selftest'
 import { Route as ApiPublicLatestReleaseRouteImport } from './routes/api/public/latest-release'
 import { Route as ApiPublicBuildIdRouteImport } from './routes/api/public/build-id'
 import { Route as ApiPublicApkRouteImport } from './routes/api/public/apk'
@@ -269,11 +268,6 @@ const ApiTronSplatRoute = ApiTronSplatRouteImport.update({
   path: '/api/tron/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicSwapSelftestRoute = ApiPublicSwapSelftestRouteImport.update({
-  id: '/api/public/swap-selftest',
-  path: '/api/public/swap-selftest',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPublicLatestReleaseRoute = ApiPublicLatestReleaseRouteImport.update({
   id: '/api/public/latest-release',
   path: '/api/public/latest-release',
@@ -361,7 +355,6 @@ export interface FileRoutesByFullPath {
   '/api/public/apk': typeof ApiPublicApkRoute
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
-  '/api/public/swap-selftest': typeof ApiPublicSwapSelftestRoute
   '/api/tron/$': typeof ApiTronSplatRoute
   '/api/tsd/link': typeof ApiTsdLinkRoute
   '/wallet/btc/receive': typeof WalletBtcReceiveRoute
@@ -416,7 +409,6 @@ export interface FileRoutesByTo {
   '/api/public/apk': typeof ApiPublicApkRoute
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
-  '/api/public/swap-selftest': typeof ApiPublicSwapSelftestRoute
   '/api/tron/$': typeof ApiTronSplatRoute
   '/api/tsd/link': typeof ApiTsdLinkRoute
   '/wallet/btc/receive': typeof WalletBtcReceiveRoute
@@ -473,7 +465,6 @@ export interface FileRoutesById {
   '/api/public/apk': typeof ApiPublicApkRoute
   '/api/public/build-id': typeof ApiPublicBuildIdRoute
   '/api/public/latest-release': typeof ApiPublicLatestReleaseRoute
-  '/api/public/swap-selftest': typeof ApiPublicSwapSelftestRoute
   '/api/tron/$': typeof ApiTronSplatRoute
   '/api/tsd/link': typeof ApiTsdLinkRoute
   '/wallet/btc/receive': typeof WalletBtcReceiveRoute
@@ -531,7 +522,6 @@ export interface FileRouteTypes {
     | '/api/public/apk'
     | '/api/public/build-id'
     | '/api/public/latest-release'
-    | '/api/public/swap-selftest'
     | '/api/tron/$'
     | '/api/tsd/link'
     | '/wallet/btc/receive'
@@ -586,7 +576,6 @@ export interface FileRouteTypes {
     | '/api/public/apk'
     | '/api/public/build-id'
     | '/api/public/latest-release'
-    | '/api/public/swap-selftest'
     | '/api/tron/$'
     | '/api/tsd/link'
     | '/wallet/btc/receive'
@@ -642,7 +631,6 @@ export interface FileRouteTypes {
     | '/api/public/apk'
     | '/api/public/build-id'
     | '/api/public/latest-release'
-    | '/api/public/swap-selftest'
     | '/api/tron/$'
     | '/api/tsd/link'
     | '/wallet/btc/receive'
@@ -690,7 +678,6 @@ export interface RootRouteChildren {
   ApiPublicApkRoute: typeof ApiPublicApkRoute
   ApiPublicBuildIdRoute: typeof ApiPublicBuildIdRoute
   ApiPublicLatestReleaseRoute: typeof ApiPublicLatestReleaseRoute
-  ApiPublicSwapSelftestRoute: typeof ApiPublicSwapSelftestRoute
   ApiTronSplatRoute: typeof ApiTronSplatRoute
   ApiTsdLinkRoute: typeof ApiTsdLinkRoute
   ApiNectarPayInvoiceIdRoute: typeof ApiNectarPayInvoiceIdRoute
@@ -986,13 +973,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTronSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/swap-selftest': {
-      id: '/api/public/swap-selftest'
-      path: '/api/public/swap-selftest'
-      fullPath: '/api/public/swap-selftest'
-      preLoaderRoute: typeof ApiPublicSwapSelftestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/public/latest-release': {
       id: '/api/public/latest-release'
       path: '/api/public/latest-release'
@@ -1182,7 +1162,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicApkRoute: ApiPublicApkRoute,
   ApiPublicBuildIdRoute: ApiPublicBuildIdRoute,
   ApiPublicLatestReleaseRoute: ApiPublicLatestReleaseRoute,
-  ApiPublicSwapSelftestRoute: ApiPublicSwapSelftestRoute,
   ApiTronSplatRoute: ApiTronSplatRoute,
   ApiTsdLinkRoute: ApiTsdLinkRoute,
   ApiNectarPayInvoiceIdRoute: ApiNectarPayInvoiceIdRoute,
