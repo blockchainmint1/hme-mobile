@@ -2,14 +2,14 @@
  * Provider-agnostic types for LTC/DOGE → stablecoin swaps.
  *
  * THORChain is one route among several. Instant-exchange providers (SideShift,
- * ChangeNOW, FixedFloat) are non-custodial deposit-address flows: we ask for a
- * quote, the provider gives us a deposit address, and we send an ordinary
- * LTC/DOGE transaction to it — signed on this device, exactly like a normal
- * send. Only THORChain needs an OP_RETURN memo.
+ * FixedFloat) are non-custodial deposit-address flows: we ask for a quote, the
+ * provider gives us a deposit address, and we send an ordinary LTC/DOGE
+ * transaction to it — signed on this device, exactly like a normal send. Only
+ * THORChain needs an OP_RETURN memo.
  */
 import type { StableDestination, UtxoSwapCoin } from "@/lib/thorchain/assets";
 
-export type SwapProviderId = "thorchain" | "sideshift" | "changenow" | "fixedfloat";
+export type SwapProviderId = "thorchain" | "sideshift" | "fixedfloat";
 
 export interface SwapProviderMeta {
   id: SwapProviderId;
@@ -28,11 +28,6 @@ export const SWAP_PROVIDERS: Record<SwapProviderId, SwapProviderMeta> = {
     id: "sideshift",
     label: "SideShift",
     blurb: "Non-custodial instant exchange. Usually the cheapest spread.",
-  },
-  changenow: {
-    id: "changenow",
-    label: "ChangeNOW",
-    blurb: "Non-custodial instant exchange with wide coin coverage.",
   },
   fixedfloat: {
     id: "fixedfloat",
