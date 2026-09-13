@@ -44,6 +44,7 @@ import {
   getSwapQuotes,
 } from "@/lib/swap-providers/swap.functions";
 import { UTXO_SWAP_COINS } from "./utxo-swap-config";
+import { recordSwap, updateSwap, useSwapHistory, type SavedSwap } from "@/lib/swap-history";
 
 type PlacedOrder = SwapOrder & { ref?: Record<string, string> };
 
@@ -153,6 +154,27 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
   const belowMin = minIn != null && amountSats > 0 && amountSats < minIn;
   const aboveMax = maxIn != null && amountSats > maxIn;
 
+  /** Reopen the progress view for a swap recorded earlier. */
+  function resumeSwap(s: SavedSwap) {
+    setStage({
+      kind: "sent",
+      txid: s.txid,
+      order: {
+        provider: s.provider,
+        depositAddress: "",
+        amountSats: s.amountSats,
+        memo: null,
+        orderId: s.orderId,
+        amountOut: s.amountOut,
+        destAsset: s.dest.asset,
+        etaSeconds: null,
+        expiry: null,
+        ref: s.token ? { token: s.token } : undefined,
+      },
+      dest: s.dest,
+    });
+  }
+
   function setMax() {
     const spendable = totalAvailable - inboundFeeEstimate;
     if (spendable > 0) setAmount(cfg.fromSats(spendable));
@@ -238,6 +260,19 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
       });
       const txid = await cfg.broadcast(built.hex);
       hapticSuccess();
+      // Persist everything needed to resume tracking this swap later —
+      // leaving the screen or locking the wallet must not lose it.
+      recordSwap({
+        txid,
+        coin,
+        provider: order.provider,
+        orderId: order.orderId,
+        token: order.ref?.["token"] ?? null,
+        amountSats: order.amountSats,
+        amountOut: order.amountOut,
+        dest,
+        destination: evmAddress!,
+      });
       void qc.invalidateQueries({ queryKey: [cfg.accountQueryKey] });
       void qc.invalidateQueries({ queryKey: [cfg.txsQueryKey] });
       setStage({ kind: "sent", txid, order, dest });
@@ -570,7 +605,65 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
           </CardContent>
         </Card>
       )}
+
+      {stage.kind === "form" && <RecentSwaps coin={coin} onOpen={resumeSwap} />}
     </main>
+  );
+}
+
+/** Swaps started on this device, newest first — tap one to watch it again. */
+function RecentSwaps({
+  coin,
+  onOpen,
+}: {
+  coin: UtxoSwapCoin;
+  onOpen: (s: SavedSwap) => void;
+}) {
+  const swaps = useSwapHistory().filter((s) => s.coin === coin);
+  if (!swaps.length) return null;
+  const cfg = UTXO_SWAP_COINS[coin];
+  return (
+    <div className="mt-6">
+      <h2 className="text-sm font-semibold">Your swaps</h2>
+      <div className="mt-2 space-y-2">
+        {swaps.map((s) => (
+          <button
+            key={s.txid}
+            type="button"
+            onClick={() => onOpen(s)}
+            className="w-full rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-left hover:border-border"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium">
+                {cfg.format(s.amountSats)} →{" "}
+                {s.amountOut.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
+                {s.dest.symbol}
+              </span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                  s.done
+                    ? "bg-emerald-500/15 text-emerald-400"
+                    : s.failed
+                      ? "bg-destructive/15 text-destructive"
+                      : "bg-amber-500/15 text-amber-500"
+                }`}
+              >
+                {s.done ? "Complete" : s.failed ? "Attention" : "In progress"}
+              </span>
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {SWAP_PROVIDERS[s.provider].label} ·{" "}
+              {new Date(s.createdAt).toLocaleString(undefined, {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </p>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -603,6 +696,17 @@ function SwapProgress({
     refetchInterval: (q) => (q.state.data?.outboundSent ? false : 15_000),
     retry: 3,
   });
+
+  // Keep the saved record in sync so the list shows live progress.
+  useEffect(() => {
+    const d = status.data;
+    if (!d) return;
+    updateSwap(txid, {
+      done: d.outboundSent,
+      failed: !!d.failed,
+      outboundTxid: d.outboundTxid ?? null,
+    });
+  }, [status.data, txid]);
 
   const label = SWAP_PROVIDERS[order.provider].label;
   const steps = [
