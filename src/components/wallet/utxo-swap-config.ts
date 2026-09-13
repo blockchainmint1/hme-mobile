@@ -24,7 +24,7 @@ export interface BuildArgs {
   changeAddress: string;
   changeIndex: number;
   feeSats: number;
-  memo: string;
+  memo?: string;
 }
 
 export interface UtxoSwapConfig {

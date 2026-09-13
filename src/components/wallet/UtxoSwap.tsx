@@ -1,11 +1,12 @@
 /**
- * Swap LTC or DOGE into a stablecoin, natively, via THORChain.
+ * Swap LTC or DOGE into a stablecoin through the cheapest available route.
  *
- * How it works: we ask a THORNode for a quote, which returns a vault
- * (inbound) address and a memo. We then send an ordinary LTC/DOGE transaction
- * to that vault with the memo in an OP_RETURN — signed on this device — and
- * THORChain pays the stablecoin out to the wallet's own EVM address a few
- * minutes later. No bridge, no custodian, no external site.
+ * We ask every configured route for a quote at once — THORChain plus the
+ * non-custodial instant exchanges (SideShift, ChangeNOW, FixedFloat) — and rank
+ * them by what actually lands in the wallet. The chosen route hands back a
+ * deposit address (and, for THORChain, a memo); we then send an ordinary
+ * LTC/DOGE transaction signed on this device. Nothing custodial, no external
+ * site, and the stablecoin is paid out to this wallet's own EVM address.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -29,24 +30,27 @@ import { ExchangeUnavailable } from "@/components/wallet/ExchangeUnavailable";
 import { confirmWithBiometric } from "@/lib/native/biometric";
 import { friendlyBroadcastError } from "@/lib/broadcast-error";
 import { OP_RETURN_MAX_BYTES } from "@/lib/utxo/op-return";
+import type { StableDestination, UtxoSwapCoin } from "@/lib/thorchain/assets";
+import { getThorDestinations } from "@/lib/thorchain/swap.functions";
 import {
-  formatThorAmount,
-  fromThorAmount,
-  type StableDestination,
-  type ThorQuote,
-  type UtxoSwapCoin,
-} from "@/lib/thorchain/assets";
+  SWAP_PROVIDERS,
+  type SwapOrder,
+  type SwapProviderId,
+  type SwapQuote,
+} from "@/lib/swap-providers/types";
 import {
-  getThorDestinations,
-  getThorQuote,
-  getThorTxStatus,
-} from "@/lib/thorchain/swap.functions";
+  createSwapOrder,
+  getSwapOrderStatus,
+  getSwapQuotes,
+} from "@/lib/swap-providers/swap.functions";
 import { UTXO_SWAP_COINS } from "./utxo-swap-config";
+
+type PlacedOrder = SwapOrder & { ref?: Record<string, string> };
 
 type Stage =
   | { kind: "form" }
-  | { kind: "review"; quote: ThorQuote; feeSats: number; vsize: number; selected: number }
-  | { kind: "sent"; txid: string; quote: ThorQuote; dest: StableDestination };
+  | { kind: "review"; order: PlacedOrder; feeSats: number; vsize: number; selected: number }
+  | { kind: "sent"; txid: string; order: PlacedOrder; dest: StableDestination };
 
 export function UtxoSwap({ coin }: { coin: UtxoSwapCoin }) {
   const exchangeAllowed = useExchangeFeaturesAllowed();
@@ -61,7 +65,8 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
   const { root, unlocked } = useWallet();
 
   const fetchDestinations = useServerFn(getThorDestinations);
-  const fetchQuote = useServerFn(getThorQuote);
+  const fetchQuotes = useServerFn(getSwapQuotes);
+  const placeOrder = useServerFn(createSwapOrder);
 
   const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
 
@@ -92,6 +97,7 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
 
   const [amount, setAmount] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [provider, setProvider] = useState<SwapProviderId | null>(null);
   const [stage, setStage] = useState<Stage>({ kind: "form" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -105,46 +111,55 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
   const totalAvailable = utxos.reduce((s: number, u: { value: number }) => s + u.value, 0);
   const feeRate = fees.data?.halfHourFee ?? cfg.fallbackFeeRate;
   const amountSats = useMemo(() => cfg.toSats(debounced || "0"), [debounced, cfg]);
+  const refundAddress = account.data?.nextReceiveAddress ?? null;
 
-  // Network fee for the inbound tx: all inputs + vault output + OP_RETURN + change.
+  // Network fee for the inbound tx: all inputs + deposit output + memo + change.
   const inboundFeeEstimate = useMemo(
     () => Math.ceil(cfg.estimateVsize(Math.max(1, utxos.length), 2, true) * feeRate),
     [cfg, utxos.length, feeRate],
   );
 
-  const quote = useQuery<ThorQuote>({
-    queryKey: ["thor-quote", coin, dest?.asset, amountSats, evmAddress],
+  const quotes = useQuery({
+    queryKey: ["swap-quotes", coin, dest?.asset, amountSats, evmAddress],
     enabled:
-      !!dest && !!evmAddress && amountSats > 0 && amountSats + inboundFeeEstimate <= totalAvailable,
+      !!dest &&
+      !!evmAddress &&
+      !!refundAddress &&
+      amountSats > 0 &&
+      amountSats + inboundFeeEstimate <= totalAvailable,
     queryFn: () =>
-      fetchQuote({
+      fetchQuotes({
         data: {
           coin,
-          toAsset: dest!.asset,
-          amountSats: String(amountSats),
+          dest: dest!,
+          amountSats,
           destination: evmAddress!,
+          refundAddress: refundAddress!,
         },
       }),
     staleTime: 30_000,
     retry: 0,
   });
 
-  const minIn = quote.data?.recommended_min_amount_in
-    ? Number(quote.data.recommended_min_amount_in)
-    : null;
+  const list: SwapQuote[] = quotes.data?.quotes ?? [];
+  const best = list[0] ?? null;
+  const selected = useMemo(
+    () => list.find((q) => q.provider === provider) ?? best,
+    [list, provider, best],
+  );
+
+  const minIn = selected?.minInSats ?? null;
+  const maxIn = selected?.maxInSats ?? null;
   const belowMin = minIn != null && amountSats > 0 && amountSats < minIn;
-  const memoTooLong = quote.data
-    ? new TextEncoder().encode(quote.data.memo).length > OP_RETURN_MAX_BYTES
-    : false;
+  const aboveMax = maxIn != null && amountSats > maxIn;
 
   function setMax() {
     const spendable = totalAvailable - inboundFeeEstimate;
     if (spendable > 0) setAmount(cfg.fromSats(spendable));
   }
 
-  function review() {
-    setError(null);
-    if (!quote.data) return;
+  /** Pick inputs for a spend of `amountSats`, sizing the fee as we go. */
+  function selectInputs() {
     const sorted = [...utxos].sort((a, b) => b.value - a.value);
     const picked: typeof sorted = [];
     let acc = 0, vsize = 0, feeSats = 0;
@@ -155,21 +170,54 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
       feeSats = Math.ceil(vsize * feeRate);
       if (acc >= amountSats + feeSats) break;
     }
-    if (acc < amountSats + feeSats) {
+    if (acc < amountSats + feeSats) return null;
+    return { count: picked.length, feeSats, vsize };
+  }
+
+  async function review() {
+    setError(null);
+    if (!selected || !dest || !evmAddress || !refundAddress) return;
+    const picked = selectInputs();
+    if (!picked) {
       setError(
-        `Not enough funds. Available ${cfg.format(totalAvailable)}, needed ${cfg.format(amountSats + feeSats)}.`,
+        `Not enough funds. Available ${cfg.format(totalAvailable)}, needed about ${cfg.format(
+          amountSats + inboundFeeEstimate,
+        )}.`,
       );
       return;
     }
-    setStage({ kind: "review", quote: quote.data, feeSats, vsize, selected: picked.length });
+    setBusy(true);
+    try {
+      const order = await placeOrder({
+        data: {
+          provider: selected.provider,
+          coin,
+          dest,
+          amountSats,
+          destination: evmAddress,
+          refundAddress,
+          quoteId: null,
+        },
+      });
+      if (order.memo && new TextEncoder().encode(order.memo).length > OP_RETURN_MAX_BYTES) {
+        setError(`This route's memo is too long for a ${cfg.ticker} transaction. Pick another route.`);
+        return;
+      }
+      setStage({ kind: "review", order, feeSats: picked.feeSats, vsize: picked.vsize, selected: picked.count });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not set up this swap.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function send() {
     if (stage.kind !== "review" || !root || !unlocked || !account.data || !dest) return;
-    if (stage.quote.expiry * 1000 < Date.now()) {
+    const { order } = stage;
+    if (order.expiry && order.expiry * 1000 < Date.now()) {
       setError("This quote expired. Refresh it and try again.");
       setStage({ kind: "form" });
-      void quote.refetch();
+      void quotes.refetch();
       return;
     }
     const ok = await confirmWithBiometric(`Confirm swapping ${cfg.ticker}`);
@@ -182,17 +230,17 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
       const built = cfg.buildAndSign({
         root,
         inputs: picked,
-        outputs: [{ address: stage.quote.inbound_address, valueSats: amountSats }],
+        outputs: [{ address: order.depositAddress, valueSats: order.amountSats }],
         changeAddress: account.data.nextChangeAddress,
         changeIndex: account.data.nextChangeIndex,
         feeSats: stage.feeSats,
-        memo: stage.quote.memo,
+        memo: order.memo ?? undefined,
       });
       const txid = await cfg.broadcast(built.hex);
       hapticSuccess();
       void qc.invalidateQueries({ queryKey: [cfg.accountQueryKey] });
       void qc.invalidateQueries({ queryKey: [cfg.txsQueryKey] });
-      setStage({ kind: "sent", txid, quote: stage.quote, dest });
+      setStage({ kind: "sent", txid, order, dest });
     } catch (err) {
       hapticError();
       setError(friendlyBroadcastError(err));
@@ -206,15 +254,12 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
       <SwapProgress
         coin={coin}
         txid={stage.txid}
-        quote={stage.quote}
+        order={stage.order}
         dest={stage.dest}
         onDone={() => navigate({ to: "/wallet" })}
       />
     );
   }
-
-  const outText = quote.data ? formatThorAmount(quote.data.expected_amount_out, 2) : null;
-  const feesBps = quote.data?.fees.total_bps ?? null;
 
   return (
     <main className="mx-auto max-w-xl px-4 py-8">
@@ -231,8 +276,9 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
           <CardHeader>
             <CardTitle>Swap to a stablecoin</CardTitle>
             <CardDescription>
-              Native cross-chain swap through THORChain. Your {cfg.ticker} is signed on this
-              device and the stablecoin lands in this wallet's EVM address.
+              We compare every available route and show the one that pays out the most. Your{" "}
+              {cfg.ticker} is signed on this device and the stablecoin lands in this wallet's EVM
+              address.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -300,20 +346,89 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
                   </span>
                 </p>
               )}
+            </div>
 
-              <div className="mt-2 rounded-md bg-muted/40 px-3 py-2 text-sm">
-                {quote.isFetching ? (
-                  <span className="inline-flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Getting best route…
-                  </span>
-                ) : outText ? (
-                  <span className="font-semibold">
-                    ≈ {outText} {dest?.symbol}
-                  </span>
-                ) : (
-                  <span className="text-muted-foreground">Enter an amount for a quote</span>
+            {/* Route comparison */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Route</Label>
+                {list.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => quotes.refetch()}
+                    className="inline-flex items-center gap-1 text-xs text-muted-foreground underline hover:text-foreground"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Refresh quotes
+                  </button>
                 )}
               </div>
+
+              {quotes.isFetching && !list.length ? (
+                <div className="rounded-md bg-muted/40 px-3 py-3 text-sm text-muted-foreground inline-flex items-center gap-2">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Comparing routes…
+                </div>
+              ) : list.length ? (
+                <div className="space-y-2">
+                  {list.map((q) => {
+                    const active = selected?.provider === q.provider;
+                    const diff = best && best.amountOut > 0 ? q.amountOut / best.amountOut - 1 : 0;
+                    return (
+                      <button
+                        key={q.provider}
+                        type="button"
+                        onClick={() => setProvider(q.provider)}
+                        className={`w-full rounded-lg border px-3 py-2 text-left transition ${
+                          active
+                            ? "border-primary bg-primary/5"
+                            : "border-border/60 bg-card/40 hover:border-border"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-2 text-sm font-medium">
+                              {SWAP_PROVIDERS[q.provider].label}
+                              {q.provider === best?.provider && (
+                                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                                  Best
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {SWAP_PROVIDERS[q.provider].blurb}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold">
+                              {q.amountOut.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
+                              {dest?.symbol}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {q.provider === best?.provider
+                                ? q.totalBps != null
+                                  ? `${(q.totalBps / 100).toFixed(2)}% fees`
+                                  : "best payout"
+                                : `${(diff * 100).toFixed(2)}%`}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-md bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                  Enter an amount to compare routes
+                </div>
+              )}
+
+              {quotes.data?.errors?.length ? (
+                <p className="text-[11px] text-muted-foreground">
+                  Unavailable right now:{" "}
+                  {quotes.data.errors
+                    .map((e) => `${SWAP_PROVIDERS[e.provider].label} (${e.message})`)
+                    .join(" · ")}
+                </p>
+              ) : null}
             </div>
 
             {evmAddress && (
@@ -323,47 +438,34 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
               </p>
             )}
 
-            {quote.data && (
+            {selected && (
               <div className="rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-xs text-muted-foreground space-y-1">
-                <Line label="Swap + network fees">
-                  {feesBps != null ? `${(feesBps / 100).toFixed(2)}%` : "—"} · ≈{" "}
-                  {formatThorAmount(quote.data.fees.total, 2)} {dest?.symbol}
-                </Line>
-                <Line label="Minimum received">
-                  {(
-                    fromThorAmount(quote.data.expected_amount_out) *
-                    (1 - (quote.data.fees.slippage_bps ?? 0) / 10_000 - 0.03)
-                  ).toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
-                  {dest?.symbol}
-                </Line>
+                <Line label="Route">{SWAP_PROVIDERS[selected.provider].label}</Line>
                 <Line label="Estimated time">
-                  {Math.max(1, Math.round((quote.data.total_swap_seconds ?? 600) / 60))} min
+                  {selected.etaSeconds
+                    ? `${Math.max(1, Math.round(selected.etaSeconds / 60))} min`
+                    : "a few minutes"}
                 </Line>
                 <Line label={`${cfg.ticker} network fee`}>{cfg.format(inboundFeeEstimate)}</Line>
-                <button
-                  type="button"
-                  onClick={() => quote.refetch()}
-                  className="mt-1 inline-flex items-center gap-1 underline hover:text-foreground"
-                >
-                  <RefreshCw className="h-3 w-3" /> Refresh quote
-                </button>
+                {selected.warning && (
+                  <p className="pt-1 text-amber-500">{selected.warning}</p>
+                )}
               </div>
             )}
 
             {belowMin && (
               <p className="text-xs text-amber-500">
-                Too small to swap economically. Minimum is about{" "}
-                {cfg.format(minIn!)} — below that the network fees eat the trade.
+                Too small for this route. Minimum is about {cfg.format(minIn!)}.
               </p>
             )}
-            {memoTooLong && (
-              <p className="text-xs text-destructive">
-                This route's memo is too long for a {cfg.ticker} transaction. Pick another
-                destination.
+            {aboveMax && (
+              <p className="text-xs text-amber-500">
+                Too large for this route. Maximum is about {cfg.format(maxIn!)} — pick another route
+                or split the swap.
               </p>
             )}
-            {quote.error && (
-              <p className="text-xs text-destructive">{(quote.error as Error).message}</p>
+            {quotes.error && (
+              <p className="text-xs text-destructive">{(quotes.error as Error).message}</p>
             )}
             {error && (
               <div className="flex items-start gap-2 text-sm text-destructive">
@@ -376,10 +478,15 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
               size="lg"
               onClick={review}
               disabled={
-                !quote.data || quote.isFetching || belowMin || memoTooLong || account.isLoading
+                !selected ||
+                quotes.isFetching ||
+                belowMin ||
+                aboveMax ||
+                busy ||
+                account.isLoading
               }
             >
-              Review swap
+              {busy ? "Setting up…" : "Review swap"}
             </Button>
           </CardContent>
         </Card>
@@ -389,11 +496,15 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
         <Card className="mt-5">
           <CardHeader>
             <CardTitle>Review and swap</CardTitle>
+            <CardDescription>
+              Routed through {SWAP_PROVIDERS[stage.order.provider].label}.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <Row label="You send">{cfg.format(amountSats)}</Row>
+            <Row label="You send">{cfg.format(stage.order.amountSats)}</Row>
             <Row label="You receive (est.)">
-              {formatThorAmount(stage.quote.expected_amount_out, 2)} {dest?.symbol}
+              {stage.order.amountOut.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
+              {dest?.symbol}
             </Row>
             <Row label="Payout to">
               <code className="font-mono break-all text-xs">{evmAddress}</code>
@@ -405,10 +516,10 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
               </span>
             </Row>
             <Row label="Arrives in">
-              ~{Math.max(1, Math.round((stage.quote.total_swap_seconds ?? 600) / 60))} min
+              ~{Math.max(1, Math.round((stage.order.etaSeconds ?? 600) / 60))} min
             </Row>
-            {stage.quote.warning && (
-              <p className="text-xs text-amber-500">{stage.quote.warning}</p>
+            {stage.order.warning && (
+              <p className="text-xs text-amber-500">{stage.order.warning}</p>
             )}
             {error && (
               <div className="flex items-start gap-2 text-sm text-destructive">
@@ -431,11 +542,14 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
                     <AlertDialogDescription asChild>
                       <div className="space-y-2 text-sm">
                         <div>
-                          Swap <strong>{cfg.format(amountSats)}</strong> for about{" "}
+                          Swap <strong>{cfg.format(stage.order.amountSats)}</strong> for about{" "}
                           <strong>
-                            {formatThorAmount(stage.quote.expected_amount_out, 2)} {dest?.symbol}
-                          </strong>
-                          .
+                            {stage.order.amountOut.toLocaleString(undefined, {
+                              maximumFractionDigits: 2,
+                            })}{" "}
+                            {dest?.symbol}
+                          </strong>{" "}
+                          via {SWAP_PROVIDERS[stage.order.provider].label}.
                         </div>
                         <div className="text-muted-foreground">
                           The final amount depends on the price when the swap executes. Swaps are
@@ -463,28 +577,37 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
 function SwapProgress({
   coin,
   txid,
-  quote,
+  order,
   dest,
   onDone,
 }: {
   coin: UtxoSwapCoin;
   txid: string;
-  quote: ThorQuote;
+  order: PlacedOrder;
   dest: StableDestination;
   onDone: () => void;
 }) {
   const cfg = UTXO_SWAP_COINS[coin];
-  const fetchStatus = useServerFn(getThorTxStatus);
+  const fetchStatus = useServerFn(getSwapOrderStatus);
   const status = useQuery({
-    queryKey: ["thor-status", txid],
-    queryFn: () => fetchStatus({ data: { txid } }),
+    queryKey: ["swap-status", order.provider, order.orderId, txid],
+    queryFn: () =>
+      fetchStatus({
+        data: {
+          provider: order.provider,
+          orderId: order.orderId,
+          txid,
+          token: order.ref?.["token"] ?? null,
+        },
+      }),
     refetchInterval: (q) => (q.state.data?.outboundSent ? false : 15_000),
     retry: 3,
   });
 
+  const label = SWAP_PROVIDERS[order.provider].label;
   const steps = [
     { label: `${cfg.ticker} sent`, done: true },
-    { label: "Seen by THORChain", done: !!status.data?.observed },
+    { label: `Seen by ${label}`, done: !!status.data?.observed },
     { label: "Swapped", done: !!status.data?.finalised },
     { label: `${dest.symbol} paid out`, done: !!status.data?.outboundSent },
   ];
@@ -497,8 +620,8 @@ function SwapProgress({
         </div>
         <h1 className="mt-4 text-2xl font-bold">Swap started</h1>
         <p className="mt-2 text-muted-foreground">
-          About {formatThorAmount(quote.expected_amount_out, 2)} {dest.label} is on the way. You
-          can close this — it keeps going without the app open.
+          About {order.amountOut.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
+          {dest.label} is on the way. You can close this — it keeps going without the app open.
         </p>
       </div>
 
@@ -516,11 +639,14 @@ function SwapProgress({
               <span className={s.done ? "" : "text-muted-foreground"}>{s.label}</span>
             </div>
           ))}
-          {status.data?.secondsRemaining ? (
+          {status.data?.message && (
+            <p className="text-xs text-amber-500">{status.data.message}</p>
+          )}
+          {order.orderId && (
             <p className="text-xs text-muted-foreground">
-              About {Math.max(1, Math.round(status.data.secondsRemaining / 60))} min remaining.
+              {label} order: <code className="font-mono">{order.orderId}</code>
             </p>
-          ) : null}
+          )}
           <div className="pt-2 space-y-2">
             <a
               href={cfg.explorerTxUrl(txid)}
@@ -530,20 +656,26 @@ function SwapProgress({
             >
               View {cfg.ticker} transaction <ExternalLink className="h-3.5 w-3.5" />
             </a>
-            <br />
-            <a
-              href={`https://runescan.io/tx/${txid}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-sm underline"
-            >
-              Track the swap <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+            {order.provider === "thorchain" && (
+              <>
+                <br />
+                <a
+                  href={`https://runescan.io/tx/${txid}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-sm underline"
+                >
+                  Track the swap <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </>
+            )}
             {status.data?.outboundTxid && (
               <>
                 <br />
                 <a
-                  href={EVM_CHAINS[dest.chain].explorerTx(`0x${status.data.outboundTxid.replace(/^0x/, "")}`)}
+                  href={EVM_CHAINS[dest.chain].explorerTx(
+                    `0x${status.data.outboundTxid.replace(/^0x/, "")}`,
+                  )}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 text-sm underline"
