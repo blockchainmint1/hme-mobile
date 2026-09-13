@@ -23,8 +23,8 @@ function toCcy(dest: StableDestination) {
 
 function creds() {
   return {
-    key: process.env["FIXEDFLOAT_API_KEY"] ?? null,
-    secret: process.env["FIXEDFLOAT_API_SECRET"] ?? null,
+    key: process.env["FIXEDFLOAT_API_KEY"] ?? process.env["FIXEDFLOAT_API"] ?? null,
+    secret: process.env["FIXEDFLOAT_API_SECRET"] ?? process.env["FIXEDFLOAT_SECRET"] ?? null,
   };
 }
 
