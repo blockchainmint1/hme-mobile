@@ -147,10 +147,16 @@ export function releaseDownloadUrl(r: AppRelease | null): string {
   return APK_URL;
 }
 
-/** Build stamp the server is shipping right now, or null if unreachable. */
+/**
+ * Build stamp the server is shipping right now, or null if unreachable.
+ *
+ * Same-origin only: asking another host (a different deployment of the same
+ * app) returns a stamp that can never match, which looked like a permanent
+ * "update available".
+ */
 export async function fetchServerBuildId(): Promise<string | null> {
   if (typeof window === "undefined") return null;
-  const bases: string[] = [window.location.origin, ...RELEASE_FEED_HOSTS];
+  const bases: string[] = [window.location.origin];
   for (const base of bases) {
     try {
       const res = await fetch(`${base}/api/public/build-id?_=${Date.now()}`, {
