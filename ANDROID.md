@@ -18,10 +18,11 @@ bun run android:apk       # debug-signed APK at android/app/build/outputs/apk/de
 Two workflows ship in `.github/workflows/`:
 
 - **`android-apk.yml`** — builds an installable APK
-  - push to the `android` branch → debug APK artifact
+  - manual "Run workflow" → pick any branch (usually `main`), choose `release`
+    (default) or `debug`. No `android` branch needed.
   - `git tag android-vX.Y.Z && git push --tags` → release APK + GitHub Release
-  - manual "Run workflow" → choose `debug` or `release`
-  - No secrets? Falls back to debug signing (still sideloadable for testing).
+  - Release builds require the four `ANDROID_*` signing secrets; pick `debug`
+    if you just want a quick sideloadable build.
 
 - **`generate-keystore.yml`** — one-time helper. Run manually to generate a
   release keystore + the four `ANDROID_*` secrets you paste into repo settings.
@@ -30,8 +31,8 @@ Two workflows ship in `.github/workflows/`:
 
 Recommended flow for the first APK on your device:
 
-1. Push a branch called `android` (any commit works).
-2. Open the Actions tab → **Android APK** run → download the artifact.
+1. Actions tab → **Android APK** → **Run workflow** → branch `main` → Run.
+2. When it finishes, download the artifact from that run.
 3. Transfer the `.apk` to your phone (Drive / AirDrop / adb) and sideload it.
    You'll need to allow "Install unknown apps" for the source.
 

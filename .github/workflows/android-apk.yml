@@ -3,9 +3,8 @@ name: Android APK
 # Builds an installable Android APK for HME Wallet.
 #
 # Triggers:
-#   - push to `android` branch     → debug or release APK (uploaded as artifact)
+#   - manual (workflow_dispatch)   → pick any branch, build release (default) or debug APK
 #   - git tag `android-v*`         → release APK + GitHub Release
-#   - manual (workflow_dispatch)   → build with optional debug/release choice
 #
 # Signing:
 #   If the four ANDROID_* secrets below are set, the APK is signed with your
@@ -19,8 +18,9 @@ name: Android APK
 #   ANDROID_KEY_PASSWORD       alias password (usually same as store password)
 
 on:
+  # No branch trigger: build an APK on demand from whatever branch you pick
+  # in the Actions UI (usually main). Tags still cut a GitHub Release.
   push:
-    branches: [android]
     tags: ["android-v*"]
   workflow_dispatch:
     inputs:
