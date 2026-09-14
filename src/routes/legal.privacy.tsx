@@ -52,6 +52,22 @@ function PrivacyPage() {
         addresses are not sent with that request.
       </p>
 
+      <h2>Exchange swaps (the one exception)</h2>
+      <p>
+        If — and only if — you place a swap through one of our third-party exchange partners
+        (currently SideShift and FixedFloat), anti-money-laundering rules require us to keep a
+        record of that order. For those orders we store the order reference, the coin and amount,
+        the payout asset and address, the deposit transaction, and your IP address, browser
+        User-Agent string, and browser language list. We keep it for 13 months and then delete it
+        automatically. We disclose it only if the exchange partner or a lawful authority requests
+        the details of a specific exchange.
+      </p>
+      <p>
+        Swaps routed through THORChain, and every ordinary send, receive, or balance check, are
+        not logged this way. We never link this record to your seed phrase, and we do not use it
+        for analytics, profiling, or advertising.
+      </p>
+
       <h2>Children</h2>
       <p>The app is not directed to children under 13.</p>
 

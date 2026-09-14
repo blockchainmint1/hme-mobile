@@ -53,12 +53,63 @@ export type Database = {
         }
         Relationships: []
       }
+      exchange_compliance_log: {
+        Row: {
+          amount_sats: number
+          created_at: string
+          deposit_address: string | null
+          dest_address: string | null
+          dest_asset: string | null
+          from_coin: string
+          id: string
+          ip_address: string | null
+          lang_list: string | null
+          order_id: string | null
+          provider: string
+          purge_after: string
+          txid: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          amount_sats: number
+          created_at?: string
+          deposit_address?: string | null
+          dest_address?: string | null
+          dest_asset?: string | null
+          from_coin: string
+          id?: string
+          ip_address?: string | null
+          lang_list?: string | null
+          order_id?: string | null
+          provider: string
+          purge_after?: string
+          txid?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          amount_sats?: number
+          created_at?: string
+          deposit_address?: string | null
+          dest_address?: string | null
+          dest_asset?: string | null
+          from_coin?: string
+          id?: string
+          ip_address?: string | null
+          lang_list?: string | null
+          order_id?: string | null
+          provider?: string
+          purge_after?: string
+          txid?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      purge_exchange_compliance_log: { Args: never; Returns: number }
     }
     Enums: {
       [_ in never]: never
