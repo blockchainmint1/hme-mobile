@@ -26,7 +26,6 @@ import {
   fetchLatestRelease,
   installedVersion,
   releaseDownloadUrl,
-  resolveDirectDownloadUrl,
   type AppRelease,
 } from "@/lib/app-release";
 import { copyToClipboard } from "@/lib/clipboard";
@@ -41,8 +40,7 @@ import { isNative, nativePlatform } from "@/lib/native/platform";
  * Intent.ACTION_VIEW, so Chrome (or the default browser) owns the download,
  * finishes it, and offers "Open"/"Install".
  */
-async function openDownload(rawUrl: string) {
-  const url = await resolveDirectDownloadUrl(rawUrl);
+async function openDownload(url: string) {
   if (isNative()) {
     try {
       const { AppLauncher } = await import("@capacitor/app-launcher");

@@ -139,29 +139,6 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-/**
- * Follow our own /api/public/apk redirect once, on the JS side, so the browser
- * we hand off to receives the final CDN URL directly.
- *
- * Android's download manager can stall at 99% when it has to follow a redirect
- * whose target reports different headers; giving it the terminal URL (with a
- * real Content-Length and range support) lets the download complete and become
- * tappable/installable.
- */
-export async function resolveDirectDownloadUrl(url: string): Promise<string> {
-  if (!/\/api\/public\/apk/.test(url)) return url;
-  try {
-    const ctl = new AbortController();
-    const timer = setTimeout(() => ctl.abort(), 8000);
-    const res = await fetch(url, { method: "HEAD", redirect: "follow", signal: ctl.signal });
-    clearTimeout(timer);
-    if (res.url && /^https?:/.test(res.url) && !/\/api\/public\/apk/.test(res.url)) return res.url;
-  } catch {
-    /* keep the original link */
-  }
-  return url;
-}
-
 /** Best download link for a release row (falls back to the IPFS gateway). */
 export function releaseDownloadUrl(r: AppRelease | null): string {
   if (!r) return APK_URL;
