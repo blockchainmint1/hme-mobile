@@ -167,15 +167,36 @@ export async function fetchServerBuildId(): Promise<string | null> {
   return null;
 }
 
+/** Remembers which server build we already reloaded for, so we never nag twice. */
+const RELOADED_FOR_KEY = "hme.reloadedForBuild";
+
+function reloadedFor(): string | null {
+  try {
+    return window.localStorage.getItem(RELOADED_FOR_KEY);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Web/webview freshness: compare the build stamp baked into this bundle with
- * the one the server is serving now. A mismatch means a reload gets new code.
+ * the one the server is serving now.
+ *
+ * Important nuance: the client bundle and the server bundle are compiled in
+ * separate passes, so their stamps can legitimately differ even when the user
+ * IS on the newest code. In that case a reload can never make them match, and
+ * the old logic nagged forever. So once we've reloaded for a given server
+ * stamp and the mismatch survives, we accept that we're current.
  */
 export async function checkForWebUpdate(): Promise<"current" | "update" | "unknown"> {
   const serverBuild = await fetchServerBuildId();
   if (!serverBuild) return "unknown";
   if (LOCAL_BUILD_ID === "dev") return "current";
-  return serverBuild === LOCAL_BUILD_ID ? "current" : "update";
+  if (serverBuild === LOCAL_BUILD_ID) return "current";
+  // Already tried reloading for exactly this server build → the stamps simply
+  // don't line up; there is no newer code to fetch.
+  if (reloadedFor() === serverBuild) return "current";
+  return "update";
 }
 
 /** Drop caches (incl. service worker) and hard-reload into the new build. */
@@ -188,6 +209,14 @@ export async function applyWebUpdate(): Promise<void> {
     window.sessionStorage.setItem("hme.postUpdate", "1");
   } catch {
     /* memory-only session; still fine */
+  }
+  // Record which server build this reload was for. If the next check still
+  // sees a mismatch against the same stamp, we stop showing the prompt.
+  try {
+    const serverBuild = await fetchServerBuildId();
+    if (serverBuild) window.localStorage.setItem(RELOADED_FOR_KEY, serverBuild);
+  } catch {
+    /* best effort */
   }
   try {
     if ("caches" in window) {
