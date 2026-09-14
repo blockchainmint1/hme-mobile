@@ -59,7 +59,7 @@ export function AddSeedCard({ compact }: { compact?: boolean }) {
   function generate() {
     setError(null);
     try {
-      setMnemonic(generateMnemonic(256));
+      setMnemonic(generateMnemonic(128));
       setConfirmedBackup(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not generate seed");
@@ -162,7 +162,7 @@ export function AddSeedCard({ compact }: { compact?: boolean }) {
                 <div className="space-y-3">
                   {!mnemonic ? (
                     <Button type="button" onClick={generate} className="w-full">
-                      <RefreshCw className="h-4 w-4 mr-2" /> Generate 24-word seed
+                      <RefreshCw className="h-4 w-4 mr-2" /> Generate 12-word seed
                     </Button>
                   ) : (
                     <>

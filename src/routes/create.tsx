@@ -23,7 +23,7 @@ let draftMnemonic: string | null = null;
 
 function getOrCreateDraftMnemonic() {
   if (draftMnemonic) return draftMnemonic;
-  draftMnemonic = generateMnemonic(256);
+  draftMnemonic = generateMnemonic(128);
   return draftMnemonic;
 }
 
@@ -86,9 +86,9 @@ function CreatePage() {
     setError(null);
     try {
       if (useScribbleEntropy && scribbleBytesRef.current?.length) {
-        draftMnemonic = generateMnemonicFromUserEntropy(scribbleBytesRef.current, 256);
+        draftMnemonic = generateMnemonicFromUserEntropy(scribbleBytesRef.current, 128);
       } else {
-        draftMnemonic = generateMnemonic(256);
+        draftMnemonic = generateMnemonic(128);
       }
       setMnemonic(draftMnemonic);
       setConfirmedBackup(false);
@@ -153,7 +153,7 @@ function CreatePage() {
       </Link>
       <h1 className="mt-4 text-3xl font-bold">Back up your seed phrase</h1>
       <p className="mt-2 text-muted-foreground">
-        These 24 words are the only way to recover your wallet. Write them down on paper and store
+        These 12 words are the only way to recover your wallet. Write them down on paper and store
         them somewhere safe. Never share them. Never type them into a website you don't trust.
       </p>
 
@@ -173,7 +173,7 @@ function CreatePage() {
             <ScribblePad
               onStart={() => {
                 try {
-                  draftMnemonic = generateMnemonic(256);
+                  draftMnemonic = generateMnemonic(128);
                   setMnemonic(draftMnemonic);
                   setConfirmedBackup(false);
                   scribbleBytesRef.current = null;
@@ -225,7 +225,7 @@ function CreatePage() {
               size="sm"
               onClick={() => {
                 try {
-                  draftMnemonic = generateMnemonic(256);
+                  draftMnemonic = generateMnemonic(128);
                   setMnemonic(draftMnemonic);
                   setConfirmedBackup(false);
                   setScribbleProgress(0);
@@ -387,7 +387,7 @@ function CreatePage() {
                 className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded-md border border-input bg-background accent-primary"
               />
               <Label htmlFor="backup-confirmed" className="flex-1 leading-relaxed">
-                I wrote down all 24 words in order. I understand that losing them means losing my
+                I wrote down all {words.length} words in order. I understand that losing them means losing my
                 coins, and that the password alone cannot recover them.
               </Label>
             </div>
