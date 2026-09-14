@@ -26,6 +26,7 @@ import {
   fetchLatestRelease,
   installedVersion,
   releaseDownloadUrl,
+  resolveDirectDownloadUrl,
   type AppRelease,
 } from "@/lib/app-release";
 import { copyToClipboard } from "@/lib/clipboard";
