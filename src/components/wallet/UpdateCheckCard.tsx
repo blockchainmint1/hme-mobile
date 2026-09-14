@@ -151,8 +151,10 @@ export function UpdateCheckCard({ compact }: { compact?: boolean }) {
                   <Download className="h-4 w-4 mr-2" /> Install {latest.version}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Your browser downloads the APK — tap the finished download and confirm
-                  &ldquo;Update&rdquo;. Your wallet and settings stay on this device.
+                  This opens your browser (Chrome) to download the file. When it finishes, tap
+                  the download and confirm &ldquo;Update&rdquo;. If the download seems stuck, pull
+                  down your notifications and tap it there. Your wallet and settings stay on this
+                  device.
                 </p>
                 <Button
                   variant="ghost"
