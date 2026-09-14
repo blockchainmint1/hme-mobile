@@ -32,11 +32,23 @@ import { copyToClipboard } from "@/lib/clipboard";
 import { isNative, nativePlatform } from "@/lib/native/platform";
 
 /**
- * Open the APK link in the *system* browser. Android's in-app Custom Tab can
- * silently drop file downloads, which is the #1 reason "update" felt broken.
+ * Hand the APK link to the phone's real browser app.
+ *
+ * @capacitor/browser opens an in-app Custom Tab, and a Custom Tab's download
+ * manager entry frequently sticks at "99%" and never becomes tappable — that is
+ * the whole reason updates felt broken. AppLauncher fires a real
+ * Intent.ACTION_VIEW, so Chrome (or the default browser) owns the download,
+ * finishes it, and offers "Open"/"Install".
  */
 async function openDownload(url: string) {
   if (isNative()) {
+    try {
+      const { AppLauncher } = await import("@capacitor/app-launcher");
+      const { completed } = await AppLauncher.openUrl({ url });
+      if (completed) return;
+    } catch {
+      /* fall through to the in-app browser */
+    }
     try {
       const { Browser } = await import("@capacitor/browser");
       await Browser.open({ url, windowName: "_system" });
@@ -137,8 +149,10 @@ export function UpdateCheckCard({ compact }: { compact?: boolean }) {
                   <Download className="h-4 w-4 mr-2" /> Install {latest.version}
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Your browser downloads the APK — tap the finished download and confirm
-                  &ldquo;Update&rdquo;. Your wallet and settings stay on this device.
+                  This opens your browser (Chrome) to download the file. When it finishes, tap
+                  the download and confirm &ldquo;Update&rdquo;. If the download seems stuck, pull
+                  down your notifications and tap it there. Your wallet and settings stay on this
+                  device.
                 </p>
                 <Button
                   variant="ghost"
