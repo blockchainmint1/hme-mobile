@@ -1,13 +1,19 @@
 /**
  * APK download endpoint with correct Android headers.
  *
- * The raw CDN asset is served with a generic binary content-type, which makes
- * Chrome save the APK as a ".zip" (an APK is a zip archive internally), so
- * users can't tap-to-install it. This route streams the same bytes with the
- * official Android MIME type and an attachment filename so the browser treats
- * it as an installable package.
- *
  *   GET /api/public/apk
+ *
+ * Why this proxies instead of redirecting:
+ *
+ * The pinned CDN asset is served as `application/zip` (an APK *is* a zip), with
+ * no `Accept-Ranges`. Chrome therefore saves it as a ".zip" that can't be
+ * tapped to install, and Android's download manager — with no length it trusts
+ * and no resume support — can sit at "99%" forever.
+ *
+ * So we stream the same bytes ourselves and copy upstream's `Content-Length`
+ * verbatim, while overriding the type/filename to the official Android package
+ * MIME type. A known length plus a matching byte count is exactly what the
+ * download manager needs to flip to "complete" and offer Install.
  */
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -18,36 +24,54 @@ const APK_FILENAME = "hme-wallet-0.1.202609140919-release.apk";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+  "Access-Control-Expose-Headers": "Content-Length, Content-Disposition, Accept-Ranges",
   "Access-Control-Max-Age": "86400",
 } as const;
 
-/**
- * Redirect instead of proxying.
- *
- * Streaming the bytes through the Worker meant the response had no reliable
- * Content-Length, so Android's download manager sat at "99%" waiting for an
- * end-of-stream it could not predict, and never flipped to "complete". The
- * gateway serves the exact same bytes with a real Content-Length, ETag and
- * range support, so the download finishes (and can resume) properly.
- */
-const redirect = () =>
-  new Response(null, {
-    status: 302,
-    headers: {
-      Location: APK_SOURCE_URL,
-      "Content-Disposition": `attachment; filename="${APK_FILENAME}"`,
-      "Cache-Control": "public, max-age=300",
-      ...corsHeaders,
-    },
-  });
+function downloadHeaders(length: string | null): Record<string, string> {
+  const h: Record<string, string> = {
+    "Content-Type": "application/vnd.android.package-archive",
+    "Content-Disposition": `attachment; filename="${APK_FILENAME}"`,
+    // No transformation/ranging surprises between us and the phone.
+    "Cache-Control": "public, max-age=300",
+    "Accept-Ranges": "none",
+    ...corsHeaders,
+  };
+  if (length) h["Content-Length"] = length;
+  return h;
+}
+
+/** Ask the CDN for the byte length without pulling the body. */
+async function upstreamLength(): Promise<string | null> {
+  try {
+    const res = await fetch(APK_SOURCE_URL, { method: "HEAD" });
+    return res.headers.get("content-length");
+  } catch {
+    return null;
+  }
+}
 
 export const Route = createFileRoute("/api/public/apk")({
   server: {
     handlers: {
       OPTIONS: async () => new Response(null, { status: 204, headers: corsHeaders }),
-      HEAD: async () => redirect(),
-      GET: async () => redirect(),
+
+      HEAD: async () =>
+        new Response(null, { status: 200, headers: downloadHeaders(await upstreamLength()) }),
+
+      GET: async () => {
+        const upstream = await fetch(APK_SOURCE_URL, {
+          // Identity encoding keeps upstream's Content-Length byte-accurate.
+          headers: { "Accept-Encoding": "identity" },
+        });
+        if (!upstream.ok || !upstream.body) {
+          return new Response("Download unavailable", { status: 502, headers: corsHeaders });
+        }
+        return new Response(upstream.body, {
+          status: 200,
+          headers: downloadHeaders(upstream.headers.get("content-length")),
+        });
+      },
     },
   },
 });
-
