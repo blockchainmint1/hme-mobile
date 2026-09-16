@@ -4,15 +4,21 @@
  * Login QR codes contain a short-lived challenge and a callback owned by the
  * site. We fetch the exact message from that callback before signing, so the
  * wallet never guesses what it is authorizing. Only the TXC identity address
- * and compact signature leave the device. Callbacks are restricted to
- * TRUSTED_LOGIN_HOSTS (src/lib/web-login-hosts.ts), shared with the proxy.
+ * and compact signature leave the device. Any public HTTPS host may ask; the
+ * host tier (src/lib/web-login-hosts.ts) only decides how loud the approval UI
+ * is. The same host rules are enforced by the proxy.
  */
 
 import { signMessageWithSeed, verifyMessage, type SignedMessage } from "@/lib/txc/message-sign";
-import { TRUSTED_LOGIN_HOSTS } from "@/lib/web-login-hosts";
+import {
+  TRUSTED_LOGIN_HOSTS,
+  classifyLoginHost,
+  isPublicHostname,
+  type LoginHostTier,
+} from "@/lib/web-login-hosts";
 
 export { TRUSTED_LOGIN_HOSTS };
-/** @deprecated Use TRUSTED_LOGIN_HOSTS. */
+/** @deprecated Sign-in is no longer restricted to a list. */
 export const NECTAR_LOGIN_HOSTS = TRUSTED_LOGIN_HOSTS;
 const PROXY = "/api/nectar/link";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
