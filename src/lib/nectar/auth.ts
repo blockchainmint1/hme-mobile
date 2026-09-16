@@ -4,15 +4,21 @@
  * Login QR codes contain a short-lived challenge and a callback owned by the
  * site. We fetch the exact message from that callback before signing, so the
  * wallet never guesses what it is authorizing. Only the TXC identity address
- * and compact signature leave the device. Callbacks are restricted to
- * TRUSTED_LOGIN_HOSTS (src/lib/web-login-hosts.ts), shared with the proxy.
+ * and compact signature leave the device. Any public HTTPS host may ask; the
+ * host tier (src/lib/web-login-hosts.ts) only decides how loud the approval UI
+ * is. The same host rules are enforced by the proxy.
  */
 
 import { signMessageWithSeed, verifyMessage, type SignedMessage } from "@/lib/txc/message-sign";
-import { TRUSTED_LOGIN_HOSTS } from "@/lib/web-login-hosts";
+import {
+  TRUSTED_LOGIN_HOSTS,
+  classifyLoginHost,
+  isPublicHostname,
+  type LoginHostTier,
+} from "@/lib/web-login-hosts";
 
 export { TRUSTED_LOGIN_HOSTS };
-/** @deprecated Use TRUSTED_LOGIN_HOSTS. */
+/** @deprecated Sign-in is no longer restricted to a list. */
 export const NECTAR_LOGIN_HOSTS = TRUSTED_LOGIN_HOSTS;
 const PROXY = "/api/nectar/link";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -25,7 +31,12 @@ export interface NectarLoginRequest {
   expiresAt: number;
   chain: "txc";
   message?: string;
+  /** How well the wallet knows this site; drives the approval UI. */
+  tier: LoginHostTier;
+  /** Friendly site name where known, otherwise the hostname. */
+  siteName: string;
 }
+
 
 interface LoginChallengeResponse {
   id?: string;
@@ -37,12 +48,16 @@ interface LoginChallengeResponse {
   message?: string;
 }
 
-function trustedUrl(raw: string): URL | null {
+/**
+ * A callback URL the wallet is willing to talk to: public HTTPS host, default
+ * port, no embedded credentials. Membership in any list is NOT required.
+ */
+function callbackUrlOf(raw: string): URL | null {
   try {
     const url = new URL(raw);
     if (
       url.protocol !== "https:" ||
-      !TRUSTED_LOGIN_HOSTS.has(url.hostname) ||
+      !isPublicHostname(url.hostname) ||
       url.port ||
       url.username ||
       url.password
@@ -85,12 +100,14 @@ function validateRequest(raw: {
   const callbackUrl = typeof raw.callbackUrl === "string" ? raw.callbackUrl : "";
   const origin = typeof raw.origin === "string" ? raw.origin : "";
   const expiresAt = numberFrom(raw.expiresAt);
-  const callback = trustedUrl(callbackUrl);
+  const callback = callbackUrlOf(callbackUrl);
 
   if (!UUID_RE.test(challengeId)) throw new Error("This is not a valid website sign-in QR.");
   if (nonce.length < 16 || nonce.length > 128) throw new Error("The sign-in challenge is malformed.");
-  if (!callback) throw new Error("This sign-in QR points to an untrusted server.");
-  if (!TRUSTED_LOGIN_HOSTS.has(origin)) throw new Error("This sign-in request is not from a trusted site.");
+  if (!callback) {
+    throw new Error("This sign-in QR points to an address the wallet can't safely reach. It must be a public https website.");
+  }
+  if (!isPublicHostname(origin)) throw new Error("This sign-in request does not name a valid website.");
   if (expiresAt === null || expiresAt <= Date.now()) throw new Error("This sign-in QR has expired.");
   if (callback.searchParams.get("id") !== challengeId) throw new Error("The sign-in challenge does not match its callback.");
   if (callback.hostname !== origin) throw new Error("The sign-in request domain does not match its callback.");
@@ -101,6 +118,7 @@ function validateRequest(raw: {
     throw new Error("This sign-in request uses an unsupported chain.");
   }
 
+  const host = classifyLoginHost(origin);
   return {
     challengeId,
     nonce,
@@ -109,6 +127,8 @@ function validateRequest(raw: {
     expiresAt,
     chain: "txc",
     message: typeof raw.message === "string" && raw.message.length <= 2000 ? raw.message : undefined,
+    tier: host.tier,
+    siteName: host.name,
   };
 }
 
