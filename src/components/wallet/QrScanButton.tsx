@@ -60,6 +60,13 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
+  // Callers usually pass an inline arrow / locally-declared function, so its
+  // identity changes on every parent render. Keeping it in a ref means the
+  // camera effect below starts exactly once instead of tearing down and
+  // restarting the stream (which looked like the scanner "refreshing a lot").
+  const onScanRef = useRef(onScan);
+  onScanRef.current = onScan;
+
   useEffect(() => {
     let stream: MediaStream | null = null;
     let raf = 0;
