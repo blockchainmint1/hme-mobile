@@ -100,12 +100,14 @@ function validateRequest(raw: {
   const callbackUrl = typeof raw.callbackUrl === "string" ? raw.callbackUrl : "";
   const origin = typeof raw.origin === "string" ? raw.origin : "";
   const expiresAt = numberFrom(raw.expiresAt);
-  const callback = trustedUrl(callbackUrl);
+  const callback = callbackUrlOf(callbackUrl);
 
   if (!UUID_RE.test(challengeId)) throw new Error("This is not a valid website sign-in QR.");
   if (nonce.length < 16 || nonce.length > 128) throw new Error("The sign-in challenge is malformed.");
-  if (!callback) throw new Error("This sign-in QR points to an untrusted server.");
-  if (!TRUSTED_LOGIN_HOSTS.has(origin)) throw new Error("This sign-in request is not from a trusted site.");
+  if (!callback) {
+    throw new Error("This sign-in QR points to an address the wallet can't safely reach. It must be a public https website.");
+  }
+  if (!isPublicHostname(origin)) throw new Error("This sign-in request does not name a valid website.");
   if (expiresAt === null || expiresAt <= Date.now()) throw new Error("This sign-in QR has expired.");
   if (callback.searchParams.get("id") !== challengeId) throw new Error("The sign-in challenge does not match its callback.");
   if (callback.hostname !== origin) throw new Error("The sign-in request domain does not match its callback.");
