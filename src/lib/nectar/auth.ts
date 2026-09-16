@@ -31,7 +31,12 @@ export interface NectarLoginRequest {
   expiresAt: number;
   chain: "txc";
   message?: string;
+  /** How well the wallet knows this site; drives the approval UI. */
+  tier: LoginHostTier;
+  /** Friendly site name where known, otherwise the hostname. */
+  siteName: string;
 }
+
 
 interface LoginChallengeResponse {
   id?: string;
@@ -43,12 +48,16 @@ interface LoginChallengeResponse {
   message?: string;
 }
 
-function trustedUrl(raw: string): URL | null {
+/**
+ * A callback URL the wallet is willing to talk to: public HTTPS host, default
+ * port, no embedded credentials. Membership in any list is NOT required.
+ */
+function callbackUrlOf(raw: string): URL | null {
   try {
     const url = new URL(raw);
     if (
       url.protocol !== "https:" ||
-      !TRUSTED_LOGIN_HOSTS.has(url.hostname) ||
+      !isPublicHostname(url.hostname) ||
       url.port ||
       url.username ||
       url.password
