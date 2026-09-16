@@ -16,11 +16,15 @@ export const TRUSTED_LOGIN_HOSTS: ReadonlySet<string> = new Set([
   // streamTXC
   "streamtxc.com",
   "www.streamtxc.com",
+  // HME Bonfire
+  "bonfire.honest.money",
+  "hme-bonfire.lovable.app",
 ]);
 
 /** Human-friendly site name for a trusted host, used in the confirm UI. */
 export function loginSiteName(hostname: string): string {
   if (hostname === "app.nectar-pay.com" || hostname === "pay.honest.money") return "NectarPay";
   if (hostname === "streamtxc.com" || hostname === "www.streamtxc.com") return "streamTXC";
+  if (hostname === "bonfire.honest.money" || hostname === "hme-bonfire.lovable.app") return "Bonfire";
   return hostname;
 }

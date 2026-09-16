@@ -60,6 +60,13 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
+  // Callers usually pass an inline arrow / locally-declared function, so its
+  // identity changes on every parent render. Keeping it in a ref means the
+  // camera effect below starts exactly once instead of tearing down and
+  // restarting the stream (which looked like the scanner "refreshing a lot").
+  const onScanRef = useRef(onScan);
+  onScanRef.current = onScan;
+
   useEffect(() => {
     let stream: MediaStream | null = null;
     let raf = 0;
@@ -129,7 +136,7 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
             if (detector) {
               const codes = await detector.detect(video);
               if (codes.length > 0 && codes[0].rawValue) {
-                onScan(codes[0].rawValue);
+                onScanRef.current(codes[0].rawValue);
                 return;
               }
             } else if (jsQR && ctx) {
@@ -141,7 +148,7 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
               const img = ctx.getImageData(0, 0, w, h);
               const code = jsQR(img.data, w, h, { inversionAttempts: "attemptBoth" });
               if (code && code.data) {
-                onScan(code.data);
+                onScanRef.current(code.data);
                 return;
               }
             }
@@ -160,7 +167,7 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
       cancelAnimationFrame(raf);
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
-  }, [onScan]);
+  }, []);
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
