@@ -118,6 +118,7 @@ function validateRequest(raw: {
     throw new Error("This sign-in request uses an unsupported chain.");
   }
 
+  const host = classifyLoginHost(origin);
   return {
     challengeId,
     nonce,
@@ -126,6 +127,8 @@ function validateRequest(raw: {
     expiresAt,
     chain: "txc",
     message: typeof raw.message === "string" && raw.message.length <= 2000 ? raw.message : undefined,
+    tier: host.tier,
+    siteName: host.name,
   };
 }
 
