@@ -30,6 +30,18 @@ export function TxidCard({
     }
   }
 
+  async function share() {
+    // Share the txid (plus the explorer link when we have one); if the
+    // device can't share, fall back to copying so the id is still at hand.
+    const shared = await shareText({
+      title: label,
+      text: explorerUrl ? `${txid}\n${explorerUrl}` : txid,
+      url: explorerUrl ?? undefined,
+      dialogTitle: "Share transaction",
+    });
+    if (!shared) await copy();
+  }
+
   return (
     <div className="mx-auto mt-5 w-full max-w-sm rounded-xl border border-border/60 bg-card/60 p-4 text-left">
       <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
