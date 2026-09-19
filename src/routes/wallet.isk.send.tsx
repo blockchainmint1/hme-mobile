@@ -36,7 +36,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, ExternalLink } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { TxidCard } from "@/components/wallet/TxidCard";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
 import { AddressBookButton } from "@/components/wallet/AddressBookButton";
 import { hapticSuccess, hapticError } from "@/lib/native/ui";

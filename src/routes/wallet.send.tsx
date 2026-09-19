@@ -38,7 +38,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, ArrowDownUp, ExternalLink, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowDownUp, Loader2 } from "lucide-react";
+import { TxidCard } from "@/components/wallet/TxidCard";
 import { TXC_NETWORK } from "@/lib/txc/network";
 import { address as addrLib, payments } from "bitcoinjs-lib";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";

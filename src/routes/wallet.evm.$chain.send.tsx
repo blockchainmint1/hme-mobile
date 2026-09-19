@@ -25,6 +25,7 @@ import {
   type Address,
 } from "viem";
 import { Button } from "@/components/ui/button";
+import { TxidCard } from "@/components/wallet/TxidCard";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
