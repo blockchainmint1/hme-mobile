@@ -140,13 +140,8 @@ function TronSend() {
             <p className="text-sm">
               {amount} {asset} is on its way. Tron usually confirms in about 3 seconds.
             </p>
-            <p className="font-mono text-xs break-all">{txid}</p>
+            <TxidCard txid={txid} explorerUrl={explorerTxUrl(txid)} explorerLabel="View on Tronscan" />
             <div className="flex gap-2">
-              <Button asChild variant="secondary" className="flex-1">
-                <a href={explorerTxUrl(txid)} target="_blank" rel="noreferrer">
-                  View on Tronscan
-                </a>
-              </Button>
               <Button className="flex-1" onClick={() => navigate({ to: "/wallet" })}>
                 Done
               </Button>
