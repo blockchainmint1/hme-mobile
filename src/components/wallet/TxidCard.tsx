@@ -80,7 +80,7 @@ export function TxidCard({
         </Button>
         {explorerUrl && (
           <Button asChild variant="secondary" className="flex-1">
-            <a href={explorerUrl} target="_blank" rel="noreferrer">
+            <a href={explorerUrl} target="_blank" rel="noreferrer" title={explorerLabel} aria-label={explorerLabel}>
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </Button>
