@@ -326,14 +326,6 @@ function EvmSend() {
                 still spent).
               </p>
             )}
-            <a
-              className="block text-sm underline break-all"
-              href={meta.explorerTx(txHash)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View on {meta.name} explorer
-            </a>
             <p className="text-xs text-muted-foreground">
               This transfer is on <strong>{meta.name}</strong>. It will not
               appear on another chain's explorer.
