@@ -70,10 +70,18 @@ export function TxidCard({
             </>
           )}
         </Button>
+        <Button
+          type="button"
+          onClick={() => void share()}
+          variant="secondary"
+          className="flex-1"
+        >
+          <Share2 className="h-4 w-4" /> Share
+        </Button>
         {explorerUrl && (
           <Button asChild variant="secondary" className="flex-1">
             <a href={explorerUrl} target="_blank" rel="noreferrer">
-              {explorerLabel} <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </Button>
         )}
