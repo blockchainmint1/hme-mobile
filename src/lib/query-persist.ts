@@ -100,7 +100,7 @@ export function clearWalletTraces(): void {
     const doomed: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
       const k = window.localStorage.key(i);
-      if (k && k.startsWith("hme.scan-hint.")) doomed.push(k);
+      if (k && /^hme\.(?:[a-z]+\.)?scan-hint\./.test(k)) doomed.push(k);
     }
     for (const k of doomed) window.localStorage.removeItem(k);
   } catch {
