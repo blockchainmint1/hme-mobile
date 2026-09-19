@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { copyToClipboard } from "@/lib/clipboard";
-import { hapticSuccess } from "@/lib/native/ui";
+import { hapticSuccess, shareText } from "@/lib/native/ui";
 
 /**
  * Success-screen block shown after a broadcast on any chain: the full
