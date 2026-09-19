@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Check, Copy, ExternalLink } from "lucide-react";
+import { Check, Copy, ExternalLink, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { copyToClipboard } from "@/lib/clipboard";
-import { hapticSuccess } from "@/lib/native/ui";
+import { hapticSuccess, shareText } from "@/lib/native/ui";
 
 /**
  * Success-screen block shown after a broadcast on any chain: the full
@@ -28,6 +28,18 @@ export function TxidCard({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  }
+
+  async function share() {
+    // Share the txid (plus the explorer link when we have one); if the
+    // device can't share, fall back to copying so the id is still at hand.
+    const shared = await shareText({
+      title: label,
+      text: explorerUrl ? `${txid}\n${explorerUrl}` : txid,
+      url: explorerUrl ?? undefined,
+      dialogTitle: "Share transaction",
+    });
+    if (!shared) await copy();
   }
 
   return (
@@ -58,10 +70,18 @@ export function TxidCard({
             </>
           )}
         </Button>
+        <Button
+          type="button"
+          onClick={() => void share()}
+          variant="secondary"
+          className="flex-1"
+        >
+          <Share2 className="h-4 w-4" /> Share
+        </Button>
         {explorerUrl && (
           <Button asChild variant="secondary" className="flex-1">
-            <a href={explorerUrl} target="_blank" rel="noreferrer">
-              {explorerLabel} <ExternalLink className="h-3.5 w-3.5" />
+            <a href={explorerUrl} target="_blank" rel="noreferrer" title={explorerLabel} aria-label={explorerLabel}>
+              <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </Button>
         )}
