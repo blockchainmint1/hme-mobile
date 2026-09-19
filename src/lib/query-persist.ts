@@ -15,13 +15,27 @@ import { persistQueryClient } from "@tanstack/react-query-persist-client";
 
 // Keys allowed to persist. Everything else stays in-memory only.
 const PERSIST_ALLOWLIST = new Set([
+  // TXC (primary chain)
   "account",       // derived addresses / xpub (no secrets)
   "txs",           // TXC tx history keyed by address
   "txc-price",
+  // other UTXO chains: account snapshots + history + price
+  "isk-account", "isk-txs", "isk-price",
+  "btc-account", "btc-txs", "btc-price",
+  "ltc-account", "ltc-txs", "ltc-price",
+  "doge-account", "doge-txs", "doge-price",
+  // watch-only / imported-key addresses
+  "watch-stats", "watch-txs",
+  "wif-stats", "wif-txs",
+  // EVM + tokens
   "all-prices",
   "evm-balance",
   "evm-history",
   "erc20-usdc",
+  "erc20-balance",
+  // Tron / Solana
+  "tron-balance", "tron-price", "tron-trc20", "tron-history",
+  "solana-balance", "solana-history",
 ]);
 
 function replacer(_key: string, value: unknown) {
@@ -86,7 +100,7 @@ export function clearWalletTraces(): void {
     const doomed: string[] = [];
     for (let i = 0; i < window.localStorage.length; i++) {
       const k = window.localStorage.key(i);
-      if (k && k.startsWith("hme.scan-hint.")) doomed.push(k);
+      if (k && /^hme\.(?:[a-z]+\.)?scan-hint\./.test(k)) doomed.push(k);
     }
     for (const k of doomed) window.localStorage.removeItem(k);
   } catch {

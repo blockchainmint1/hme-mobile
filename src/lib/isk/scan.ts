@@ -197,8 +197,8 @@ export async function scanIskAccount(
     }
   };
 
-  await collect(usedExt);
-  await collect(usedInt);
+  // Receive + change chains gathered concurrently (halves the wait).
+  await Promise.all([collect(usedExt), collect(usedInt)]);
 
   if (kind === "bip84" || kind === "bip49") {
     const { payments } = await import("bitcoinjs-lib");

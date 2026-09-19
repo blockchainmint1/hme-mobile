@@ -148,8 +148,8 @@ export async function scanDogeAccount(
     }
   };
 
-  await collect(usedExt);
-  await collect(usedInt);
+  // Receive + change chains gathered concurrently (halves the wait).
+  await Promise.all([collect(usedExt), collect(usedInt)]);
 
   const nextRecvIdx = ext.firstUnusedIndex;
   const nextChangeIdx = int.firstUnusedIndex;
