@@ -38,7 +38,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, ArrowDownUp, ExternalLink, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowDownUp, Loader2 } from "lucide-react";
+import { TxidCard } from "@/components/wallet/TxidCard";
 import { TXC_NETWORK } from "@/lib/txc/network";
 import { address as addrLib, payments } from "bitcoinjs-lib";
 import { QrScanButton, parseWalletUri } from "@/components/wallet/QrScanButton";
@@ -688,14 +689,7 @@ function SendPage() {
           </p>
         )}
 
-        <a
-          href={explorerTxUrl(stage.txid)}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-3 inline-flex items-center gap-1 text-sm underline"
-        >
-          View on explorer <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+        <TxidCard txid={stage.txid} explorerUrl={explorerTxUrl(stage.txid)} />
         <div className="mt-8 flex justify-center gap-2">
           <Button onClick={() => navigate({ to: "/wallet" })}>Back to wallet</Button>
         </div>

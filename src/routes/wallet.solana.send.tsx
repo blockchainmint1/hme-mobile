@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Send as SendIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { TxidCard } from "@/components/wallet/TxidCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,7 +60,7 @@ function SolanaSend() {
     } finally { setSending(false); }
   }
 
-  if (signature) return <main className="mx-auto max-w-3xl px-4 py-6"><h1 className="text-2xl font-semibold mb-4">Sent</h1><Card><CardContent className="pt-6 space-y-3"><p className="text-sm">{amount} SOL was sent on Solana.</p><p className="font-mono text-xs break-all">{signature}</p><div className="flex gap-2"><Button asChild variant="secondary" className="flex-1"><a href={explorerTxUrl(signature)} target="_blank" rel="noreferrer">View on Solscan</a></Button><Button className="flex-1" onClick={() => navigate({ to: "/wallet" })}>Done</Button></div></CardContent></Card></main>;
+  if (signature) return <main className="mx-auto max-w-3xl px-4 py-6"><h1 className="text-2xl font-semibold mb-4">Sent</h1><Card><CardContent className="pt-6 space-y-3"><p className="text-sm">{amount} SOL was sent on Solana.</p><TxidCard txid={signature} explorerUrl={explorerTxUrl(signature)} label="Transaction signature" explorerLabel="View on Solscan" /><div className="flex gap-2"><Button className="flex-1" onClick={() => navigate({ to: "/wallet" })}>Done</Button></div></CardContent></Card></main>;
 
   return <main className="mx-auto max-w-3xl px-4 py-6">
     <Link to="/wallet" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"><ArrowLeft className="h-4 w-4" /> Back</Link>

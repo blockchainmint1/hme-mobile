@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Send as SendIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { TxidCard } from "@/components/wallet/TxidCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -140,13 +141,8 @@ function TronSend() {
             <p className="text-sm">
               {amount} {asset} is on its way. Tron usually confirms in about 3 seconds.
             </p>
-            <p className="font-mono text-xs break-all">{txid}</p>
+            <TxidCard txid={txid} explorerUrl={explorerTxUrl(txid)} explorerLabel="View on Tronscan" />
             <div className="flex gap-2">
-              <Button asChild variant="secondary" className="flex-1">
-                <a href={explorerTxUrl(txid)} target="_blank" rel="noreferrer">
-                  View on Tronscan
-                </a>
-              </Button>
               <Button className="flex-1" onClick={() => navigate({ to: "/wallet" })}>
                 Done
               </Button>

@@ -25,6 +25,7 @@ import {
   type Address,
 } from "viem";
 import { Button } from "@/components/ui/button";
+import { TxidCard } from "@/components/wallet/TxidCard";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -307,14 +308,12 @@ function EvmSend() {
         </p>
         <Card>
           <CardContent className="pt-6 space-y-3">
-            <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Transaction hash
-              </div>
-              <code className="block font-mono break-all text-xs bg-muted rounded p-2 mt-1">
-                {txHash}
-              </code>
-            </div>
+            <TxidCard
+              txid={txHash}
+              explorerUrl={meta.explorerTx(txHash)}
+              label="Transaction hash"
+              explorerLabel={`View on ${meta.name} explorer`}
+            />
             {!status && (
               <p className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -328,14 +327,6 @@ function EvmSend() {
                 still spent).
               </p>
             )}
-            <a
-              className="block text-sm underline break-all"
-              href={meta.explorerTx(txHash)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View on {meta.name} explorer
-            </a>
             <p className="text-xs text-muted-foreground">
               This transfer is on <strong>{meta.name}</strong>. It will not
               appear on another chain's explorer.
