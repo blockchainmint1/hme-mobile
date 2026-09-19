@@ -221,14 +221,7 @@ function SendIskPage() {
         <p className="mt-2 text-muted-foreground">
           Your ISK transaction was broadcast to the network.
         </p>
-        <a
-          href={explorerTxUrl(stage.txid)}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-3 inline-flex items-center gap-1 text-sm underline"
-        >
-          View on explorer <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+        <TxidCard txid={stage.txid} explorerUrl={explorerTxUrl(stage.txid)} />
         <div className="mt-8 flex justify-center gap-2">
           <Button onClick={() => navigate({ to: "/wallet" })}>Back to wallet</Button>
         </div>

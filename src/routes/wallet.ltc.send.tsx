@@ -163,9 +163,7 @@ function SendLtcPage() {
         <div className="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-400 mx-auto flex items-center justify-center text-2xl">✓</div>
         <h1 className="mt-4 text-2xl font-bold">Sent</h1>
         <p className="mt-2 text-muted-foreground">Your LTC transaction was broadcast to the network.</p>
-        <a href={explorerTxUrl(stage.txid)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-sm underline">
-          View on explorer <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+        <TxidCard txid={stage.txid} explorerUrl={explorerTxUrl(stage.txid)} />
         <div className="mt-8 flex justify-center gap-2">
           <Button onClick={() => navigate({ to: "/wallet" })}>Back to wallet</Button>
         </div>
