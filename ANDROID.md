@@ -53,6 +53,7 @@ Recommended flow for the first APK on your device:
 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
 <!-- Nectar tap-to-pay deep links: nectar://... and https://pay.honest.money/... -->
+<!-- Website tap-to-sign-in deep link: payhme://login?id=...&nonce=...&cb=...&msg=...&from=... -->
 <activity ...>
   <intent-filter android:autoVerify="true">
     <action android:name="android.intent.action.VIEW" />

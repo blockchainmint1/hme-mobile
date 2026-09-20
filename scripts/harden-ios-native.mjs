@@ -47,6 +47,7 @@ const infoPlist = `<?xml version="1.0" encoding="UTF-8"?>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>nectar</string>
+				<string>payhme</string>
 			</array>
 		</dict>
 	</array>

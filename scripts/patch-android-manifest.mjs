@@ -9,6 +9,7 @@
  *   - ACCESS_NETWORK_STATE (reachability)
  *   - Deep-link intent filters:
  *       nectar://...
+ *       payhme://login (tap-to-sign-in from partner sites)
  *       https://pay.honest.money/...
  *
  * See ANDROID.md for the source-of-truth list.
@@ -48,6 +49,12 @@ const deepLinks = `
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="nectar" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="payhme" android:host="login" />
+            </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -56,7 +63,7 @@ const deepLinks = `
             </intent-filter>
 `;
 
-if (!xml.includes('android:scheme="nectar"')) {
+if (!xml.includes('android:scheme="nectar"') || !xml.includes('android:scheme="payhme"')) {
   xml = xml.replace(/(<\/activity>)/, `${deepLinks}        $1`);
 }
 
