@@ -66,6 +66,10 @@ export async function registerPayDeepLinkListener(router: AnyRouter): Promise<()
     const { App } = await import("@capacitor/app");
 
     const handle = (url: string) => {
+      if (isLoginDeepLink(url)) {
+        router.navigate({ to: "/wallet/signin", search: { payload: url.trim() } });
+        return;
+      }
       const parsed = parsePayUrl(url);
       if (!parsed) return;
       router.navigate({
