@@ -19,6 +19,16 @@ export interface ParsedPayUrl {
   nonce: string;
 }
 
+/**
+ * `payhme://login?...` — a site (e.g. Bonfire) handing a sign-in challenge to
+ * this wallet instead of asking for a second device to scan. We only recognise
+ * the shape here; every field is re-validated by parseLoginInput on the
+ * sign-in screen, and the message is always re-fetched from the callback.
+ */
+export function isLoginDeepLink(raw: string): boolean {
+  return /^payhme:\/\/login\b/i.test(raw.trim());
+}
+
 /** Parse either URL shape into `{invoiceId, nonce}`. Returns null on miss. */
 export function parsePayUrl(raw: string): ParsedPayUrl | null {
   if (!raw) return null;
