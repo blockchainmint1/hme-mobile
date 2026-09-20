@@ -32,6 +32,7 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>nectar</string>
+				<string>payhme</string>
 			</array>
 		</dict>
 	</array>
