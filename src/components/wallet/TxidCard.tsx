@@ -33,10 +33,11 @@ export function TxidCard({
   async function share() {
     // Share the txid (plus the explorer link when we have one); if the
     // device can't share, fall back to copying so the id is still at hand.
+    // Put the explorer link in the text only — passing it as `url` too makes
+    // some share sheets (iOS especially) show the link twice.
     const shared = await shareText({
       title: label,
       text: explorerUrl ? `${txid}\n${explorerUrl}` : txid,
-      url: explorerUrl ?? undefined,
       dialogTitle: "Share transaction",
     });
     if (!shared) await copy();
