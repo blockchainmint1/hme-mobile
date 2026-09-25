@@ -80,12 +80,29 @@ export async function sendEvmTransaction(
   const reserved = readReserved(chainId, address);
   let nonce = Math.max(latest, pending, reserved != null ? reserved + 1 : 0);
 
+  // Generous EIP-1559 fees. viem's default cap is only 1.2x the current base
+  // fee, so any short fee spike on Ethereum leaves the tx stuck "pending".
+  // Cap at 2x base fee + a healthy tip; the user only pays the actual base fee.
+  let fees: { maxFeePerGas: bigint; maxPriorityFeePerGas: bigint } | undefined;
+  try {
+    const block = await pub.getBlock({ blockTag: "latest" });
+    if (block.baseFeePerGas != null) {
+      const minTip = chainId === "eth" ? 1_500_000_000n : 100_000_000n;
+      let tip = await pub.estimateMaxPriorityFeePerGas().catch(() => minTip);
+      if (tip < minTip) tip = minTip;
+      fees = { maxPriorityFeePerGas: tip, maxFeePerGas: block.baseFeePerGas * 2n + tip };
+    }
+  } catch {
+    /* fall back to viem defaults */
+  }
+
   let lastErr: unknown;
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       const hash = await walletClient.sendTransaction({
         account,
         chain: walletClient.chain,
+        ...fees,
         ...tx,
         nonce,
       } as Parameters<WalletClient["sendTransaction"]>[0]);
