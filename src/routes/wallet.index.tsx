@@ -2135,7 +2135,7 @@ function EvmActivity({
         {pending.length > 0 && (
           <ul className="space-y-2 mb-2">
             {pending.map((p) => {
-              const reverted = p.status === "reverted";
+              const reverted = p.status === "reverted" || p.status === "dropped";
               const confirmed = p.status === "success";
               return (
                 <li key={p.hash}>
