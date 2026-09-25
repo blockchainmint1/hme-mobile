@@ -2135,7 +2135,7 @@ function EvmActivity({
         {pending.length > 0 && (
           <ul className="space-y-2 mb-2">
             {pending.map((p) => {
-              const reverted = p.status === "reverted";
+              const reverted = p.status === "reverted" || p.status === "dropped";
               const confirmed = p.status === "success";
               return (
                 <li key={p.hash}>
@@ -2167,7 +2167,7 @@ function EvmActivity({
                                 : "text-amber-400"
                           }`}
                         >
-                          {reverted ? "reverted" : confirmed ? "confirmed" : "pending"}
+                          {p.status === "dropped" ? "not sent — funds safe, try again" : reverted ? "reverted" : confirmed ? "confirmed" : "pending"}
                         </span>
                       </p>
                       <a
