@@ -31,3 +31,13 @@ Current gates:
 
 If the user asks for a feature and does not explicitly say it should be on iOS,
 default to excluding it from iOS. Ask the user for confirmation when unsure.
+
+## Release delivery is database-driven
+
+`/api/public/apk` resolves what to serve from the newest `app_releases` row
+(`ipfs_cid` + version, or `?v=<version>` for an older build) and only falls back
+to the build baked into the file when the lookup fails. Why: cutting a release
+must never require a website redeploy — pin the file, insert the row with
+`download_url` pointing at the endpoint, and installed apps get the prompt and
+the correct bytes. Keep it that way: never move the pinned CID/filename back
+into a hardcoded constant that the release row has to be kept in sync with.
