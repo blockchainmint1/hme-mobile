@@ -137,8 +137,13 @@ export function parseLoginInput(raw: string): NectarLoginRequest {
   const text = raw.trim();
   if (!text) throw new Error("Scan a website sign-in QR to continue.");
 
-  try {
-    const value: unknown = JSON.parse(text);
+  if (text.startsWith("{")) {
+    let value: unknown;
+    try {
+      value = JSON.parse(text);
+    } catch {
+      throw new Error("This QR is not a supported sign-in request.");
+    }
     if (value && typeof value === "object") {
       const envelope = value as Record<string, unknown>;
       if (envelope.type !== "hm-login") throw new Error("This QR is not a supported sign-in request.");
@@ -151,8 +156,6 @@ export function parseLoginInput(raw: string): NectarLoginRequest {
         chain: envelope.chain,
       });
     }
-  } catch (error) {
-    if (error instanceof Error && error.message !== "Unexpected end of JSON input") throw error;
   }
 
   try {
