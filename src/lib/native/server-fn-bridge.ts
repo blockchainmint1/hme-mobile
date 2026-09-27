@@ -11,7 +11,7 @@
  */
 import { CapacitorHttp } from "@capacitor/core";
 
-import { isNative } from "./platform";
+import { isExtension, isNative } from "./platform";
 
 const PROD_ORIGIN = "https://mobile.honest.money";
 const FORWARD_PREFIXES = ["/_serverFn/", "/api/"];
@@ -20,13 +20,20 @@ let patched = false;
 
 export function installNativeServerFnBridge() {
   if (patched || typeof window === "undefined") return;
-  if (!isNative()) return;
+  const extension = isExtension();
+  if (!isNative() && !extension) return;
   patched = true;
 
   const originalFetch = window.fetch.bind(window);
   window.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     try {
       const path = serverBackedPath(input);
+      if (path && extension) {
+        // Extension pages hold host permission for the site, so a plain
+        // cross-origin fetch works without CORS.
+        if (input instanceof Request) return originalFetch(new Request(PROD_ORIGIN + path, input));
+        return originalFetch(PROD_ORIGIN + path, init);
+      }
       if (path) {
         return nativeRequest(PROD_ORIGIN + path, input, init, originalFetch);
       }

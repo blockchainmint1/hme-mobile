@@ -30,3 +30,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# generated extension build output
+/extension/*
+!/extension/manifest.json
+!/extension/approve.html

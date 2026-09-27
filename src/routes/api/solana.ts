@@ -26,6 +26,7 @@ function isAllowedCaller(request: Request): boolean {
   if (sourceHost === host) return true;
   if (["capacitor://localhost", "ionic://localhost", "https://localhost"].includes(source)) return true;
   if (["hme-mobile.lovable.app", "mobile.honest.money"].includes(sourceHost)) return true;
+  if (source.startsWith("chrome-extension://")) return true;
   return process.env.NODE_ENV !== "production" && sourceHost.endsWith(".lovable.app");
 }
 

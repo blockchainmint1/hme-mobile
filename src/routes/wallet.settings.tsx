@@ -1,3 +1,4 @@
+import { useIsExtension } from "@/lib/native/use-is-extension";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
@@ -65,6 +66,7 @@ export const Route = createFileRoute("/wallet/settings")({
 });
 
 function SettingsPage() {
+  const isExt = useIsExtension();
   const { unlocked, forget } = useWallet();
   const keyOnly = unlocked?.mode === "keyonly";
 
@@ -227,7 +229,7 @@ function SettingsPage() {
           title="Updates"
           description="Check for new app versions."
         >
-          <UpdateCheckCard compact />
+          {!isExt && <UpdateCheckCard compact />}
         </SettingsSection>
 
         <Link to="/wallet/contacts" className="block">

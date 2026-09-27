@@ -37,7 +37,7 @@ into a hardcoded constant that the release row has to be kept in sync with.
 
 ## Chrome extension
 
-The browser extension lives in `extension/` (manifest.json + popup.html) with its UI in `src/extension/popup.tsx`, built by `bun scripts/build-extension.mjs` (esbuild bundle + zip to `public/hme-wallet-extension.zip`). Why: it reuses the `src/lib/txc/*` engine directly so fixes apply to phone app and extension at once; never fork the engine into the extension. The unlocked wallet lives in popup memory only — closing the popup locks it.
+The extension packages the full web app: `bun scripts/build-extension.mjs` runs `vite build`, renders the SPA shell into `extension/popup.html`/`index.html` with inline scripts externalised (MV3 CSP), and `server-fn-bridge` forwards `/_serverFn`+`/api` to mobile.honest.money when `isExtension()`. `src/extension/popup.tsx` is only the approval window (`approve.html`). Why: one app, every fix ships to web, APK and extension.
 
 - Extension web provider: `src/extension/inpage.ts` (EIP-6963 + `window.honestMoney`, `window.ethereum` only if free) → `content.ts` → `background.ts`; keys stay in approval popup. Why: sites never touch keys and signatures need approval.
 - Popup theme follows system by default with a light/dark override saved only in extension localStorage. Why: appearance should not change web/mobile settings or wallet data.

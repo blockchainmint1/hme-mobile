@@ -136,7 +136,12 @@ function ChromeExtensionPage() {
           <li>
             Import the same phrase you use in the phone app and both will control the same wallet.
           </li>
-          <li>See your TEXITcoin balance, copy your receive address, and send TXC.</li>
+          <li>
+            The full wallet — the same one as the phone app: TEXITcoin, Iskander, Zero Chill,
+            Ethereum and other EVM chains, Bitcoin, Litecoin, Dogecoin, Solana and Tron, plus
+            settings, wallet profiles, history, swaps, watch-only and private-key imports.
+          </li>
+          <li>Click &ldquo;Open in tab&rdquo; in the corner of the small window for a bigger view.</li>
           <li>
             Sign in to honest.money sites — like Bonfire — with one click, no QR code and no phone.
           </li>
@@ -160,8 +165,8 @@ function ChromeExtensionPage() {
             Send screen.
           </li>
           <li>
-            The wallet window itself is TEXITcoin only for now — Bitcoin, Litecoin, Dogecoin,
-            Solana, Tron and the rest live in the phone app.
+            The camera QR scanner and fingerprint unlock are phone-only; paste codes and use your
+            password instead.
           </li>
           <li>
             There is no Chrome Web Store listing yet, which is why these steps exist and why updates

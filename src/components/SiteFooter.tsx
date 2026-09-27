@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { isNative } from "@/lib/native/platform";
+import { isExtension, isNative } from "@/lib/native/platform";
 import { APK_URL } from "@/lib/app-release";
 
 async function openExternal(url: string) {
@@ -20,7 +20,7 @@ export function SiteFooter() {
   // Inside the native app the footer takes up scarce vertical real estate and
   // the external <a> targets would try to hijack the WebView. Skip it entirely.
   const [native, setNative] = useState(false);
-  useEffect(() => setNative(isNative()), []);
+  useEffect(() => setNative(isNative() || isExtension()), []);
   // Marketing/legal footer belongs on the public pages (landing, manifesto,
   // legal) — never inside the unlocked wallet app, where it eats space and
   // duplicates in-app navigation.
