@@ -227,7 +227,7 @@ function SettingsPage() {
           title="Updates"
           description="Check for new app versions."
         >
-          <UpdateCheckCard compact />
+          {!isExt && <UpdateCheckCard compact />}
         </SettingsSection>
 
         <Link to="/wallet/contacts" className="block">
