@@ -18,6 +18,7 @@ import {
   Trash2,
   AlertTriangle,
   Link2,
+  ScrollText,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChainsCard } from "@/components/wallet/ChainsCard";
@@ -98,6 +99,22 @@ function SettingsPage() {
         >
           <ProfilesCard compact />
         </SettingsSection>
+
+        <Link to="/wallet/backup" className="block">
+          <Card className="hover:bg-accent/30 transition-colors">
+            <CardContent className="py-4 flex items-center gap-3">
+              <ScrollText className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-semibold">Backup</div>
+                <div className="text-xs text-muted-foreground">
+                  Reveal your seed phrase — the only way to restore your wallet. It asks for your
+                  password first.
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
 
         <SettingsSection
           value="appearance"
