@@ -14,6 +14,7 @@ import { Route as ManifestoRouteImport } from './routes/manifesto'
 import { Route as ImportKeyRouteImport } from './routes/import-key'
 import { Route as ImportRouteImport } from './routes/import'
 import { Route as CreateRouteImport } from './routes/create'
+import { Route as ChromeRouteImport } from './routes/chrome'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WalletIndexRouteImport } from './routes/wallet.index'
 import { Route as WalletWifAddRouteImport } from './routes/wallet.wif-add'
@@ -86,6 +87,11 @@ const ImportRoute = ImportRouteImport.update({
 const CreateRoute = CreateRouteImport.update({
   id: '/create',
   path: '/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChromeRoute = ChromeRouteImport.update({
+  id: '/chrome',
+  path: '/chrome',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -331,6 +337,7 @@ const ApiNectarPayInvoiceIdRoute = ApiNectarPayInvoiceIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/chrome': typeof ChromeRoute
   '/create': typeof CreateRoute
   '/import': typeof ImportRoute
   '/import-key': typeof ImportKeyRoute
@@ -386,6 +393,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/chrome': typeof ChromeRoute
   '/create': typeof CreateRoute
   '/import': typeof ImportRoute
   '/import-key': typeof ImportKeyRoute
@@ -441,6 +449,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/chrome': typeof ChromeRoute
   '/create': typeof CreateRoute
   '/import': typeof ImportRoute
   '/import-key': typeof ImportKeyRoute
@@ -498,6 +507,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/chrome'
     | '/create'
     | '/import'
     | '/import-key'
@@ -553,6 +563,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/chrome'
     | '/create'
     | '/import'
     | '/import-key'
@@ -607,6 +618,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/chrome'
     | '/create'
     | '/import'
     | '/import-key'
@@ -663,6 +675,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ChromeRoute: typeof ChromeRoute
   CreateRoute: typeof CreateRoute
   ImportRoute: typeof ImportRoute
   ImportKeyRoute: typeof ImportKeyRoute
@@ -719,6 +732,13 @@ declare module '@tanstack/react-router' {
       path: '/create'
       fullPath: '/create'
       preLoaderRoute: typeof CreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chrome': {
+      id: '/chrome'
+      path: '/chrome'
+      fullPath: '/chrome'
+      preLoaderRoute: typeof ChromeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -1147,6 +1167,7 @@ const WalletRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ChromeRoute: ChromeRoute,
   CreateRoute: CreateRoute,
   ImportRoute: ImportRoute,
   ImportKeyRoute: ImportKeyRoute,
