@@ -235,6 +235,7 @@ function Home() {
         </>
       )}
 
+      <IosInstallHint />
 
       <section className="mt-12 rounded-xl border border-border/60 bg-card/40 p-5 text-sm text-muted-foreground">
         <h2 className="font-semibold text-foreground mb-2">Also available as a browser extension</h2>
