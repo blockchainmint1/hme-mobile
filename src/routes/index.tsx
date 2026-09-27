@@ -118,6 +118,24 @@ function Home() {
     },
     [navigate],
   );
+  // Direct <a href download> fails in the preview (static files need auth),
+  // so fetch the zip and hand it over as a blob.
+  const downloadExtension = useCallback(() => {
+    fetch("/hme-wallet-extension.zip")
+      .then((res) => {
+        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "hme-wallet-extension.zip";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch((err) => alert(err.message));
+  }, []);
+
   const goImportKey = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
