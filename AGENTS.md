@@ -45,3 +45,5 @@ into a hardcoded constant that the release row has to be kept in sync with.
 ## Chrome extension
 
 The browser extension lives in `extension/` (manifest.json + popup.html) with its UI in `src/extension/popup.tsx`, built by `bun scripts/build-extension.mjs` (esbuild bundle + zip to `public/hme-wallet-extension.zip`). Why: it reuses the `src/lib/txc/*` engine directly so fixes apply to phone app and extension at once; never fork the engine into the extension. The unlocked wallet lives in popup memory only — closing the popup locks it.
+
+- Extension web provider: `src/extension/inpage.ts` (page world, EIP-6963 + `window.honestMoney`, `window.ethereum` only if unclaimed) → `content.ts` bridge → `background.ts` router; keys exist only in the approval popup window. Why: sites never touch keys and every account reveal/signature needs explicit approval.
