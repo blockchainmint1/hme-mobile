@@ -271,3 +271,40 @@ function Home() {
     </main>
   );
 }
+
+function IosInstallHint() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const ua = window.navigator.userAgent;
+    const isIos = /iPhone|iPad|iPod/.test(ua);
+    const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    const standalone =
+      window.matchMedia?.("(display-mode: standalone)").matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+    const nativeOrExt =
+      window.location.protocol === "capacitor:" ||
+      window.location.protocol === "chrome-extension:";
+    setShow(isIos && isSafari && !standalone && !nativeOrExt);
+  }, []);
+  if (!show) return null;
+  return (
+    <section className="mt-12 rounded-xl border border-border/60 bg-card/40 p-5 text-sm text-muted-foreground">
+      <h2 className="font-semibold text-foreground mb-2">On iPhone? Add it to your Home Screen</h2>
+      <p className="mb-3">
+        The web version is always up to date — no app store, no downloads. Add it to your Home
+        Screen and it opens like an app.
+      </p>
+      <ol className="list-decimal pl-5 space-y-1">
+        <li>
+          Tap the <strong>Share</strong> button in Safari (the square with an arrow).
+        </li>
+        <li>
+          Scroll down and tap <strong>Add to Home Screen</strong>.
+        </li>
+        <li>
+          Tap <strong>Add</strong>. Done — the honest.money icon is now on your Home Screen.
+        </li>
+      </ol>
+    </section>
+  );
+}
