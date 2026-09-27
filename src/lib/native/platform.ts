@@ -22,3 +22,8 @@ export function nativePlatform(): "ios" | "android" | "web" {
   }
   return "web";
 }
+
+/** True when running as the browser extension (chrome-extension:// page). */
+export function isExtension(): boolean {
+  return typeof location !== "undefined" && location.protocol === "chrome-extension:";
+}
