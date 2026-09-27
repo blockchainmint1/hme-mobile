@@ -195,6 +195,11 @@ function reloadedFor(): string | null {
  * stamp and the mismatch survives, we accept that we're current.
  */
 export async function checkForWebUpdate(): Promise<"current" | "update" | "unknown"> {
+  // Installed apps (APK/IPA) and the browser extension carry their own copy of
+  // the code. Reloading can never fetch newer code there — it only blanks the
+  // screen — so new code arrives solely through a new app/extension build.
+  const { isNative, isExtension } = await import("@/lib/native/platform");
+  if (isNative() || isExtension()) return "current";
   const serverBuild = await fetchServerBuildId();
   if (!serverBuild) return "unknown";
   if (LOCAL_BUILD_ID === "dev") return "current";
@@ -207,6 +212,8 @@ export async function checkForWebUpdate(): Promise<"current" | "update" | "unkno
 
 /** Drop caches (incl. service worker) and hard-reload into the new build. */
 export async function applyWebUpdate(): Promise<void> {
+  const { isNative, isExtension } = await import("@/lib/native/platform");
+  if (isNative() || isExtension()) return;
   // A hard reload wipes the in-memory session key, so the wallet will lock and
   // the user lands back on the unlock screen. Flag that this was an *update*
   // reload (not a sign-out) so the landing screen can say so and fast-path
