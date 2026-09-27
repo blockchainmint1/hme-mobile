@@ -60,6 +60,7 @@ function isAllowedCaller(request: Request): boolean {
     return true;
   }
   if (new Set(["hme-mobile.lovable.app", "mobile.honest.money"]).has(sourceHost)) return true;
+  if (source.startsWith("chrome-extension://")) return true;
   if (process.env.NODE_ENV !== "production" && sourceHost.endsWith(".lovable.app")) return true;
   return false;
 }

@@ -60,7 +60,7 @@ function originOf(sender: { origin?: string; url?: string }): string | null {
 async function openApproval(req: PendingReq) {
   pending.set(req.id, req);
   const win = await chrome.windows.create({
-    url: chrome.runtime.getURL(`popup.html?req=${encodeURIComponent(req.id)}`),
+    url: chrome.runtime.getURL(`approve.html?req=${encodeURIComponent(req.id)}`),
     type: "popup",
     width: 380,
     height: 640,
