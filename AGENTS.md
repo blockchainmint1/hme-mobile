@@ -15,22 +15,15 @@ The iOS App Store build is produced with `VITE_DISABLE_EXCHANGE=true`
 (`bun run build:ios`). Any feature that could be classified as crypto
 exchange, swap, bridge, trading, or off-ramp must be hidden on iOS.
 
-Before adding such a feature:
-
-1. Add a gate in `src/lib/native/capabilities.ts` (or extend an existing one).
-2. Wrap the UI entry point(s) with that gate so the feature is unreachable
-   when the gate returns `false`.
-3. Ensure the feature's route/component does not appear in iOS screenshots or
-   navigation when gated.
-4. Build iOS with `bun run build:ios` and verify the feature is absent.
+Before adding one, gate it in `src/lib/native/capabilities.ts` and its UI, keep
+it out of iOS navigation/screenshots, and verify with `bun run build:ios`.
 
 Current gates:
 
 - `exchangeFeaturesAllowed()` / `useExchangeFeaturesAllowed()` — swap and
   bridge features (LI.FI EVM swaps, THORChain LTC/DOGE swaps, Tron bridge).
 
-If the user asks for a feature and does not explicitly say it should be on iOS,
-default to excluding it from iOS. Ask the user for confirmation when unsure.
+Default to excluding new exchange features from iOS unless explicitly requested.
 
 ## Release delivery is database-driven
 
@@ -46,4 +39,5 @@ into a hardcoded constant that the release row has to be kept in sync with.
 
 The browser extension lives in `extension/` (manifest.json + popup.html) with its UI in `src/extension/popup.tsx`, built by `bun scripts/build-extension.mjs` (esbuild bundle + zip to `public/hme-wallet-extension.zip`). Why: it reuses the `src/lib/txc/*` engine directly so fixes apply to phone app and extension at once; never fork the engine into the extension. The unlocked wallet lives in popup memory only — closing the popup locks it.
 
-- Extension web provider: `src/extension/inpage.ts` (page world, EIP-6963 + `window.honestMoney`, `window.ethereum` only if unclaimed) → `content.ts` bridge → `background.ts` router; keys exist only in the approval popup window. Why: sites never touch keys and every account reveal/signature needs explicit approval.
+- Extension web provider: `src/extension/inpage.ts` (EIP-6963 + `window.honestMoney`, `window.ethereum` only if free) → `content.ts` → `background.ts`; keys stay in approval popup. Why: sites never touch keys and signatures need approval.
+- Popup theme follows system by default with a light/dark override saved only in extension localStorage. Why: appearance should not change web/mobile settings or wallet data.
