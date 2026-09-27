@@ -76,6 +76,8 @@ function isAllowedCaller(request: Request): boolean {
   if (source === "capacitor://localhost") return true;
   if (source === "ionic://localhost") return true;
   if (source === "https://localhost") return true;
+  // Our browser extension's background worker (read-only calls for websites).
+  if (source.startsWith("chrome-extension://")) return true;
 
   // Allowlist our published web origins.
   const ALLOWED_HOSTS = new Set(["hme-mobile.lovable.app", "mobile.honest.money"]);
