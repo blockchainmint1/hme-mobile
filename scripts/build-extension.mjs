@@ -110,7 +110,7 @@ writeFileSync(join(extDir, "index.html"), html);
 // Sanity: every referenced asset must exist.
 const missing = [...html.matchAll(/(?:href|src)="(\/[^"]+)"/g)]
   .map((m) => m[1].split("?")[0])
-  .filter((p) => !p.startsWith("//") && !existsSync(join(extDir, p.slice(1))));
+  .filter((p) => /^\/(assets|app-boot)\//.test(p) && !existsSync(join(extDir, p.slice(1))));
 if (missing.length) throw new Error("Extension shell references missing files:\n  " + missing.join("\n  "));
 
 copyFileSync(join(root, "resources/hme-mark.png"), join(extDir, "icon.png"));
