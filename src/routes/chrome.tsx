@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { downloadExtensionZip, EXTENSION_ZIP_NAME } from "@/lib/extension-download";
+import type { ReactNode } from "react";
 
 export const Route = createFileRoute("/chrome")({
   head: () => ({
@@ -24,7 +25,7 @@ export const Route = createFileRoute("/chrome")({
   component: ChromeExtensionPage,
 });
 
-function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
+function Step({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
     <li className="flex gap-3">
       <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border/70 bg-card text-xs font-semibold text-foreground">
@@ -46,7 +47,7 @@ function Panel({
   className = "",
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (

@@ -2,7 +2,6 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { isNative } from "@/lib/native/platform";
 import { APK_URL } from "@/lib/app-release";
-import { downloadExtensionZip } from "@/lib/extension-download";
 
 async function openExternal(url: string) {
   if (isNative()) {
@@ -43,14 +42,13 @@ export function SiteFooter() {
           ecosystem.
         </p>
         <nav className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <button
-            type="button"
-            onClick={downloadExtensionZip}
-            title="Download the honest.money browser extension (Chrome, Edge, Brave, Arc, Opera)"
+          <Link
+            to="/chrome"
+            title="Install the honest.money browser extension (Chrome, Edge, Brave, Arc, Opera)"
             className="hover:text-foreground"
           >
             Chrome
-          </button>
+          </Link>
           <Link to="/legal/terms" className="hover:text-foreground">
             Terms
           </Link>

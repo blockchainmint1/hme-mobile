@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Fingerprint } from "lucide-react";
 import { hasWallet } from "@/lib/txc/storage";
@@ -251,6 +251,11 @@ function Home() {
           <li>Enable <strong>Developer mode</strong> (toggle in the top-right).</li>
           <li>Click <strong>Load unpacked</strong> and select the unzipped folder.</li>
         </ol>
+        <p className="mt-3">
+          <Link to="/chrome" className="text-foreground underline underline-offset-4">
+            Full install guide, with troubleshooting →
+          </Link>
+        </p>
       </section>
 
       <section className="mt-4 rounded-xl border border-border/60 bg-card/40 p-5 text-sm text-muted-foreground">
