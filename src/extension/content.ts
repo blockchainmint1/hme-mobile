@@ -27,3 +27,4 @@ chrome.runtime.onMessage.addListener((m: { type?: string; event?: string; data?:
     window.postMessage({ target: "hm-inpage", event: m.event, data: m.data }, window.location.origin);
   }
 });
+export {};

@@ -165,3 +165,4 @@ chrome.windows.onRemoved.addListener((windowId: number) => {
     }
   }
 });
+export {};

@@ -82,3 +82,4 @@
   announce();
   window.dispatchEvent(new Event("honestmoney#initialized"));
 })();
+export {};
