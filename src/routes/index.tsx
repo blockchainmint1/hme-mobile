@@ -305,6 +305,12 @@ function IosInstallHint() {
           Tap <strong>Add</strong>. Done — the honest.money icon is now on your Home Screen.
         </li>
       </ol>
+      <p className="mt-3 border-t border-border/60 pt-3">
+        One thing to know: the Home Screen app keeps its own wallet, separate from Safari. Open it
+        once and import your seed phrase — Settings &rarr; Backup shows it again if you need it.
+        After that it just works, and always loads the latest version.
+      </p>
     </section>
+
   );
 }
