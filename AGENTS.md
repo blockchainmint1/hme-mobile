@@ -41,3 +41,7 @@ must never require a website redeploy — pin the file, insert the row with
 `download_url` pointing at the endpoint, and installed apps get the prompt and
 the correct bytes. Keep it that way: never move the pinned CID/filename back
 into a hardcoded constant that the release row has to be kept in sync with.
+
+## Chrome extension
+
+The browser extension lives in `extension/` (manifest.json + popup.html) with its UI in `src/extension/popup.tsx`, built by `bun scripts/build-extension.mjs` (esbuild bundle + zip to `public/hme-wallet-extension.zip`). Why: it reuses the `src/lib/txc/*` engine directly so fixes apply to phone app and extension at once; never fork the engine into the extension. The unlocked wallet lives in popup memory only — closing the popup locks it.
