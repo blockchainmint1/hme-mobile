@@ -1,22 +1,41 @@
 {
   "manifest_version": 3,
   "name": "honest.money wallet",
-  "version": "0.2.0",
-  "description": "Self-custodial TEXITcoin (TXC) wallet with one-click website sign-in. Your keys stay on your device, encrypted with your password.",
-  "permissions": ["storage"],
-  "host_permissions": ["https://mempool.texitcoin.org/*", "https://mobile.honest.money/*"],
-  "background": { "service_worker": "dist/background.js" },
+  "version": "0.3.0",
+  "description": "Self-custodial multi-chain wallet (TEXITcoin, Ethereum, Bitcoin and more) with one-click website sign-in. Your keys stay on your device, encrypted with your password.",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "dist/background.js"
+  },
   "content_scripts": [
     {
-      "matches": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
-      "js": ["dist/inpage.js"],
+      "matches": [
+        "https://*/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "dist/inpage.js"
+      ],
       "run_at": "document_start",
       "all_frames": false,
       "world": "MAIN"
     },
     {
-      "matches": ["https://*/*", "http://localhost/*", "http://127.0.0.1/*"],
-      "js": ["dist/content.js"],
+      "matches": [
+        "https://*/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": [
+        "dist/content.js"
+      ],
       "run_at": "document_start",
       "all_frames": false
     }
@@ -28,5 +47,8 @@
   "icons": {
     "48": "icon.png",
     "128": "icon.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
 }
