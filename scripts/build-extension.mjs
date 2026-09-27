@@ -20,12 +20,17 @@ rmSync(join(extDir, "dist"), { recursive: true, force: true });
 mkdirSync(join(extDir, "dist"), { recursive: true });
 
 await build({
-  entryPoints: [join(root, "src/extension/popup.tsx")],
-  outfile: join(extDir, "dist/popup.js"),
+  entryPoints: {
+    popup: join(root, "src/extension/popup.tsx"),
+    background: join(root, "src/extension/background.ts"),
+    content: join(root, "src/extension/content.ts"),
+    inpage: join(root, "src/extension/inpage.ts"),
+  },
+  outdir: join(extDir, "dist"),
   bundle: true,
   format: "iife",
   platform: "browser",
-  target: "chrome110",
+  target: "chrome111",
   jsx: "automatic",
   alias: { "@": join(root, "src") },
   define: { "process.env.NODE_ENV": '"production"', "import.meta.env.VITE_DISABLE_EXCHANGE": '"true"' },

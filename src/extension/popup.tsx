@@ -26,6 +26,14 @@ import {
 } from "@/lib/txc/storage";
 import { scanAccount, type AccountSnapshot } from "@/lib/txc/scan";
 import { broadcastTx, explorerAddressUrl, explorerTxUrl, getFeeEstimates } from "@/lib/txc/mempool";
+import { deriveEvmAccount } from "@/lib/chains/evm";
+import { signMessageWithSeed, verifyMessage } from "@/lib/txc/message-sign";
+import { checkLoginMessageShape } from "@/lib/hm-login-template";
+
+declare const chrome: any;
+
+/** Set when this window was opened by a website request needing approval. */
+const REQ_ID = new URLSearchParams(window.location.search).get("req");
 
 const SATS = 100_000_000;
 
@@ -68,6 +76,7 @@ function App() {
   if (view.name === "create") return <Create onDone={load} onBack={() => setView({ name: "welcome" })} />;
   if (view.name === "import") return <Import onDone={load} onBack={() => setView({ name: "welcome" })} />;
   if (view.name === "unlock") return <Unlock onDone={load} />;
+  if (wallet && root && REQ_ID) return <Approve reqId={REQ_ID} wallet={wallet} root={root} />;
   if (wallet && root) return <Wallet wallet={wallet} root={root} onLock={() => { setWallet(null); setRoot(null); setView({ name: "unlock" }); }} />;
   return null;
 }
@@ -403,6 +412,110 @@ function Send({ snap, root, kind, onSent }: { snap: AccountSnapshot | null; root
       {error && <p className="error">{error}</p>}
       <button onClick={send} disabled={busy || !snap}>{busy ? "Sending…" : "Send"}</button>
     </div>
+  );
+}
+
+type ApprovalReq = { origin: string; method: string; params: unknown };
+
+function hexToText(hex: string): string {
+  if (!/^0x[0-9a-f]*$/i.test(hex)) return hex;
+  try {
+    const bytes = new Uint8Array((hex.slice(2).match(/../g) ?? []).map((b) => parseInt(b, 16)));
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return hex;
+  }
+}
+
+function Approve({ reqId, wallet, root }: { reqId: string; wallet: UnlockedWallet; root: BIP32Interface }) {
+  const [req, setReq] = useState<ApprovalReq | null | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const account = deriveEvmAccount(root);
+
+  useEffect(() => {
+    chrome.runtime.sendMessage({ type: "hm:get", id: reqId }, (r: ApprovalReq | null) => setReq(r ?? null));
+  }, [reqId]);
+
+  if (req === undefined) return <div className="spin">Loading request…</div>;
+  if (req === null) return <div className="card"><h2>Request expired</h2><p className="desc">You can close this window.</p></div>;
+
+  const host = new URL(req.origin).hostname;
+  const params = req.params as any;
+  let title = "";
+  let body: React.ReactNode = null;
+  let signin: { ok: boolean; siteLabel?: string } | null = null;
+
+  if (req.method === "eth_requestAccounts" || req.method === "wallet_requestPermissions") {
+    title = "Connect to this site?";
+    body = <p className="desc">The site will see your Ethereum address:<span className="addr" style={{ display: "block" }}>{account.address}</span>It can't move funds — every signature asks you first.</p>;
+  } else if (req.method === "personal_sign") {
+    title = "Sign a message";
+    body = <div className="addr" style={{ whiteSpace: "pre-wrap", maxHeight: 220, overflow: "auto" }}>{hexToText(String(params?.[0] ?? ""))}</div>;
+  } else if (req.method === "eth_signTypedData_v4") {
+    title = "Sign structured data";
+    let pretty = String(params?.[1] ?? "");
+    try { pretty = JSON.stringify(JSON.parse(pretty), null, 2); } catch { /* raw */ }
+    body = <div className="addr" style={{ whiteSpace: "pre-wrap", maxHeight: 260, overflow: "auto" }}>{pretty}</div>;
+  } else if (req.method === "txc_signIn") {
+    const message = String(params?.message ?? "");
+    signin = checkLoginMessageShape(message, host);
+    title = "Sign in with TEXITcoin";
+    body = signin.ok
+      ? <><div className="addr" style={{ whiteSpace: "pre-wrap" }}>{message}</div><p className="muted" style={{ marginTop: 8 }}>This only proves you own your address. It can't move money.</p></>
+      : <p className="error">This site sent a sign-in message that doesn't match the honest.money format for {host}. It can't be signed.</p>;
+  }
+
+  function finish(payload: { result?: unknown; error?: string; connect?: { address: string } }) {
+    chrome.runtime.sendMessage({ type: "hm:resolve", id: reqId, ...payload }, () => window.close());
+  }
+
+  async function approve() {
+    setError(null);
+    setBusy(true);
+    try {
+      if (req!.method === "eth_requestAccounts") return finish({ result: [account.address], connect: { address: account.address } });
+      if (req!.method === "wallet_requestPermissions") return finish({ result: [{ parentCapability: "eth_accounts" }], connect: { address: account.address } });
+      if (req!.method === "personal_sign") {
+        const [data, addr] = params as [string, string];
+        if (String(addr).toLowerCase() !== account.address.toLowerCase()) throw new Error("That address isn't in this wallet.");
+        const raw = /^0x[0-9a-f]*$/i.test(data) ? (data as `0x${string}`) : undefined;
+        return finish({ result: await account.signMessage({ message: raw ? { raw } : String(data) }) });
+      }
+      if (req!.method === "eth_signTypedData_v4") {
+        const [addr, json] = params as [string, string];
+        if (String(addr).toLowerCase() !== account.address.toLowerCase()) throw new Error("That address isn't in this wallet.");
+        const td = typeof json === "string" ? JSON.parse(json) : json;
+        const { EIP712Domain: _d, ...types } = td.types ?? {};
+        return finish({ result: await account.signTypedData({ domain: td.domain, types, primaryType: td.primaryType, message: td.message }) });
+      }
+      if (req!.method === "txc_signIn") {
+        if (!signin?.ok) throw new Error("Invalid sign-in message.");
+        const signed = await signMessageWithSeed({ mnemonic: wallet.mnemonic, passphrase: wallet.passphrase, kind: "bip44", change: 0, index: 0, message: String(params.message) });
+        if (!verifyMessage(signed.address, signed.message, signed.signature)) throw new Error("Couldn't verify the signature.");
+        return finish({ result: { address: signed.address, signature: signed.signature, message: signed.message } });
+      }
+      throw new Error("Unsupported request.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Signing failed.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <Header />
+      <div className="card">
+        <h2>{title}</h2>
+        <p className="muted" style={{ marginBottom: 8 }}>Requested by <b style={{ color: "var(--text)" }}>{host}</b></p>
+        {body}
+        {error && <p className="error">{error}</p>}
+        <div className="row">
+          <button onClick={approve} disabled={busy || (signin !== null && !signin.ok)}>{busy ? "Signing…" : "Approve"}</button>
+          <button className="secondary" onClick={() => finish({ error: "User rejected the request." })}>Reject</button>
+        </div>
+      </div>
+    </>
   );
 }
 
