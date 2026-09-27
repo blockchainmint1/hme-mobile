@@ -235,6 +235,23 @@ function Home() {
 
 
       <section className="mt-12 rounded-xl border border-border/60 bg-card/40 p-5 text-sm text-muted-foreground">
+        <h2 className="font-semibold text-foreground mb-2">Also available as a browser extension</h2>
+        <p className="mb-3">
+          The same wallet — same seed phrase, same engine — as a Chrome extension. Works in
+          Chrome, Edge, Brave, Arc, and Opera.
+        </p>
+        <Button type="button" variant="secondary" onClick={downloadExtension}>
+          Download the browser extension
+        </Button>
+        <ol className="mt-3 list-decimal pl-5 space-y-1">
+          <li>Unzip the downloaded file.</li>
+          <li>Open <code>chrome://extensions</code> in your browser.</li>
+          <li>Enable <strong>Developer mode</strong> (toggle in the top-right).</li>
+          <li>Click <strong>Load unpacked</strong> and select the unzipped folder.</li>
+        </ol>
+      </section>
+
+      <section className="mt-4 rounded-xl border border-border/60 bg-card/40 p-5 text-sm text-muted-foreground">
         <h2 className="font-semibold text-foreground mb-2">Moving from the old TXC Wallet app?</h2>
         <p>
           This is a brand-new app. It <strong>cannot</strong> read the old app's storage, so
