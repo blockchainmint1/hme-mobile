@@ -18,7 +18,6 @@ import { Toaster } from "../components/ui/sonner";
 import { ThemeProvider } from "../lib/theme";
 import { installNativeServerFnBridge } from "../lib/native/server-fn-bridge";
 import icon192 from "../assets/icons/icon-192.webp";
-import icon512 from "../assets/icons/icon-512.webp";
 
 if (typeof window !== "undefined") {
   installNativeServerFnBridge();
