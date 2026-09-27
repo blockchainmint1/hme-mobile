@@ -349,7 +349,7 @@ function Send({ snap, root, kind, onSent }: { snap: AccountSnapshot | null; root
         if (acc >= total) break;
       }
 
-      const { txid: id } = buildAndSignTx({
+      const { hex, txid: id } = buildAndSignTx({
         root,
         kind,
         inputs,
@@ -358,11 +358,7 @@ function Send({ snap, root, kind, onSent }: { snap: AccountSnapshot | null; root
         changeIndex: snap.nextChangeIndex,
         feeSats,
       });
-      const finalTxid = await broadcastTx(((): string => {
-        // buildAndSignTx returns hex + txid; broadcast the hex.
-        return (buildAndSignTx as never as { hex?: string }) && "";
-      })() || "");
-      void finalTxid;
+      await broadcastTx(hex);
       setTxid(id);
       onSent();
     } catch (e) {
