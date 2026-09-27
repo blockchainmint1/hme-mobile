@@ -8,6 +8,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { Monitor, Moon, Sun } from "lucide-react";
 import type { BIP32Interface } from "bip32";
 import {
   generateMnemonic,
@@ -34,6 +35,53 @@ declare const chrome: any;
 
 /** Set when this window was opened by a website request needing approval. */
 const REQ_ID = new URLSearchParams(window.location.search).get("req");
+type ThemeChoice = "system" | "light" | "dark";
+const THEME_KEY = "hme.extension.theme";
+
+function savedTheme(): ThemeChoice {
+  const value = localStorage.getItem(THEME_KEY);
+  return value === "light" || value === "dark" ? value : "system";
+}
+
+function applyTheme(theme: ThemeChoice) {
+  if (theme === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.dataset.theme = theme;
+}
+
+applyTheme(savedTheme());
+
+function ThemePicker() {
+  const [theme, setTheme] = useState<ThemeChoice>(savedTheme);
+  const choices = [
+    { value: "system", label: "Follow system appearance", icon: Monitor },
+    { value: "light", label: "Light mode", icon: Sun },
+    { value: "dark", label: "Dark mode", icon: Moon },
+  ] as const;
+
+  return (
+    <div className="theme-picker">
+      <div className="theme-options" role="radiogroup" aria-label="Appearance">
+        {choices.map(({ value, label, icon: Icon }) => (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={theme === value}
+            aria-label={label}
+            title={label}
+            onClick={() => {
+              localStorage.setItem(THEME_KEY, value);
+              applyTheme(value);
+              setTheme(value);
+            }}
+          >
+            <Icon aria-hidden="true" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const SATS = 100_000_000;
 
@@ -519,4 +567,5 @@ function Approve({ reqId, wallet, root }: { reqId: string; wallet: UnlockedWalle
   );
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+const mount = document.getElementById("root");
+if (mount) createRoot(mount).render(<><ThemePicker /><App /></>);
