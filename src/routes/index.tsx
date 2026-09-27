@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Fingerprint } from "lucide-react";
 import { hasWallet } from "@/lib/txc/storage";
+import { downloadExtensionZip } from "@/lib/extension-download";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,23 +119,6 @@ function Home() {
     },
     [navigate],
   );
-  // Direct <a href download> fails in the preview (static files need auth),
-  // so fetch the zip and hand it over as a blob.
-  const downloadExtension = useCallback(() => {
-    fetch("/hme-wallet-extension.zip")
-      .then((res) => {
-        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
-        return res.blob();
-      })
-      .then((blob) => {
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "hme-wallet-extension.zip";
-        a.click();
-        URL.revokeObjectURL(a.href);
-      })
-      .catch((err) => alert(err.message));
-  }, []);
 
   const goImportKey = useCallback(
     (e: React.MouseEvent) => {
@@ -258,7 +242,7 @@ function Home() {
           The same wallet — same seed phrase, same engine — as a Chrome extension. Works in
           Chrome, Edge, Brave, Arc, and Opera.
         </p>
-        <Button type="button" variant="secondary" onClick={downloadExtension}>
+        <Button type="button" variant="secondary" onClick={downloadExtensionZip}>
           Download the browser extension
         </Button>
         <ol className="mt-3 list-decimal pl-5 space-y-1">
