@@ -19,6 +19,12 @@ import { TRON_COIN_TYPE } from "@/lib/tron/network";
 import { deriveSolanaAddress } from "@/lib/solana/derive";
 import { seedFromMnemonic, deriveAddress, rootFromSeed } from "@/lib/txc/wallet";
 import { signMessageWithSeed } from "@/lib/txc/message-sign";
+import { isPublicHostname } from "@/lib/web-login-hosts";
+import {
+  isRequestedDialect,
+  validateRequested,
+  type RequestedManifest,
+} from "@/lib/xpub-link/requested";
 
 const bip32 = BIP32Factory(ecc);
 
@@ -95,15 +101,35 @@ const KNOWN_CHAINS = new Set([
 
 /** Accept either a bare manifest URL or a QR payload containing one. */
 export function parseLinkInput(raw: string): string | null {
-  const text = raw.trim();
+  const text = raw.trim().replace(/^hm-link:/i, "");
   if (!text) return null;
   try {
     const url = new URL(text);
-    if (url.protocol === "https:" && url.hostname === NECTAR_TRUSTED_HOST) return url.toString();
+    if (url.protocol === "https:" && !url.port && !url.username && isPublicHostname(url.hostname))
+      return url.toString();
     return null;
   } catch {
     return null;
   }
+}
+
+/** Fetch a link manifest in either dialect (NectarPay bundle or requested paths). */
+export async function fetchAnyManifest(
+  manifestUrl: string,
+): Promise<(NectarManifest & { kind: "bundle" }) | RequestedManifest> {
+  const res = await fetch(`${PROXY}?url=${encodeURIComponent(manifestUrl)}`, {
+    headers: { Accept: "application/json" },
+  });
+  const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!res.ok || !body) {
+    throw new Error(
+      (body?.["message"] as string) ?? (body?.["error"] as string) ?? "Could not read the link",
+    );
+  }
+  if (isRequestedDialect(body)) return validateRequested(body, manifestUrl);
+  const manifest = validateManifest(body, new URL(manifestUrl).hostname);
+  if (manifest.manifest_url !== manifestUrl) throw new Error("The link manifest does not match its URL.");
+  return { ...manifest, kind: "bundle" };
 }
 
 export async function fetchManifest(manifestUrl: string): Promise<NectarManifest> {
@@ -116,17 +142,17 @@ export async function fetchManifest(manifestUrl: string): Promise<NectarManifest
       (body?.["message"] as string) ?? (body?.["error"] as string) ?? "Could not read the link",
     );
   }
-  const manifest = validateManifest(body);
+  const manifest = validateManifest(body, new URL(manifestUrl).hostname);
   if (manifest.manifest_url !== manifestUrl) throw new Error("The link manifest does not match its URL.");
   return manifest;
 }
 
-function sameHost(url: string): boolean {
+function sameHost(url: string, host: string): boolean {
   try {
     const u = new URL(url);
     return (
       u.protocol === "https:" &&
-      u.hostname === NECTAR_TRUSTED_HOST &&
+      u.hostname === host &&
       u.port === "" &&
       u.username === "" &&
       u.password === ""
@@ -136,16 +162,19 @@ function sameHost(url: string): boolean {
   }
 }
 
-export function validateManifest(raw: Record<string, unknown>): NectarManifest {
+export function validateManifest(
+  raw: Record<string, unknown>,
+  host: string = NECTAR_TRUSTED_HOST,
+): NectarManifest {
   const fail = (m: string): never => {
     throw new Error(m);
   };
-  if (raw["type"] !== "hm-link-xpubs") fail("This QR isn't a Nectar Pay wallet link.");
-  if (raw["from"] !== NECTAR_TRUSTED_HOST) fail("Link comes from an untrusted server.");
+  if (raw["type"] !== "hm-link-xpubs") fail("This QR isn't a wallet link.");
+  if (raw["from"] !== host) fail("Link comes from an untrusted server.");
   if (typeof raw["challenge_id"] !== "string" || !raw["challenge_id"]) fail("Link is malformed.");
-  if (typeof raw["callback_url"] !== "string" || !sameHost(raw["callback_url"] as string))
+  if (typeof raw["callback_url"] !== "string" || !sameHost(raw["callback_url"] as string, host))
     fail("Link points at an untrusted server.");
-  if (typeof raw["manifest_url"] !== "string" || !sameHost(raw["manifest_url"] as string))
+  if (typeof raw["manifest_url"] !== "string" || !sameHost(raw["manifest_url"] as string, host))
     fail("Link points at an untrusted server.");
   if (new URL(raw["callback_url"] as string).origin !== new URL(raw["manifest_url"] as string).origin)
     fail("Link callback does not match its manifest.");
@@ -166,7 +195,7 @@ export function validateManifest(raw: Record<string, unknown>): NectarManifest {
     v: Number(raw["v"]) || 1,
     type: "hm-link-xpubs",
     challenge_id: raw["challenge_id"] as string,
-    from: (raw["from"] as string) ?? NECTAR_TRUSTED_HOST,
+    from: host,
     callback_url: raw["callback_url"] as string,
     manifest_url: raw["manifest_url"] as string,
     chains,

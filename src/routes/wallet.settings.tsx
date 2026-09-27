@@ -202,7 +202,7 @@ function SettingsPage() {
         <SettingsSection
           value="merchant-link"
           icon={Link2}
-          title="Merchant link"
+          title="Merchant xpub link"
           description="Share watch-only keys with a Nectar Pay merchant."
         >
           <NectarLinkCard compact />

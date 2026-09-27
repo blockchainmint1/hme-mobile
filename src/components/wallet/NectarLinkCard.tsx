@@ -14,7 +14,8 @@ import { useWallet } from "@/lib/txc/wallet-context";
 import {
   consentMode,
   deriveWalletKeys,
-  fetchManifest,
+  fetchAnyManifest,
+  NECTAR_TRUSTED_HOST,
   listLinks,
   parseLinkInput,
   removeLink,
@@ -24,6 +25,7 @@ import {
   type NectarLinkRecord,
   type NectarManifest,
 } from "@/lib/nectar/link";
+import { submitRequested, type RequestedManifest } from "@/lib/xpub-link/requested";
 
 export function NectarLinkCard({ compact }: { compact?: boolean }) {
   const { unlocked } = useWallet();
@@ -34,6 +36,8 @@ export function NectarLinkCard({ compact }: { compact?: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [manifest, setManifest] = useState<NectarManifest | null>(null);
+  const [requested, setRequested] = useState<RequestedManifest | null>(null);
+  const [ackHost, setAckHost] = useState(false);
   const [mode, setMode] = useState<ConsentMode>("silent");
   const [ackNewWallet, setAckNewWallet] = useState(false);
   const [links, setLinks] = useState<NectarLinkRecord[]>([]);
@@ -46,21 +50,55 @@ export function NectarLinkCard({ compact }: { compact?: boolean }) {
     setError(null);
     setNotice(null);
     setManifest(null);
+    setRequested(null);
+    setAckHost(false);
     setAckNewWallet(false);
     const url = parseLinkInput(raw);
     if (!url) {
-      setError("That isn't a Nectar Pay link.");
+      setError("That isn't a wallet link.");
       return;
     }
     if (!unlocked?.mnemonic) return;
     setBusy(true);
     try {
-      const m = await fetchManifest(url);
+      const any = await fetchAnyManifest(url);
+      if (any.kind === "requested") {
+        setRequested(any);
+        return;
+      }
+      const m = any;
       const keys = await deriveWalletKeys(unlocked.mnemonic, unlocked.passphrase ?? "");
       setMode(consentMode(m, keys.identityAddress));
       setManifest(m);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read that link.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onApproveRequested() {
+    if (!requested || !unlocked?.mnemonic) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await submitRequested({
+        manifest: requested,
+        mnemonic: unlocked.mnemonic,
+        passphrase: unlocked.passphrase ?? "",
+      });
+      saveLink({
+        merchantId: `${requested.host}:${requested.keys[0]!.path}`,
+        merchantName: `${res.appName} (${requested.host})`,
+        url: requested.manifestUrl,
+        linkedAt: new Date().toISOString(),
+      });
+      setLinks(listLinks());
+      setRequested(null);
+      setInput("");
+      setNotice(`Linked to ${res.appName}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Link failed.");
     } finally {
       setBusy(false);
     }
@@ -97,8 +135,8 @@ export function NectarLinkCard({ compact }: { compact?: boolean }) {
   const body = (
     <div className="space-y-3">
       <p className="text-xs text-muted-foreground">
-        Shares watch-only account keys (xpubs) so a merchant can generate invoices to your
-        wallet. Your seed phrase and private keys never leave this device.
+        Shares watch-only account keys (xpubs) with Nectar Pay, Bonfire, or any site that
+        shows a wallet link code. Sites can see addresses but never spend. Your seed phrase and private keys never leave this device.
       </p>
 
       {seedless ? (
@@ -132,11 +170,47 @@ export function NectarLinkCard({ compact }: { compact?: boolean }) {
             </Button>
           </div>
 
+          {requested && (
+            <div className="rounded-lg border p-3 space-y-2">
+              <div className="text-sm font-medium">{requested.appName}</div>
+              <div className="text-xs text-muted-foreground break-all">{requested.host}</div>
+              {requested.purpose && (
+                <p className="text-xs text-muted-foreground">{requested.purpose}</p>
+              )}
+              <div className="text-xs">
+                Requesting one watch-only key:{" "}
+                <span className="font-mono">
+                  {requested.keys[0]!.chain} {requested.keys[0]!.path}
+                </span>
+              </div>
+              <label className="flex items-start gap-2 text-xs">
+                <Checkbox checked={ackHost} onCheckedChange={(v) => setAckHost(v === true)} />
+                <span>
+                  I trust <b>{requested.host}</b> to see the addresses on this branch. It can't
+                  spend anything.
+                </span>
+              </label>
+              <div className="flex gap-2">
+                <Button size="sm" disabled={busy || !ackHost} onClick={() => void onApproveRequested()}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Share xpub"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setRequested(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
           {manifest && (
             <div className="rounded-lg border p-3 space-y-2">
               <div className="text-sm font-medium">
                 {manifest.merchant_name ?? "Nectar Pay merchant"}
               </div>
+              {manifest.from !== NECTAR_TRUSTED_HOST && (
+                <div className="text-xs text-destructive break-all">
+                  Not Nectar Pay: {manifest.from}. Only continue if you trust this site.
+                </div>
+              )}
               <div className="text-xs text-muted-foreground">
                 Requesting: {manifest.chains.join(", ")}
               </div>
@@ -217,9 +291,9 @@ export function NectarLinkCard({ compact }: { compact?: boolean }) {
     <Card className="mt-5">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Link2 className="h-4 w-4" /> Merchant link
+          <Link2 className="h-4 w-4" /> Merchant xpub link
         </CardTitle>
-        <CardDescription>Link this wallet to a Nectar Pay merchant.</CardDescription>
+        <CardDescription>Link this wallet to Nectar Pay, Bonfire, and other sites.</CardDescription>
       </CardHeader>
       <CardContent>{body}</CardContent>
     </Card>
