@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { friendlyBroadcastError } from "@/lib/broadcast-error";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanIskAccount } from "@/lib/isk/scan";
@@ -101,6 +101,11 @@ function SendIskPage() {
   const search = Route.useSearch();
   const [to, setTo] = useState(search.to ?? "");
   const [amount, setAmount] = useState(search.amount ?? "");
+  // Re-sync when the top-bar scanner navigates here while already open.
+  useEffect(() => {
+    if (search.to) setTo(search.to);
+    if (search.amount) setAmount(search.amount);
+  }, [search.to, search.amount]);
   const [sendAll, setSendAll] = useState(false);
   const [feeTier, setFeeTier] = useState<"fastestFee" | "halfHourFee" | "hourFee">("halfHourFee");
   const [stage, setStage] = useState<Stage>({ kind: "form" });

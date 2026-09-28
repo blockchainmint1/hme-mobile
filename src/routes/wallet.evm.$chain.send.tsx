@@ -14,7 +14,7 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import {
@@ -167,6 +167,11 @@ function EvmSend() {
   const [confirmTail, setConfirmTail] = useState("");
   const [confirmLast4Enabled] = useFeature("confirmLast4");
   const [amount, setAmount] = useState(search.amount ?? "");
+  // Re-sync when the top-bar scanner navigates here while already open.
+  useEffect(() => {
+    if (search.to) setTo(search.to);
+    if (search.amount) setAmount(search.amount);
+  }, [search.to, search.amount]);
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
 

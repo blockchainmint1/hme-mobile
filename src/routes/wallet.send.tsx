@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { friendlyBroadcastError } from "@/lib/broadcast-error";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { scanAccount } from "@/lib/txc/scan";
@@ -237,6 +237,18 @@ function SendPage() {
       setSendAll(false);
     }
   }
+
+  // The top-bar scanner navigates here with ?to=… — if this page is already
+  // open, useState initialisers don't re-run, so sync the new values in.
+  useEffect(() => {
+    if (search.to) setTo(search.to);
+    if (search.amount) {
+      setAmount(search.amount);
+      setSendAll(false);
+    }
+    const n = Number(search.token);
+    if (Number.isInteger(n) && n > 0) setAsset(n);
+  }, [search.to, search.amount, search.token]);
 
   // Never offer coins that a transaction this device already broadcast is
   // spending (an earlier payment, or the background token-holder top-up) —
