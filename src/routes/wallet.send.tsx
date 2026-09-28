@@ -238,6 +238,18 @@ function SendPage() {
     }
   }
 
+  // The top-bar scanner navigates here with ?to=… — if this page is already
+  // open, useState initialisers don't re-run, so sync the new values in.
+  useEffect(() => {
+    if (search.to) setTo(search.to);
+    if (search.amount) {
+      setAmount(search.amount);
+      setSendAll(false);
+    }
+    const n = Number(search.token);
+    if (Number.isInteger(n) && n > 0) setAsset(n);
+  }, [search.to, search.amount, search.token]);
+
   // Never offer coins that a transaction this device already broadcast is
   // spending (an earlier payment, or the background token-holder top-up) —
   // picking them again is what the node rejects as `txn-mempool-conflict`.
