@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -130,7 +131,8 @@ async function purgeCachesAndReload() {
   window.location.replace(url.toString());
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent(props: ErrorComponentProps) {
+  const { error, reset } = props as { error: Error; reset: () => void };
   console.error(error);
   const router = useRouter();
   useEffect(() => {
