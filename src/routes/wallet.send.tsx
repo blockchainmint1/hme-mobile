@@ -60,6 +60,7 @@ import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { TsdCashoutPanel, type CashoutPlan } from "@/components/wallet/TsdCashoutPanel";
 import { useCashoutApiKey } from "@/lib/cashout/api-key";
+import { notifyCashoutDeposit } from "@/lib/cashout/tsd.functions";
 import { TSD_PROPERTY_ID, formatUsd, payoutFor } from "@/lib/cashout/tsd";
 
 
@@ -637,6 +638,18 @@ function SendPage() {
       void qc.invalidateQueries({ queryKey: ["account"] });
       void qc.invalidateQueries({ queryKey: ["txs"] });
       setStage({ kind: "sent", txid });
+      if (cashout && cashoutApiKey) {
+        // Heads-up so TSD Swap watches for this deposit; never blocks the send.
+        void notifyCashoutDeposit({
+          data: {
+            apiKey: cashoutApiKey,
+            txid,
+            amount: cashout.amount,
+            depositAddress: cashout.depositAddress,
+            payoutAddress: cashout.payoutAddress,
+          },
+        }).catch(() => {});
+      }
     } catch (err) {
       hapticError();
       const msg = String((err as Error)?.message ?? err).toLowerCase();
