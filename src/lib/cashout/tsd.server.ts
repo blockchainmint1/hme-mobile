@@ -100,3 +100,41 @@ export function saveDepositPayoutAddress(apiKey: string, payoutAddress: string):
     body: JSON.stringify({ payoutAddress }),
   });
 }
+
+export interface DepositNotice {
+  apiKey: string;
+  txid: string;
+  amount: number;
+  depositAddress: string;
+  payoutAddress: string;
+}
+
+/**
+ * Heads-up to TSD Swap that a cash-out deposit was just broadcast, so it can
+ * watch for it instead of waiting to discover it. Signed with the shared
+ * HME_ECOSYSTEM secret (HMAC-SHA256 over `${timestamp}.${body}`) so TSD Swap
+ * knows it came from our server, plus the user's x-api-key for the account.
+ */
+export async function notifyDeposit(n: DepositNotice): Promise<void> {
+  const secret = process.env["HME_ECOSYSTEM"];
+  const { createHmac } = await import("crypto");
+  const body = JSON.stringify({
+    txid: n.txid,
+    amount: n.amount,
+    depositAddress: n.depositAddress,
+    payoutAddress: n.payoutAddress,
+    source: "hme-wallet",
+  });
+  const ts = Math.floor(Date.now() / 1000).toString();
+  const headers: Record<string, string> = {
+    accept: "application/json",
+    "content-type": "application/json",
+    "x-api-key": n.apiKey,
+    "x-hme-timestamp": ts,
+  };
+  if (secret) {
+    headers["x-hme-signature"] = createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex");
+  }
+  const res = await fetch(`${baseUrl()}/api/public/v1/cashout/notify`, { method: "POST", headers, body });
+  if (!res.ok) console.warn("TSD deposit notice not accepted", res.status);
+}

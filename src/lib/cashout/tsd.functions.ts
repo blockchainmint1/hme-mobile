@@ -128,3 +128,27 @@ export const setCashoutPayoutAddress = createServerFn({ method: "POST" })
     // Some responses only acknowledge the save; read the account back.
     return accountSchema.parse(await fetchDepositAddress(data.apiKey));
   });
+
+/** Fire-and-forget heads-up to TSD Swap after the deposit is broadcast. */
+export const notifyCashoutDeposit = createServerFn({ method: "POST" })
+  .inputValidator((raw: unknown) =>
+    z
+      .object({
+        apiKey,
+        txid: z.string().regex(/^[0-9a-fA-F]{64}$/),
+        amount: z.number().positive().max(1_000_000),
+        depositAddress: z.string().min(20).max(64),
+        payoutAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+      })
+      .parse(raw),
+  )
+  .handler(async ({ data }): Promise<{ ok: boolean }> => {
+    try {
+      const { notifyDeposit } = await import("./tsd.server");
+      await notifyDeposit(data);
+      return { ok: true };
+    } catch (e) {
+      console.warn("TSD deposit notice failed", e);
+      return { ok: false };
+    }
+  });
