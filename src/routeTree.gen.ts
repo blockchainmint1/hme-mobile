@@ -30,6 +30,7 @@ import { Route as WalletSettingsRouteImport } from './routes/wallet.settings'
 import { Route as WalletSigninRouteImport } from './routes/wallet.signin'
 import { Route as WalletWatchAddRouteImport } from './routes/wallet.watch-add'
 import { Route as WalletWifAddRouteImport } from './routes/wallet.wif-add'
+import { Route as WalletXpubLinkRouteImport } from './routes/wallet.xpub-link'
 import { Route as ApiEvmChainRouteImport } from './routes/api/evm.$chain'
 import { Route as ApiNectarLinkRouteImport } from './routes/api/nectar.link'
 import { Route as ApiPublicApkRouteImport } from './routes/api/public/apk'
@@ -167,6 +168,11 @@ const WalletWatchAddRoute = WalletWatchAddRouteImport.update({
 const WalletWifAddRoute = WalletWifAddRouteImport.update({
   id: '/wif-add',
   path: '/wif-add',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletXpubLinkRoute = WalletXpubLinkRouteImport.update({
+  id: '/xpub-link',
+  path: '/xpub-link',
   getParentRoute: () => WalletRoute,
 } as any)
 const ApiEvmChainRoute = ApiEvmChainRouteImport.update({
@@ -356,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/wallet/signin': typeof WalletSigninRoute
   '/wallet/watch-add': typeof WalletWatchAddRoute
   '/wallet/wif-add': typeof WalletWifAddRoute
+  '/wallet/xpub-link': typeof WalletXpubLinkRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
   '/api/nectar/link': typeof ApiNectarLinkRoute
@@ -411,6 +418,7 @@ export interface FileRoutesByTo {
   '/wallet/signin': typeof WalletSigninRoute
   '/wallet/watch-add': typeof WalletWatchAddRoute
   '/wallet/wif-add': typeof WalletWifAddRoute
+  '/wallet/xpub-link': typeof WalletXpubLinkRoute
   '/wallet': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
   '/api/nectar/link': typeof ApiNectarLinkRoute
@@ -468,6 +476,7 @@ export interface FileRoutesById {
   '/wallet/signin': typeof WalletSigninRoute
   '/wallet/watch-add': typeof WalletWatchAddRoute
   '/wallet/wif-add': typeof WalletWifAddRoute
+  '/wallet/xpub-link': typeof WalletXpubLinkRoute
   '/wallet/': typeof WalletIndexRoute
   '/api/evm/$chain': typeof ApiEvmChainRoute
   '/api/nectar/link': typeof ApiNectarLinkRoute
@@ -526,6 +535,7 @@ export interface FileRouteTypes {
     | '/wallet/signin'
     | '/wallet/watch-add'
     | '/wallet/wif-add'
+    | '/wallet/xpub-link'
     | '/wallet/'
     | '/api/evm/$chain'
     | '/api/nectar/link'
@@ -581,6 +591,7 @@ export interface FileRouteTypes {
     | '/wallet/signin'
     | '/wallet/watch-add'
     | '/wallet/wif-add'
+    | '/wallet/xpub-link'
     | '/wallet'
     | '/api/evm/$chain'
     | '/api/nectar/link'
@@ -637,6 +648,7 @@ export interface FileRouteTypes {
     | '/wallet/signin'
     | '/wallet/watch-add'
     | '/wallet/wif-add'
+    | '/wallet/xpub-link'
     | '/wallet/'
     | '/api/evm/$chain'
     | '/api/nectar/link'
@@ -844,6 +856,13 @@ declare module '@tanstack/react-router' {
       path: '/wif-add'
       fullPath: '/wallet/wif-add'
       preLoaderRoute: typeof WalletWifAddRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/xpub-link': {
+      id: '/wallet/xpub-link'
+      path: '/xpub-link'
+      fullPath: '/wallet/xpub-link'
+      preLoaderRoute: typeof WalletXpubLinkRouteImport
       parentRoute: typeof WalletRoute
     }
     '/api/evm/$chain': {
@@ -1105,6 +1124,7 @@ interface WalletRouteChildren {
   WalletSigninRoute: typeof WalletSigninRoute
   WalletWatchAddRoute: typeof WalletWatchAddRoute
   WalletWifAddRoute: typeof WalletWifAddRoute
+  WalletXpubLinkRoute: typeof WalletXpubLinkRoute
   WalletIndexRoute: typeof WalletIndexRoute
   WalletBtcReceiveRoute: typeof WalletBtcReceiveRoute
   WalletBtcSendRoute: typeof WalletBtcSendRoute
@@ -1138,6 +1158,7 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletSigninRoute: WalletSigninRoute,
   WalletWatchAddRoute: WalletWatchAddRoute,
   WalletWifAddRoute: WalletWifAddRoute,
+  WalletXpubLinkRoute: WalletXpubLinkRoute,
   WalletIndexRoute: WalletIndexRoute,
   WalletBtcReceiveRoute: WalletBtcReceiveRoute,
   WalletBtcSendRoute: WalletBtcSendRoute,

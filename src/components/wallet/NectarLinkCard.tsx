@@ -28,7 +28,7 @@ import {
 import { isEcosystemSite, loginSiteName } from "@/lib/web-login-hosts";
 import { submitRequested, type RequestedManifest } from "@/lib/xpub-link/requested";
 
-export function NectarLinkCard({ compact }: { compact?: boolean }) {
+export function NectarLinkCard({ compact, initialPayload }: { compact?: boolean; initialPayload?: string }) {
   const { unlocked } = useWallet();
   const seedless = !unlocked || unlocked.mode === "keyonly" || !unlocked.mnemonic;
 
@@ -46,6 +46,16 @@ export function NectarLinkCard({ compact }: { compact?: boolean }) {
   useEffect(() => {
     setLinks(listLinks());
   }, [unlocked]);
+
+  // A link QR scanned from the main camera arrives here pre-filled.
+  const [handledInitial, setHandledInitial] = useState(false);
+  useEffect(() => {
+    if (handledInitial || !initialPayload || !unlocked?.mnemonic) return;
+    setHandledInitial(true);
+    setInput(initialPayload);
+    void onLoad(initialPayload);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPayload, unlocked, handledInitial]);
 
   async function onLoad(raw: string) {
     setError(null);

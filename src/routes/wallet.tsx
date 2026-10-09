@@ -154,6 +154,11 @@ function WalletLayout() {
       navigate({ to: "/wallet/signin", search: { payload: raw } });
       return;
     }
+    // Merchant xpub link (Bonfire, File Fingerprint, NectarPay, …).
+    if (/^hm-link:/i.test(raw.trim())) {
+      navigate({ to: "/wallet/xpub-link", search: { payload: raw.trim() } });
+      return;
+    }
     const intent = parsePaymentUri(raw);
     if (intent.kind === "txc") {
       navigate({
