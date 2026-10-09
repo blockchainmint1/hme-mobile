@@ -19,6 +19,7 @@ import { Toaster } from "../components/ui/sonner";
 import { ThemeProvider } from "../lib/theme";
 import { installNativeServerFnBridge } from "../lib/native/server-fn-bridge";
 import icon192 from "../assets/icons/icon-192.webp";
+import { useEcosystemSites } from "../lib/ecosystem-sites";
 
 if (typeof window !== "undefined") {
   installNativeServerFnBridge();
@@ -289,6 +290,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function RootComponent() {
+  useEcosystemSites();
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
 
