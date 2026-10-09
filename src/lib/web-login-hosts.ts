@@ -73,10 +73,33 @@ export function isPublicHostname(raw: string): boolean {
   return true;
 }
 
+/**
+ * Live ecosystem registry, published by the Honest.Money Ecosystem site
+ * (Admin → SSO sites) and loaded at startup by src/lib/ecosystem-sites.ts.
+ * Adds friendly names for new partner sites without a wallet release; the
+ * built-in list above stays as the offline fallback.
+ */
+let ecosystemNames: Record<string, string> = {};
+
+export function setEcosystemSites(sites: { host: string; label: string }[]): void {
+  const next: Record<string, string> = {};
+  for (const s of sites) {
+    const host = s.host.trim().toLowerCase();
+    if (!isPublicHostname(host)) continue;
+    next[host] = (s.label || host).slice(0, 40);
+  }
+  ecosystemNames = next;
+}
+
+export function isEcosystemSite(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase();
+  return !!ecosystemNames[host] || !!PARTNER_NAMES[host] || isFirstParty(host);
+}
+
 /** Tier + display name for a sign-in host. */
 export function classifyLoginHost(hostname: string): LoginHostInfo {
   const host = hostname.trim().toLowerCase();
-  const partner = PARTNER_NAMES[host];
+  const partner = ecosystemNames[host] ?? PARTNER_NAMES[host];
   if (partner) return { tier: isFirstParty(host) ? "first-party" : "partner", name: partner };
   if (isFirstParty(host)) return { tier: "first-party", name: host };
   return { tier: "unknown", name: host };
