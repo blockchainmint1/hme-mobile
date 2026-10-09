@@ -25,6 +25,7 @@ import {
   type NectarLinkRecord,
   type NectarManifest,
 } from "@/lib/nectar/link";
+import { isEcosystemSite, loginSiteName } from "@/lib/web-login-hosts";
 import { submitRequested, type RequestedManifest } from "@/lib/xpub-link/requested";
 
 export function NectarLinkCard({ compact }: { compact?: boolean }) {
@@ -174,6 +175,15 @@ export function NectarLinkCard({ compact }: { compact?: boolean }) {
             <div className="rounded-lg border p-3 space-y-2">
               <div className="text-sm font-medium">{requested.appName}</div>
               <div className="text-xs text-muted-foreground break-all">{requested.host}</div>
+              {isEcosystemSite(requested.host) ? (
+                <p className="text-xs text-primary">
+                  Verified honest.money ecosystem site ({loginSiteName(requested.host)}).
+                </p>
+              ) : (
+                <p className="text-xs text-destructive">
+                  Not a listed honest.money ecosystem site. Only continue if you started this yourself.
+                </p>
+              )}
               {requested.purpose && (
                 <p className="text-xs text-muted-foreground">{requested.purpose}</p>
               )}

@@ -41,3 +41,6 @@ The extension packages the full web app: `bun scripts/build-extension.mjs` runs 
 
 - Extension web provider: `src/extension/inpage.ts` (EIP-6963 + `window.honestMoney`, `window.ethereum` only if free) → `content.ts` → `background.ts`; keys stay in approval popup. Why: sites never touch keys and signatures need approval.
 - Popup theme follows system by default with a light/dark override saved only in extension localStorage. Why: appearance should not change web/mobile settings or wallet data.
+
+## Trusted ecosystem sites come from honest.money
+Friendly site names/trust badges for sign-in and xpub links load from the HMAC-signed (`HME_ECOSYSTEM`) registry at honest.money (`src/lib/ecosystem-sites*`, spec `docs/ecosystem-trusted-sites.md`); the built-in list in `src/lib/web-login-hosts.ts` is only the offline fallback. Why: adding a partner site must never need a wallet release. The registry only labels — it never relaxes message/path rules.
