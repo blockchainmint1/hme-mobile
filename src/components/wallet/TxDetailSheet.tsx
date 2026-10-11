@@ -175,6 +175,7 @@ function UtxoDetailBody({
             : "Pending"
         }
       />
+      )}
       <Field label="Status" value={tx.status.confirmed ? `Confirmed · block ${tx.status.block_height}` : "Unconfirmed"} />
       <Field label="Network fee" value={formatAmount(tx.fee)} />
       <Field label="Transaction ID" value={tx.txid} mono copy />
