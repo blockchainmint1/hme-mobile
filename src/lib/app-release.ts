@@ -142,7 +142,12 @@ export function compareVersions(a: string, b: string): number {
 /** Best download link for a release row (falls back to the IPFS gateway). */
 export function releaseDownloadUrl(r: AppRelease | null): string {
   if (!r) return APK_URL;
-  if (r.download_url) return r.download_url;
+  if (r.download_url) {
+    // A relative path ("/api/public/apk") is meaningless once the link leaves
+    // the app — a phone's browser would 404 on it. Anchor it to our origin.
+    if (r.download_url.startsWith("/")) return `https://mobile.honest.money${r.download_url}`;
+    return r.download_url;
+  }
   if (r.ipfs_cid) return `https://txc.mypinata.cloud/ipfs/${r.ipfs_cid}`;
   return APK_URL;
 }
