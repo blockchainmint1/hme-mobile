@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowUp, Check, Copy, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { formatTxc } from "@/lib/txc/units";
+import { formatTokenAmount } from "@/lib/txc/tokens";
 import { explorerTxUrl, type MempoolTx } from "@/lib/txc/mempool";
 import type { EvmTransfer } from "@/lib/chains/history.functions";
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
@@ -151,6 +152,7 @@ function UtxoDetailBody({
   formatAmount,
   explorerUrl,
   explorerName,
+  hideHeader,
 }: {
   tx: MempoolTx;
   net: number;
@@ -158,9 +160,11 @@ function UtxoDetailBody({
   formatAmount: (sats: number) => string;
   explorerUrl: string;
   explorerName: string;
+  hideHeader?: boolean;
 }) {
   return (
     <div className="space-y-4">
+      {!hideHeader && (
       <Header
         incoming={incoming}
         title={incoming ? "Received" : "Sent"}
