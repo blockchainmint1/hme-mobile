@@ -893,7 +893,26 @@ function WalletHome() {
                       <li key={tx.txid}>
                         <button
                           type="button"
-                          onClick={() => setDetail({ kind: "txc", tx, net, incoming })}
+                          onClick={() =>
+                            setDetail({
+                              kind: "txc",
+                              tx,
+                              net,
+                              incoming,
+                              omni:
+                                omni && meta
+                                  ? {
+                                      propertyId: omni.propertyId,
+                                      amount: omni.amount,
+                                      symbol: meta.symbol,
+                                      divisible: meta.divisible,
+                                      sender: omni.sender,
+                                      references: omni.references,
+                                      invalid: omniInvalid,
+                                    }
+                                  : undefined,
+                            })
+                          }
                           className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors text-left"
                         >
                           <div
