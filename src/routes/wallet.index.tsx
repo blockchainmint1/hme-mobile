@@ -878,9 +878,9 @@ function WalletHome() {
                     const omniMine =
                       omni &&
                       ((omni.sender && ownAddresses.has(omni.sender)) ||
-                        (omni.reference && ownAddresses.has(omni.reference)));
+                        omni.references.some((a) => ownAddresses.has(a)));
                     const omniIncoming =
-                      !!omni && !!omni.reference && ownAddresses.has(omni.reference) &&
+                      !!omni && omni.references.some((a) => ownAddresses.has(a)) &&
                       !(omni.sender && ownAddresses.has(omni.sender));
                     const meta = omni && omniMine ? omniMetaFor(omni.propertyId) : null;
                     const incoming = meta ? omniIncoming : net > 0;
