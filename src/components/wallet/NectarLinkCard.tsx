@@ -28,7 +28,7 @@ import {
 import { isEcosystemSite, loginSiteName } from "@/lib/web-login-hosts";
 import { submitRequested, type RequestedManifest } from "@/lib/xpub-link/requested";
 
-export function NectarLinkCard({ compact, initialPayload }: { compact?: boolean; initialPayload?: string }) {
+export function NectarLinkCard({ compact, initialPayload, hideInput }: { compact?: boolean; initialPayload?: string; hideInput?: boolean }) {
   const { unlocked } = useWallet();
   const seedless = !unlocked || unlocked.mode === "keyonly" || !unlocked.mnemonic;
 
@@ -145,10 +145,12 @@ export function NectarLinkCard({ compact, initialPayload }: { compact?: boolean;
 
   const body = (
     <div className="space-y-3">
+      {!hideInput && (
       <p className="text-xs text-muted-foreground">
         Shares watch-only account keys (xpubs) with Nectar Pay, Bonfire, or any site that
         shows a wallet link code. Sites can see addresses but never spend. Your seed phrase and private keys never leave this device.
       </p>
+      )}
 
       {seedless ? (
         <p className="text-xs text-muted-foreground">
@@ -156,6 +158,7 @@ export function NectarLinkCard({ compact, initialPayload }: { compact?: boolean;
         </p>
       ) : (
         <>
+          {!hideInput && (
           <div className="flex gap-2">
             <Input
               value={input}
@@ -180,6 +183,7 @@ export function NectarLinkCard({ compact, initialPayload }: { compact?: boolean;
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Read"}
             </Button>
           </div>
+          )}
 
           {requested && (
             <div className="rounded-lg border p-3 space-y-2">
@@ -311,7 +315,7 @@ export function NectarLinkCard({ compact, initialPayload }: { compact?: boolean;
     <Card className="mt-5">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Link2 className="h-4 w-4" /> Merchant xpub link
+          <Link2 className="h-4 w-4" /> Ecosystem links
         </CardTitle>
         <CardDescription>Link this wallet to Nectar Pay, Bonfire, and other sites.</CardDescription>
       </CardHeader>

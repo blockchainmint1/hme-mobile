@@ -29,11 +29,10 @@ import { DeepRescanCard } from "@/components/wallet/DeepRescanCard";
 import { FeaturesCard } from "@/components/wallet/FeaturesCard";
 import { SecurityCheckupCard } from "@/components/wallet/SecurityCheckupCard";
 import { SignMessageCard } from "@/components/wallet/SignMessageCard";
-import { NectarLinkCard } from "@/components/wallet/NectarLinkCard";
+import { EcosystemLinksCard } from "@/components/wallet/EcosystemLinksCard";
 
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
-import { TsdAccountLinkCard } from "@/components/wallet/TsdAccountLinkCard";
 import { TsdNudgeToggleCard } from "@/components/wallet/TsdNudgeToggleCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { ProfilesCard } from "@/components/wallet/ProfilesCard";
@@ -219,10 +218,10 @@ function SettingsPage() {
         <SettingsSection
           value="merchant-link"
           icon={Link2}
-          title="Merchant xpub link"
-          description="Share watch-only keys with a Nectar Pay merchant."
+          title="Ecosystem links"
+          description="Link Nectar Pay, Bonfire, File Fingerprint, TSD Swap and more."
         >
-          <NectarLinkCard compact />
+          <EcosystemLinksCard />
         </SettingsSection>
 
 
@@ -231,11 +230,10 @@ function SettingsPage() {
           value="tsd-cashout"
           icon={ArrowDownUp}
           title="TSD settings"
-          description="API key, shared account key and TSD reminders."
+          description="Cash-out API key and TSD reminders."
         >
           <div className="space-y-6">
             <TsdCashoutKeyCard compact />
-            <TsdAccountLinkCard compact />
             <TsdNudgeToggleCard compact />
           </div>
         </SettingsSection>
