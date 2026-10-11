@@ -22,6 +22,12 @@ export interface OmniSend {
   sender: string | null;
   /** Omni reference (recipient) address. */
   reference: string | null;
+  /**
+   * Every addressed output that isn't the sender, in output order. A
+   * multi-send (e.g. the TSD distributor paying many people in one tx) has
+   * several recipients; `reference` stays the last one for back-compat.
+   */
+  references: string[];
 }
 
 const MAGIC = "6f6d6e69"; // "omni"
@@ -81,15 +87,13 @@ export function decodeOmniSend(tx: MempoolTx): OmniSend | null {
 
 
   const sender = tx.vin[0]?.prevout?.scriptpubkey_address ?? null;
-  // Omni Class C: the reference address is the last output with an address
-  // that isn't the sender (the sender's own output is BTC/TXC change).
-  let reference: string | null = null;
-  for (let i = tx.vout.length - 1; i >= 0; i--) {
-    const a = tx.vout[i]?.scriptpubkey_address;
-    if (a && a !== sender) {
-      reference = a;
-      break;
-    }
+  // Omni Class C: reference addresses are the outputs that aren't the sender
+  // (the sender's own output is BTC/TXC change). A multi-send has several.
+  const references: string[] = [];
+  for (const v of tx.vout) {
+    const a = v.scriptpubkey_address;
+    if (a && a !== sender) references.push(a);
   }
-  return { propertyId, amount, sender, reference };
+  const reference = references.length > 0 ? references[references.length - 1]! : null;
+  return { propertyId, amount, sender, reference, references };
 }

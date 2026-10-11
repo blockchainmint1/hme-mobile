@@ -274,8 +274,8 @@ function WalletHome() {
     for (const tx of txs.data ?? []) {
       if (tx.status.confirmed) continue;
       const o = decodeOmniSend(tx);
-      if (!o || !o.reference) continue;
-      if (!ownAddresses.has(o.reference)) continue;
+      if (!o || o.references.length === 0) continue;
+      if (!o.references.some((a) => ownAddresses.has(a))) continue;
       if (o.sender && ownAddresses.has(o.sender)) continue; // self-move
       map.set(o.propertyId, (map.get(o.propertyId) ?? 0n) + o.amount);
     }
@@ -878,9 +878,9 @@ function WalletHome() {
                     const omniMine =
                       omni &&
                       ((omni.sender && ownAddresses.has(omni.sender)) ||
-                        (omni.reference && ownAddresses.has(omni.reference)));
+                        omni.references.some((a) => ownAddresses.has(a)));
                     const omniIncoming =
-                      !!omni && !!omni.reference && ownAddresses.has(omni.reference) &&
+                      !!omni && omni.references.some((a) => ownAddresses.has(a)) &&
                       !(omni.sender && ownAddresses.has(omni.sender));
                     const meta = omni && omniMine ? omniMetaFor(omni.propertyId) : null;
                     const incoming = meta ? omniIncoming : net > 0;
@@ -893,7 +893,26 @@ function WalletHome() {
                       <li key={tx.txid}>
                         <button
                           type="button"
-                          onClick={() => setDetail({ kind: "txc", tx, net, incoming })}
+                          onClick={() =>
+                            setDetail({
+                              kind: "txc",
+                              tx,
+                              net,
+                              incoming,
+                              omni:
+                                omni && meta
+                                  ? {
+                                      propertyId: omni.propertyId,
+                                      amount: omni.amount,
+                                      symbol: meta.symbol,
+                                      divisible: meta.divisible,
+                                      sender: omni.sender,
+                                      references: omni.references,
+                                      invalid: omniInvalid,
+                                    }
+                                  : undefined,
+                            })
+                          }
                           className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-card/40 px-4 py-3 hover:bg-card transition-colors text-left"
                         >
                           <div

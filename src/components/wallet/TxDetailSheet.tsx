@@ -8,13 +8,24 @@ import { Button } from "@/components/ui/button";
 import { ArrowDown, ArrowUp, Check, Copy, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { formatTxc } from "@/lib/txc/units";
+import { formatTokenAmount } from "@/lib/txc/tokens";
 import { explorerTxUrl, type MempoolTx } from "@/lib/txc/mempool";
 import type { EvmTransfer } from "@/lib/chains/history.functions";
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import { copyToClipboard } from "@/lib/clipboard";
 
+export interface OmniDetail {
+  propertyId: number;
+  amount: bigint;
+  symbol: string;
+  divisible: boolean;
+  sender: string | null;
+  references: string[];
+  invalid: string | null;
+}
+
 export type TxDetail =
-  | { kind: "txc"; tx: MempoolTx; net: number; incoming: boolean }
+  | { kind: "txc"; tx: MempoolTx; net: number; incoming: boolean; omni?: OmniDetail }
   | {
       /** Other UTXO chains (BTC, LTC, DOGE, ISK) — same Esplora tx shape. */
       kind: "utxo";
@@ -52,15 +63,72 @@ export function TxDetailSheet({
 }
 
 function TxcDetail({ detail }: { detail: Extract<TxDetail, { kind: "txc" }> }) {
+  const omni = detail.omni;
   return (
-    <UtxoDetailBody
-      tx={detail.tx}
-      net={detail.net}
-      incoming={detail.incoming}
-      formatAmount={(sats) => `${formatTxc(sats)} TXC`}
-      explorerUrl={explorerTxUrl(detail.tx.txid)}
-      explorerName="mempool.texitcoin.org"
-    />
+    <div className="space-y-4">
+      {omni && (
+        <div className="space-y-4">
+          <Header
+            incoming={detail.incoming}
+            title={`${detail.incoming ? "Received" : "Sent"} ${omni.symbol}`}
+            amount={`${detail.incoming ? "+" : "−"}${formatTokenAmount(omni.amount, omni.divisible)} ${omni.symbol}`}
+            subtitle={
+              detail.tx.status.confirmed
+                ? new Date((detail.tx.status.block_time ?? 0) * 1000).toLocaleString()
+                : "Pending"
+            }
+          />
+          {omni.invalid && (
+            <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-xs text-destructive">
+              Not applied — {omni.invalid}
+            </p>
+          )}
+          {omni.sender && <Field label="From" value={omni.sender} mono copy />}
+          {omni.references.length === 1 ? (
+            <Field label="To" value={omni.references[0]!} mono copy />
+          ) : (
+            omni.references.length > 1 && (
+              <div className="rounded-lg border border-border/60 bg-card/40 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  To · {omni.references.length} recipients
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {omni.references.map((a) => (
+                    <li key={a} className="text-sm font-mono break-all">
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          )}
+          <div className="border-t border-border/60 pt-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
+              Underlying TXC transaction
+            </p>
+            <UtxoDetailBody
+              tx={detail.tx}
+              net={detail.net}
+              incoming={detail.incoming}
+              formatAmount={(sats) => `${formatTxc(sats)} TXC`}
+              explorerUrl={explorerTxUrl(detail.tx.txid)}
+              explorerName="mempool.texitcoin.org"
+              hideHeader
+            />
+          </div>
+        </div>
+      )}
+      {!omni && (
+        <UtxoDetailBody
+          tx={detail.tx}
+          net={detail.net}
+          incoming={detail.incoming}
+          formatAmount={(sats) => `${formatTxc(sats)} TXC`}
+          explorerUrl={explorerTxUrl(detail.tx.txid)}
+          explorerName="mempool.texitcoin.org"
+        />
+      )}
+    </div>
   );
 }
 
@@ -84,6 +152,7 @@ function UtxoDetailBody({
   formatAmount,
   explorerUrl,
   explorerName,
+  hideHeader,
 }: {
   tx: MempoolTx;
   net: number;
@@ -91,9 +160,11 @@ function UtxoDetailBody({
   formatAmount: (sats: number) => string;
   explorerUrl: string;
   explorerName: string;
+  hideHeader?: boolean;
 }) {
   return (
     <div className="space-y-4">
+      {!hideHeader && (
       <Header
         incoming={incoming}
         title={incoming ? "Received" : "Sent"}
@@ -104,6 +175,7 @@ function UtxoDetailBody({
             : "Pending"
         }
       />
+      )}
       <Field label="Status" value={tx.status.confirmed ? `Confirmed · block ${tx.status.block_height}` : "Unconfirmed"} />
       <Field label="Network fee" value={formatAmount(tx.fee)} />
       <Field label="Transaction ID" value={tx.txid} mono copy />
