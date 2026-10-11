@@ -1,3 +1,4 @@
+import { parseTsdLinkInput } from "@/lib/rewards/tsd-link";
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
@@ -154,8 +155,8 @@ function WalletLayout() {
       navigate({ to: "/wallet/signin", search: { payload: raw } });
       return;
     }
-    // Merchant xpub link (Bonfire, File Fingerprint, NectarPay, …).
-    if (/^hm-link:/i.test(raw.trim())) {
+    // Ecosystem link (Bonfire, File Fingerprint, NectarPay, TSD Swap, …).
+    if (/^hm-link:/i.test(raw.trim()) || parseTsdLinkInput(raw)) {
       navigate({ to: "/wallet/xpub-link", search: { payload: raw.trim() } });
       return;
     }

@@ -315,7 +315,7 @@ export function NectarLinkCard({ compact, initialPayload, hideInput }: { compact
     <Card className="mt-5">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Link2 className="h-4 w-4" /> Merchant xpub link
+          <Link2 className="h-4 w-4" /> Ecosystem links
         </CardTitle>
         <CardDescription>Link this wallet to Nectar Pay, Bonfire, and other sites.</CardDescription>
       </CardHeader>
