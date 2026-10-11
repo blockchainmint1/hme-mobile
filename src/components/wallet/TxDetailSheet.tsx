@@ -13,8 +13,18 @@ import type { EvmTransfer } from "@/lib/chains/history.functions";
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import { copyToClipboard } from "@/lib/clipboard";
 
+export interface OmniDetail {
+  propertyId: number;
+  amount: bigint;
+  symbol: string;
+  divisible: boolean;
+  sender: string | null;
+  references: string[];
+  invalid: string | null;
+}
+
 export type TxDetail =
-  | { kind: "txc"; tx: MempoolTx; net: number; incoming: boolean }
+  | { kind: "txc"; tx: MempoolTx; net: number; incoming: boolean; omni?: OmniDetail }
   | {
       /** Other UTXO chains (BTC, LTC, DOGE, ISK) — same Esplora tx shape. */
       kind: "utxo";
