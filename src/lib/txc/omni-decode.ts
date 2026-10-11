@@ -28,6 +28,8 @@ export interface OmniSend {
    * several recipients; `reference` stays the last one for back-compat.
    */
   references: string[];
+  /** Send To Many (type 7) only: exact amount per recipient address. */
+  allocations?: { address: string; amount: bigint }[];
 }
 
 const MAGIC = "6f6d6e69"; // "omni"
@@ -54,9 +56,48 @@ export function decodeOmniSend(tx: MempoolTx): OmniSend | null {
       break;
     }
   }
-  if (!payload || payload.length < 32) return null;
+  if (!payload || payload.length < 16) return null;
 
   const type = parseInt(payload.slice(4, 8), 16);
+  const sender = tx.vin[0]?.prevout?.scriptpubkey_address ?? null;
+
+  if (type === 7) {
+    // Send To Many: property(4) + count(1) + count × [vout index(1) + amount(8)].
+    // Each entry names its recipient by output position, so amounts differ
+    // per recipient — never show the batch total as one person's receipt.
+    const propertyId = parseInt(payload.slice(8, 16), 16);
+    const count = parseInt(payload.slice(16, 18), 16);
+    if (!Number.isFinite(propertyId) || propertyId <= 0 || !count) return null;
+    const allocations: { address: string; amount: bigint }[] = [];
+    let total = 0n;
+    for (let i = 0; i < count; i++) {
+      const at = 18 + i * 18;
+      const chunk = payload.slice(at, at + 18);
+      if (chunk.length < 18) return null;
+      const idx = parseInt(chunk.slice(0, 2), 16);
+      let amt: bigint;
+      try {
+        amt = BigInt("0x" + chunk.slice(2));
+      } catch {
+        return null;
+      }
+      const address = tx.vout[idx]?.scriptpubkey_address;
+      if (!address) continue;
+      allocations.push({ address, amount: amt });
+      total += amt;
+    }
+    const references = allocations.map((a) => a.address);
+    return {
+      propertyId,
+      amount: total,
+      sender,
+      reference: references[references.length - 1] ?? null,
+      references,
+      allocations,
+    };
+  }
+
+  if (payload.length < 32) return null;
   let propertyId: number;
   let amount: bigint;
   if (type === 0) {
@@ -85,8 +126,6 @@ export function decodeOmniSend(tx: MempoolTx): OmniSend | null {
   }
   if (!Number.isFinite(propertyId) || propertyId <= 0) return null;
 
-
-  const sender = tx.vin[0]?.prevout?.scriptpubkey_address ?? null;
   // Omni Class C: reference addresses are the outputs that aren't the sender
   // (the sender's own output is BTC/TXC change). A multi-send has several.
   const references: string[] = [];
@@ -96,4 +135,13 @@ export function decodeOmniSend(tx: MempoolTx): OmniSend | null {
   }
   const reference = references.length > 0 ? references[references.length - 1]! : null;
   return { propertyId, amount, sender, reference, references };
+}
+
+/**
+ * Amount to show for this wallet: on an incoming Send To Many, only the
+ * share paid to our own addresses; otherwise the transfer amount.
+ */
+export function omniAmountFor(o: OmniSend, own: Set<string>, incoming: boolean): bigint {
+  if (!incoming || !o.allocations) return o.amount;
+  return o.allocations.reduce((s, a) => (own.has(a.address) ? s + a.amount : s), 0n);
 }

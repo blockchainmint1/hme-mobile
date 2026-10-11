@@ -47,7 +47,7 @@ import { useFeature } from "@/lib/feature-prefs";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { usePendingTxs, removePendingTx } from "@/lib/pending-tx";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
-import { decodeOmniSend } from "@/lib/txc/omni-decode";
+import { decodeOmniSend, omniAmountFor } from "@/lib/txc/omni-decode";
 
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { getChainLabel, CHAIN_LABEL_EVENT } from "@/lib/chain-labels";
@@ -277,7 +277,7 @@ function WalletHome() {
       if (!o || o.references.length === 0) continue;
       if (!o.references.some((a) => ownAddresses.has(a))) continue;
       if (o.sender && ownAddresses.has(o.sender)) continue; // self-move
-      map.set(o.propertyId, (map.get(o.propertyId) ?? 0n) + o.amount);
+      map.set(o.propertyId, (map.get(o.propertyId) ?? 0n) + omniAmountFor(o, ownAddresses, true));
     }
     return map;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -903,7 +903,7 @@ function WalletHome() {
                                 omni && meta
                                   ? {
                                       propertyId: omni.propertyId,
-                                      amount: omni.amount,
+                                      amount: omniAmountFor(omni, ownAddresses, incoming),
                                       symbol: meta.symbol,
                                       divisible: meta.divisible,
                                       sender: omni.sender,
@@ -966,7 +966,7 @@ function WalletHome() {
                             >
                               {incoming ? "+" : "−"}
                               {meta && omni
-                                ? `${formatTokenAmount(omni.amount, meta.divisible)} ${meta.symbol}`
+                                ? `${formatTokenAmount(omniAmountFor(omni, ownAddresses, incoming), meta.divisible)} ${meta.symbol}`
                                 : formatTxc(Math.abs(net))}
                             </p>
                             {meta && net !== 0 && (
