@@ -5,7 +5,6 @@
  * watch-only public keys only and always asks for approval.
  */
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { QrScanButton } from "@/components/wallet/QrScanButton";
@@ -61,7 +60,7 @@ export function EcosystemLinksCard({ initialPayload }: { initialPayload?: string
             }}
           />
           <Button type="button" variant="outline" disabled={!input.trim()} onClick={() => load(input)}>
-            {false ? <Loader2 className="h-4 w-4 animate-spin" /> : "Read"}
+            Read
           </Button>
         </div>
       )}
