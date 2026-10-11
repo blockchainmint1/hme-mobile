@@ -274,8 +274,8 @@ function WalletHome() {
     for (const tx of txs.data ?? []) {
       if (tx.status.confirmed) continue;
       const o = decodeOmniSend(tx);
-      if (!o || !o.reference) continue;
-      if (!ownAddresses.has(o.reference)) continue;
+      if (!o || o.references.length === 0) continue;
+      if (!o.references.some((a) => ownAddresses.has(a))) continue;
       if (o.sender && ownAddresses.has(o.sender)) continue; // self-move
       map.set(o.propertyId, (map.get(o.propertyId) ?? 0n) + o.amount);
     }
