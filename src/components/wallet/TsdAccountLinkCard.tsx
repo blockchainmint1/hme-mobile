@@ -23,7 +23,7 @@ import {
   type TsdLinkRecord,
 } from "@/lib/rewards/tsd-link";
 
-export function TsdAccountLinkCard({ compact }: { compact?: boolean }) {
+export function TsdAccountLinkCard({ compact, initialPayload, hideInput }: { compact?: boolean; initialPayload?: string; hideInput?: boolean }) {
   const { unlocked } = useWallet();
   const seedless = !unlocked || unlocked.mode === "keyonly" || !unlocked.mnemonic;
 
@@ -37,6 +37,15 @@ export function TsdAccountLinkCard({ compact }: { compact?: boolean }) {
   useEffect(() => {
     setLinks(listTsdLinks());
   }, [unlocked]);
+
+  const [handledInitial, setHandledInitial] = useState(false);
+  useEffect(() => {
+    if (handledInitial || !initialPayload || !unlocked?.mnemonic) return;
+    setHandledInitial(true);
+    setInput(initialPayload);
+    void onLoad(initialPayload);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPayload, unlocked, handledInitial]);
 
   async function onLoad(raw: string) {
     setError(null);
@@ -88,17 +97,20 @@ export function TsdAccountLinkCard({ compact }: { compact?: boolean }) {
 
   const body = (
     <div className="space-y-3">
+      {!hideInput && (
       <p className="text-xs text-muted-foreground">
         Scan the QR code on your TSD Swap profile page to link this wallet. It shares your
         watch-only TEXITcoin account key and your base EVM address, so TSD Swap can add up your
         TSD across every address for rewards. Public keys only — your seed phrase and private keys
         never leave this device.
       </p>
+      )}
 
       {seedless ? (
         <p className="text-xs text-muted-foreground">Only seed-phrase wallets can be linked.</p>
       ) : (
         <>
+          {!hideInput && (
           <div className="flex gap-2">
             <Input
               value={input}
@@ -123,6 +135,7 @@ export function TsdAccountLinkCard({ compact }: { compact?: boolean }) {
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Read"}
             </Button>
           </div>
+          )}
 
           {manifest && (
             <div className="rounded-lg border p-3 space-y-2">
