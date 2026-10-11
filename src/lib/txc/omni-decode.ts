@@ -22,6 +22,12 @@ export interface OmniSend {
   sender: string | null;
   /** Omni reference (recipient) address. */
   reference: string | null;
+  /**
+   * Every addressed output that isn't the sender, in output order. A
+   * multi-send (e.g. the TSD distributor paying many people in one tx) has
+   * several recipients; `reference` stays the last one for back-compat.
+   */
+  references: string[];
 }
 
 const MAGIC = "6f6d6e69"; // "omni"
