@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { NectarLinkCard } from "@/components/wallet/NectarLinkCard";
+import { EcosystemLinksCard } from "@/components/wallet/EcosystemLinksCard";
 
 export const Route = createFileRoute("/wallet/xpub-link")({
   validateSearch: (s: Record<string, unknown>): { payload?: string } => ({
@@ -22,7 +22,7 @@ function XpubLinkPage() {
   const { payload } = Route.useSearch();
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-6">
-      <NectarLinkCard initialPayload={payload} />
+      <EcosystemLinksCard initialPayload={payload} />
     </div>
   );
 }
