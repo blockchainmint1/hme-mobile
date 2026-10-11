@@ -62,15 +62,72 @@ export function TxDetailSheet({
 }
 
 function TxcDetail({ detail }: { detail: Extract<TxDetail, { kind: "txc" }> }) {
+  const omni = detail.omni;
   return (
-    <UtxoDetailBody
-      tx={detail.tx}
-      net={detail.net}
-      incoming={detail.incoming}
-      formatAmount={(sats) => `${formatTxc(sats)} TXC`}
-      explorerUrl={explorerTxUrl(detail.tx.txid)}
-      explorerName="mempool.texitcoin.org"
-    />
+    <div className="space-y-4">
+      {omni && (
+        <div className="space-y-4">
+          <Header
+            incoming={detail.incoming}
+            title={`${detail.incoming ? "Received" : "Sent"} ${omni.symbol}`}
+            amount={`${detail.incoming ? "+" : "−"}${formatTokenAmount(omni.amount, omni.divisible)} ${omni.symbol}`}
+            subtitle={
+              detail.tx.status.confirmed
+                ? new Date((detail.tx.status.block_time ?? 0) * 1000).toLocaleString()
+                : "Pending"
+            }
+          />
+          {omni.invalid && (
+            <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-xs text-destructive">
+              Not applied — {omni.invalid}
+            </p>
+          )}
+          {omni.sender && <Field label="From" value={omni.sender} mono copy />}
+          {omni.references.length === 1 ? (
+            <Field label="To" value={omni.references[0]!} mono copy />
+          ) : (
+            omni.references.length > 1 && (
+              <div className="rounded-lg border border-border/60 bg-card/40 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  To · {omni.references.length} recipients
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {omni.references.map((a) => (
+                    <li key={a} className="text-sm font-mono break-all">
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          )}
+          <div className="border-t border-border/60 pt-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-3">
+              Underlying TXC transaction
+            </p>
+            <UtxoDetailBody
+              tx={detail.tx}
+              net={detail.net}
+              incoming={detail.incoming}
+              formatAmount={(sats) => `${formatTxc(sats)} TXC`}
+              explorerUrl={explorerTxUrl(detail.tx.txid)}
+              explorerName="mempool.texitcoin.org"
+              hideHeader
+            />
+          </div>
+        </div>
+      )}
+      {!omni && (
+        <UtxoDetailBody
+          tx={detail.tx}
+          net={detail.net}
+          incoming={detail.incoming}
+          formatAmount={(sats) => `${formatTxc(sats)} TXC`}
+          explorerUrl={explorerTxUrl(detail.tx.txid)}
+          explorerName="mempool.texitcoin.org"
+        />
+      )}
+    </div>
   );
 }
 
