@@ -48,6 +48,7 @@ import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { usePendingTxs, removePendingTx } from "@/lib/pending-tx";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
 import { decodeOmniSend, omniAmountFor } from "@/lib/txc/omni-decode";
+import { TradingPocketCard } from "@/components/wallet/TradingPocketCard";
 
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
 import { getChainLabel, CHAIN_LABEL_EVENT } from "@/lib/chain-labels";
@@ -570,6 +571,8 @@ function WalletHome() {
     <main className="flex-1 flex flex-col min-h-0">
       <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
         <div className="mx-auto max-w-3xl w-full flex-1">
+          <TradingPocketCard />
+
           {/* Swipeable chain tiles */}
           <div className="relative">
             <Button

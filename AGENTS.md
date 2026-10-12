@@ -44,3 +44,6 @@ The extension packages the full web app: `bun scripts/build-extension.mjs` runs 
 
 ## Trusted ecosystem sites come from honest.money
 Friendly site names/trust badges for sign-in and xpub links load from the HMAC-signed (`HME_ECOSYSTEM`) registry at honest.money (`src/lib/ecosystem-sites*`, spec `docs/ecosystem-trusted-sites.md`); the built-in list in `src/lib/web-login-hosts.ts` is only the offline fallback. Why: adding a partner site must never need a wallet release. The registry only labels — it never relaxes message/path rules.
+
+## Trading links (hm-link-delegate)
+- Spending access is only ever for the Trading pocket account (1106'+, rotated on revoke) and only for sites on the honest.money trusted list; look-only links stay xpub-only. Why: a shared spending key can't be taken back, so the blast radius must be one separate, retirable pocket.
