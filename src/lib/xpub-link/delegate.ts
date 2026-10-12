@@ -18,7 +18,7 @@ import { x25519 } from "@noble/curves/ed25519";
 import { gcm } from "@noble/ciphers/aes";
 import { hkdf } from "@noble/hashes/hkdf.js";
 import { sha256 } from "@noble/hashes/sha2.js";
-import { base64url } from "@scure/base";
+import { base64url, base64urlnopad } from "@scure/base";
 import { seedFromMnemonic } from "@/lib/txc/wallet";
 import { signMessageWithSeed } from "@/lib/txc/message-sign";
 import { scopedKey } from "@/lib/profiles";
@@ -78,7 +78,7 @@ export function validateDelegate(raw: Record<string, unknown>, manifestUrl: stri
   if (!Number.isFinite(exp) || exp <= Date.now()) fail("This link has expired.");
   let recipientPub: Uint8Array = new Uint8Array();
   try {
-    recipientPub = base64url.decode(String(raw["recipient_pubkey"] ?? "").replace(/=+$/, ""));
+    recipientPub = base64urlnopad.decode(String(raw["recipient_pubkey"] ?? "").trim().replace(/=+$/, ""));
   } catch {
     fail("Link is missing its encryption key.");
   }
@@ -98,7 +98,7 @@ export function validateDelegate(raw: Record<string, unknown>, manifestUrl: stri
   const app = (raw["app"] ?? {}) as Record<string, unknown>;
   return {
     host,
-    appName: typeof app["name"] === "string" ? (app["name"] as string).slice(0, 40) : loginSiteName(host),
+    appName: typeof app["name"] === "string" ? (app["name"] as string).slice(0, 40) : typeof raw["app_name"] === "string" ? (raw["app_name"] as string).slice(0, 40) : loginSiteName(host),
     purpose: typeof raw["purpose"] === "string" ? (raw["purpose"] as string).slice(0, 300) : undefined,
     token: token as string,
     challenge: challenge as string,
