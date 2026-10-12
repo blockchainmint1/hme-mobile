@@ -47,6 +47,18 @@ export interface TradeView {
   fee: bigint | null;
   outputs: { address: string; value: bigint; mine: boolean }[];
   ourInputs: number;
+  /**
+   * Omni token leg of the trade (TXC chain only), decoded from the OP_RETURN
+   * payload — so a 100 TSD trade says "100 TSD", not the TXC dust under it.
+   */
+  token?: {
+    propertyId: number;
+    symbol: string;
+    divisible: boolean;
+    /** Raw Omni units (10^8 fixed point when divisible). */
+    youPay: bigint;
+    youGet: bigint;
+  };
 }
 
 export async function fetchTrades(link: DelegateLinkRecord): Promise<TradeProposal[]> {
