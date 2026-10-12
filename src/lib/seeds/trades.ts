@@ -26,8 +26,6 @@ import {
   UTXO_META,
   type UtxoChain,
 } from "./pocket";
-import { payments } from "bitcoinjs-lib";
-
 const PROXY = "/api/nectar/link";
 
 export interface TradeProposal {
