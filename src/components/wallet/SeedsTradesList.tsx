@@ -59,6 +59,21 @@ export function SeedsTradesList({ link }: { link: DelegateLinkRecord }) {
       {views.map((v) => (
         <div key={v.proposal.id} className="space-y-1 rounded-md border border-primary/40 p-3 text-xs">
           {v.proposal.summary && <p className="font-medium">{v.proposal.summary.slice(0, 200)}</p>}
+          {v.token && (
+            <p>
+              {v.token.youPay > 0n && (
+                <>
+                  You pay <b>{v.token.divisible ? fmt(v.token.youPay) : v.token.youPay.toString()} {v.token.symbol}</b>
+                </>
+              )}
+              {v.token.youPay > 0n && v.token.youGet > 0n && " · "}
+              {v.token.youGet > 0n && (
+                <>
+                  you get <b>{v.token.divisible ? fmt(v.token.youGet) : v.token.youGet.toString()} {v.token.symbol}</b>
+                </>
+              )}
+            </p>
+          )}
           {v.chain && (
             <p>
               You pay <b>{fmt(v.youPay)} {v.chain}</b>
