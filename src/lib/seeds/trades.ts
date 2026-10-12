@@ -141,7 +141,89 @@ export async function inspectTrade(args: {
   };
   void m;
   if (ourInputs === 0) view.refused = "Nothing in this trade is spent from your Trading pocket.";
+  if (chain === "TXC") view.token = decodeTokenLeg(psbt, mine);
   return view;
+}
+
+function hexToBytes(h: string): Uint8Array {
+  const out = new Uint8Array(h.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16);
+  return out;
+}
+
+/** Address for a standard output script on the given network, or null. */
+function scriptAddress(script: Uint8Array, net: (typeof UTXO_META)["TXC"]["net"]): string | null {
+  const tries = [
+    () => payments.p2wpkh({ output: script, network: net }).address,
+    () => payments.p2pkh({ output: script, network: net }).address,
+    () => payments.p2sh({ output: script, network: net }).address,
+    () => payments.p2wsh({ output: script, network: net }).address,
+  ];
+  for (const t of tries) {
+    try {
+      const a = t();
+      if (a) return a;
+    } catch {
+      /* next script type */
+    }
+  }
+  return null;
+}
+
+/**
+ * Read the Omni token transfer out of a trade's PSBT and say what the pocket
+ * pays or receives in that token. Mirrors the mempool decoder in
+ * src/lib/txc/omni-decode.ts, fed from the PSBT's own inputs/outputs.
+ */
+function decodeTokenLeg(
+  psbt: Psbt,
+  mine: Map<string, unknown>,
+): TradeView["token"] | undefined {
+  const net = UTXO_META.TXC.net;
+  const tx = {
+    vin: Array.from({ length: psbt.inputCount }, (_, i) => {
+      const s = inputScript(psbt, i);
+      return { prevout: { scriptpubkey_address: s ? scriptAddress(s, net) : undefined } };
+    }),
+    vout: psbt.txOutputs.map((o) => ({
+      scriptpubkey: bytesToHex(o.script),
+      scriptpubkey_address: o.address ?? scriptAddress(o.script, net) ?? undefined,
+      value: o.value,
+    })),
+  } as unknown as MempoolTx;
+  let omni: OmniSend | null;
+  try {
+    omni = decodeOmniSend(tx);
+  } catch {
+    omni = null;
+  }
+  if (!omni) return undefined;
+  const own = new Set<string>();
+  for (const scriptHex of mine.keys()) {
+    const a = scriptAddress(hexToBytes(scriptHex), net);
+    if (a) own.add(a);
+  }
+  let youPay = 0n;
+  let youGet = 0n;
+  if (omni.allocations) {
+    // Send To Many: exact amount per recipient.
+    youGet = omni.allocations.reduce((s, a) => (own.has(a.address) ? s + a.amount : s), 0n);
+    if (omni.sender && own.has(omni.sender)) {
+      youPay = omni.allocations.reduce((s, a) => (own.has(a.address) ? s : s + a.amount), 0n);
+    }
+  } else {
+    if (omni.sender && own.has(omni.sender)) youPay = omni.amount;
+    else if (omni.references.some((r) => own.has(r))) youGet = omni.amount;
+  }
+  if (youPay === 0n && youGet === 0n) return undefined;
+  const meta = BUILTIN_TXC_TOKENS.find((t) => t.id === omni!.propertyId);
+  return {
+    propertyId: omni.propertyId,
+    symbol: meta?.symbol ?? `token #${omni.propertyId}`,
+    divisible: meta?.divisible ?? true,
+    youPay,
+    youGet,
+  };
 }
 
 async function respond(args: {
