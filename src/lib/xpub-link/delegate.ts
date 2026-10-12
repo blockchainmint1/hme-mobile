@@ -231,6 +231,8 @@ export async function submitDelegate(args: {
       ...(payload ? { payload } : {}),
       xpubs,
       app_name: "honest.money wallet",
+      // Seeds reads the app name from a nested app.name; keep both fields.
+      app: { name: "honest.money wallet" },
     }),
   });
   const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
