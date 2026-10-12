@@ -8,11 +8,14 @@
  *   GET  /api/public/hme-link/trades?link_id=…&identity=…  → { trades: TradeProposal[] }
  *   POST /api/public/hme-link/trades/respond { link_id, trade_id, decision, signed_psbt?, identity_address, signature, message }
  */
-import { Psbt } from "bitcoinjs-lib";
+import { Psbt, payments } from "bitcoinjs-lib";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { base64 } from "@scure/base";
 import { seedFromMnemonic } from "@/lib/txc/wallet";
 import { signMessageWithSeed } from "@/lib/txc/message-sign";
+import { decodeOmniSend, type OmniSend } from "@/lib/txc/omni-decode";
+import { BUILTIN_TXC_TOKENS } from "@/lib/txc/tokens";
+import type { MempoolTx } from "@/lib/txc/mempool";
 import type { DelegateLinkRecord } from "@/lib/xpub-link/delegate";
 import {
   inputScript,
