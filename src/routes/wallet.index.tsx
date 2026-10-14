@@ -1366,6 +1366,7 @@ function TxcTile({
   balanceSats,
   loading,
   priceUsd,
+  tokensUsd,
   onRefresh,
   refreshing,
   label,
@@ -1374,6 +1375,8 @@ function TxcTile({
   balanceSats: number;
   loading: boolean;
   priceUsd: number | null;
+  /** Dollar value of Omni tokens on this chain (TSD counts at its $1 peg). */
+  tokensUsd?: number | null;
   onRefresh: () => void;
   refreshing: boolean;
   label: string;
@@ -1383,6 +1386,9 @@ function TxcTile({
   const balanceUsd = priceUsd ? satsToTxc(balanceSats) * priceUsd : null;
   const balText = loading ? "..." : formatTxcCompact(balanceSats);
   const fiatText = balanceUsd != null ? formatFiat(balanceUsd) : "Price unavailable";
+  const chainTotalUsd =
+    balanceUsd != null || (tokensUsd ?? 0) > 0 ? (balanceUsd ?? 0) + (tokensUsd ?? 0) : null;
+  const chainTotalText = chainTotalUsd != null ? formatFiat(chainTotalUsd) : "Price unavailable";
   return (
     <button
       type="button"
