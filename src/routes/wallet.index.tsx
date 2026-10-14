@@ -1421,7 +1421,7 @@ function TxcTile({
       <div className="mt-3 pt-3 border-t border-white/15">
         <p className="text-[10px] uppercase tracking-widest text-amber-100/70">Chain total</p>
         <p className="text-lg font-semibold">
-          {hidden ? maskAmount(fiatText) : fiatText}
+          {hidden ? maskAmount(chainTotalText) : chainTotalText}
         </p>
       </div>
     </button>
