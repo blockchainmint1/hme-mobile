@@ -37,6 +37,7 @@ import { getEvmHistory } from "@/lib/chains/history.functions";
 import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { useTokensForChain } from "@/lib/token-prefs";
 import { useEnabledTxcTokens, formatTokenAmount } from "@/lib/txc/tokens";
+import { TSD_PROPERTY_ID } from "@/lib/cashout/tsd";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { useTokenHolderTopUp } from "@/lib/txc/topup";
 import { getTxcTokenBalancesForAddresses, getOmniTxValidity } from "@/lib/txc/tokens.functions";
@@ -624,6 +625,7 @@ function WalletHome() {
                       balanceSats={account.data?.balanceSats ?? 0}
                       loading={account.isLoading}
                       priceUsd={price.data?.usd ?? null}
+                      tokensUsd={tsdBalanceUsd}
                       onRefresh={() => account.refetch()}
                       refreshing={account.isFetching}
                       label={unlocked?.label ?? "TXC Wallet"}
