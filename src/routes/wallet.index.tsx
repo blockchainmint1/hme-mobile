@@ -37,6 +37,7 @@ import { getEvmHistory } from "@/lib/chains/history.functions";
 import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { useTokensForChain } from "@/lib/token-prefs";
 import { useEnabledTxcTokens, formatTokenAmount } from "@/lib/txc/tokens";
+import { TSD_PROPERTY_ID } from "@/lib/cashout/tsd";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
 import { useTokenHolderTopUp } from "@/lib/txc/topup";
 import { getTxcTokenBalancesForAddresses, getOmniTxValidity } from "@/lib/txc/tokens.functions";
@@ -266,6 +267,11 @@ function WalletHome() {
     ...(account.data?.external.map((a) => a.address) ?? []),
     ...(account.data?.internal.map((a) => a.address) ?? []),
   ]);
+
+  // TSD rides on the TXC chain, so its dollar value belongs in the TXC
+  // tile's chain total. TSD is dollar-pegged (redeemed 1:1 via TSD Swap),
+  // so the balance in TSD is the balance in dollars.
+  const tsdBalanceUsd = useTsdBalanceUsd([...ownAddresses]);
 
   // Incoming Omni transfers still sitting in the mempool. The node's balance
   // only counts confirmed transfers, so surface these as a "+X pending" line
@@ -619,6 +625,7 @@ function WalletHome() {
                       balanceSats={account.data?.balanceSats ?? 0}
                       loading={account.isLoading}
                       priceUsd={price.data?.usd ?? null}
+                      tokensUsd={tsdBalanceUsd}
                       onRefresh={() => account.refetch()}
                       refreshing={account.isFetching}
                       label={unlocked?.label ?? "TXC Wallet"}
@@ -1362,10 +1369,32 @@ function BottomActions({ chain }: { chain: ChainId }) {
   );
 }
 
+/**
+ * Dollar value of the wallet's TSD (Texas Stable Dollar) across the given
+ * TXC addresses. TSD redeems 1:1 for USDC, so its face value is its dollar
+ * value. Returns null while the balance hasn't loaded yet.
+ */
+function useTsdBalanceUsd(addresses: string[]): number | null {
+  const fetchBalances = useServerFn(getTxcTokenBalancesForAddresses);
+  const key = addresses.slice().sort().join(",");
+  const balances = useQuery({
+    queryKey: ["tsd-balance-usd", key],
+    enabled: addresses.length > 0,
+    queryFn: () => fetchBalances({ data: { addresses, propertyIds: [TSD_PROPERTY_ID] } }),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+  });
+  if (balances.data == null) return null;
+  const units = BigInt(balances.data[TSD_PROPERTY_ID] ?? "0");
+  return Number(formatTokenAmount(units, true));
+}
+
 function TxcTile({
   balanceSats,
   loading,
   priceUsd,
+  tokensUsd,
   onRefresh,
   refreshing,
   label,
@@ -1374,6 +1403,8 @@ function TxcTile({
   balanceSats: number;
   loading: boolean;
   priceUsd: number | null;
+  /** Dollar value of Omni tokens on this chain (TSD counts at its $1 peg). */
+  tokensUsd?: number | null;
   onRefresh: () => void;
   refreshing: boolean;
   label: string;
@@ -1383,6 +1414,9 @@ function TxcTile({
   const balanceUsd = priceUsd ? satsToTxc(balanceSats) * priceUsd : null;
   const balText = loading ? "..." : formatTxcCompact(balanceSats);
   const fiatText = balanceUsd != null ? formatFiat(balanceUsd) : "Price unavailable";
+  const chainTotalUsd =
+    balanceUsd != null || (tokensUsd ?? 0) > 0 ? (balanceUsd ?? 0) + (tokensUsd ?? 0) : null;
+  const chainTotalText = chainTotalUsd != null ? formatFiat(chainTotalUsd) : "Price unavailable";
   return (
     <button
       type="button"
@@ -1415,7 +1449,7 @@ function TxcTile({
       <div className="mt-3 pt-3 border-t border-white/15">
         <p className="text-[10px] uppercase tracking-widest text-amber-100/70">Chain total</p>
         <p className="text-lg font-semibold">
-          {hidden ? maskAmount(fiatText) : fiatText}
+          {hidden ? maskAmount(chainTotalText) : chainTotalText}
         </p>
       </div>
     </button>
