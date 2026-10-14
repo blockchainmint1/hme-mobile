@@ -1367,6 +1367,27 @@ function BottomActions({ chain }: { chain: ChainId }) {
   );
 }
 
+/**
+ * Dollar value of the wallet's TSD (Texas Stable Dollar) across the given
+ * TXC addresses. TSD redeems 1:1 for USDC, so its face value is its dollar
+ * value. Returns null while the balance hasn't loaded yet.
+ */
+function useTsdBalanceUsd(addresses: string[]): number | null {
+  const fetchBalances = useServerFn(getTxcTokenBalancesForAddresses);
+  const key = addresses.slice().sort().join(",");
+  const balances = useQuery({
+    queryKey: ["tsd-balance-usd", key],
+    enabled: addresses.length > 0,
+    queryFn: () => fetchBalances({ data: { addresses, propertyIds: [TSD_PROPERTY_ID] } }),
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+  });
+  if (balances.data == null) return null;
+  const units = BigInt(balances.data[TSD_PROPERTY_ID] ?? "0");
+  return Number(formatTokenAmount(units, true));
+}
+
 function TxcTile({
   balanceSats,
   loading,
