@@ -20,7 +20,10 @@ import { createFileRoute } from "@tanstack/react-router";
 type Upstream = { base: string; key?: boolean };
 
 const UPSTREAMS: Record<string, Upstream[]> = {
-  ltc: [{ base: "https://litecoinspace.org/api" }],
+  ltc: [
+    { base: "https://ltcbook.nownodes.io/api/v2", key: true },
+    { base: "https://litecoin.atomicwallet.io/api/v2" },
+  ],
   btc: [
     { base: "https://btcbook.nownodes.io/api/v2", key: true },
     { base: "https://btc1.trezor.io/api/v2" },
