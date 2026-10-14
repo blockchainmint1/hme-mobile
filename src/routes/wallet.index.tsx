@@ -267,6 +267,11 @@ function WalletHome() {
     ...(account.data?.internal.map((a) => a.address) ?? []),
   ]);
 
+  // TSD rides on the TXC chain, so its dollar value belongs in the TXC
+  // tile's chain total. TSD is dollar-pegged (redeemed 1:1 via TSD Swap),
+  // so the balance in TSD is the balance in dollars.
+  const tsdBalanceUsd = useTsdBalanceUsd([...ownAddresses]);
+
   // Incoming Omni transfers still sitting in the mempool. The node's balance
   // only counts confirmed transfers, so surface these as a "+X pending" line
   // on the token row the moment the tx hits the mempool.
