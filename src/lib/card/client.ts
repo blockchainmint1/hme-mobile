@@ -42,6 +42,6 @@ export function signEnvelope(seed: Uint8Array, action: string, body: unknown): E
   const owner = addressFor("TXC", node.publicKey);
   const ts = Math.floor(Date.now() / 1000);
   const message = `hm-card|${action}|${ts}|${JSON.stringify(body)}`;
-  const { signature } = signMessageWithKey({ privateKey: node.privateKey!, kind: "bip44" as never, address: owner, message });
+  const { signature } = signMessageWithKey({ privateKey: node.privateKey!, kind: "bip44", address: owner, message });
   return { owner, ts, action, body, sig: signature };
 }
