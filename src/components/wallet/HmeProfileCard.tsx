@@ -6,7 +6,7 @@
  * the main TXC watch key + Ethereum address is a separate, off-by-default
  * choice: those let honest.money see that wallet's activity, never spend.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import * as ecc from "@bitcoinerlab/secp256k1";
 import { BIP32Factory } from "bip32";
@@ -42,6 +42,8 @@ export function HmeProfileCard() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [native, setNative] = useState(false);
+  const shareKeysRef = useRef(false);
+  shareKeysRef.current = shareKeys;
 
   useEffect(() => {
     setProfile(loadProfileLink());
@@ -97,8 +99,6 @@ export function HmeProfileCard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlocked]);
 
-  const shareKeysRef = { current: shareKeys };
-  shareKeysRef.current = shareKeys;
 
   function start() {
     setError(null);

@@ -30,6 +30,7 @@ import { FeaturesCard } from "@/components/wallet/FeaturesCard";
 import { SecurityCheckupCard } from "@/components/wallet/SecurityCheckupCard";
 import { SignMessageCard } from "@/components/wallet/SignMessageCard";
 import { EcosystemLinksCard } from "@/components/wallet/EcosystemLinksCard";
+import { HmeProfileCard } from "@/components/wallet/HmeProfileCard";
 
 import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
@@ -222,6 +223,15 @@ function SettingsPage() {
           description="Link Nectar Pay, Bonfire, File Fingerprint, TSD Swap and more."
         >
           <EcosystemLinksCard />
+        </SettingsSection>
+
+        <SettingsSection
+          value="hme-profile"
+          icon={Link2}
+          title="Honest Money profile"
+          description="Optional: link your member account so your referrer gets credit."
+        >
+          <HmeProfileCard />
         </SettingsSection>
 
 
