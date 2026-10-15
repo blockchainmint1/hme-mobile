@@ -19,8 +19,10 @@ import {
   AlertTriangle,
   Link2,
   ScrollText,
+  Nfc,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { TapCardCard } from "@/components/wallet/TapCardCard";
 import { ChainsCard } from "@/components/wallet/ChainsCard";
 import { TokensCard } from "@/components/wallet/TokensCard";
 import { TxcTokensCard } from "@/components/wallet/TxcTokensCard";
@@ -232,6 +234,15 @@ function SettingsPage() {
           description="Optional: link your member account so your referrer gets credit."
         >
           <HmeProfileCard />
+        </SettingsSection>
+
+        <SettingsSection
+          value="tap-card"
+          icon={Nfc}
+          title="Tap card"
+          description="Pay at NectarPay checkouts by tapping a card."
+        >
+          <TapCardCard />
         </SettingsSection>
 
 

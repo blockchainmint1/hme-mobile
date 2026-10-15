@@ -8,3 +8,6 @@
 - [x] Normalize stale encrypted/session TXC primary-path metadata while loading a seed wallet so Settings always reports m/44'/696969'/0' before Receive is opened
 - [x] Add Solana chain support with seed-derived address, balance, activity, send, receive, and chain settings
 
+- [x] Tap card (NFC): server card service, owner settings, NectarPay pay endpoint, Telegram approvals, kill + sweep, NectarPay handoff
+- [x] Tap card uses reserved HME branch 1107 (card N = m/44'/696969'/1107'/0/N); Trading pocket rotation must skip 1107
+- [ ] Tap card: native NFC reading in the APK (needs NFC plugin + new APK build)
