@@ -104,6 +104,151 @@ export type Database = {
         }
         Relationships: []
       }
+      nfc_card_keys: {
+        Row: {
+          card_id: string
+          created_at: string
+          enc_key: string
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          enc_key: string
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          enc_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfc_card_keys_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: true
+            referencedRelation: "nfc_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nfc_card_payments: {
+        Row: {
+          amount_units: number
+          card_id: string
+          created_at: string
+          decided_at: string | null
+          id: string
+          invoice_id: string
+          merchant: string | null
+          pay_to: string
+          reason: string | null
+          status: string
+          txid: string | null
+          usd: number
+        }
+        Insert: {
+          amount_units: number
+          card_id: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          invoice_id: string
+          merchant?: string | null
+          pay_to: string
+          reason?: string | null
+          status?: string
+          txid?: string | null
+          usd: number
+        }
+        Update: {
+          amount_units?: number
+          card_id?: string
+          created_at?: string
+          decided_at?: string | null
+          id?: string
+          invoice_id?: string
+          merchant?: string | null
+          pay_to?: string
+          reason?: string | null
+          status?: string
+          txid?: string | null
+          usd?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nfc_card_payments_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "nfc_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nfc_cards: {
+        Row: {
+          approver_chat_ids: number[]
+          created_at: string
+          daily_usd: number
+          id: string
+          label: string
+          owner_address: string
+          per_tap_usd: number
+          pin_above_usd: number
+          pin_hash: string | null
+          pin_rule: string
+          pin_salt: string | null
+          pocket_account: number
+          pocket_address: string
+          return_address: string
+          status: string
+          telegram_code: string | null
+          uid_hash: string
+          updated_at: string
+          wrong_pins: number
+        }
+        Insert: {
+          approver_chat_ids?: number[]
+          created_at?: string
+          daily_usd?: number
+          id?: string
+          label?: string
+          owner_address: string
+          per_tap_usd?: number
+          pin_above_usd?: number
+          pin_hash?: string | null
+          pin_rule?: string
+          pin_salt?: string | null
+          pocket_account: number
+          pocket_address: string
+          return_address: string
+          status?: string
+          telegram_code?: string | null
+          uid_hash: string
+          updated_at?: string
+          wrong_pins?: number
+        }
+        Update: {
+          approver_chat_ids?: number[]
+          created_at?: string
+          daily_usd?: number
+          id?: string
+          label?: string
+          owner_address?: string
+          per_tap_usd?: number
+          pin_above_usd?: number
+          pin_hash?: string | null
+          pin_rule?: string
+          pin_salt?: string | null
+          pocket_account?: number
+          pocket_address?: string
+          return_address?: string
+          status?: string
+          telegram_code?: string | null
+          uid_hash?: string
+          updated_at?: string
+          wrong_pins?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
