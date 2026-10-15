@@ -344,6 +344,11 @@ function RootComponent() {
     };
   }, [router]);
 
+  // Keep any honest.money affiliate ?ref= code (30 days, last click wins).
+  useEffect(() => {
+    import("../lib/hme-profile/ref").then(({ captureRefFromUrl }) => captureRefFromUrl());
+  }, []);
+
   // Configure iOS/Android status bar + keyboard once on mount. No-op on web.
   useEffect(() => {
     import("../lib/native/ui").then(({ initNativeChrome }) => {
