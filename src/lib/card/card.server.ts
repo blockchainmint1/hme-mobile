@@ -83,7 +83,7 @@ export interface OwnerEnvelope {
   owner: string;
   ts: number;
   action: string;
-  body: unknown;
+  body?: unknown;
   sig: string;
 }
 
