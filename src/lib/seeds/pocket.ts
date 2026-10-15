@@ -74,9 +74,14 @@ export function activePocketAccount(): number {
   return isPocketAccount(n) ? n : POCKET_BASE_ACCOUNT;
 }
 
+/** Branches reserved for other HME features that the Trading pocket must never land on. */
+const RESERVED_ACCOUNTS = new Set([1107]); // 1107' = Tap card pocket
+
 /** Move to a fresh account so any key shared for the old one controls nothing new. */
 export function retirePocketAccount(): number {
-  const next = Math.min(activePocketAccount() + 1, POCKET_MAX_ACCOUNT);
+  let next = activePocketAccount() + 1;
+  while (RESERVED_ACCOUNTS.has(next)) next++;
+  next = Math.min(next, POCKET_MAX_ACCOUNT);
   window.localStorage.setItem(scopedKey(ACCOUNT_KEY), String(next));
   return next;
 }
