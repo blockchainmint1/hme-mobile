@@ -508,7 +508,7 @@ function WalletHome() {
     queryKey: ["all-prices"],
     queryFn: () => fetchAllPrices(),
     staleTime: 10 * 60_000,
-    enabled: evmEnabled.length > 0 || solanaEnabled,
+    enabled: evmEnabled.length > 0 || solanaEnabled || watchList.some((w) => w.chain === "zcu"),
   });
   // Native balances always run for all enabled EVM chains so the portfolio
   // total is complete on open. One RPC call each = cheap.
