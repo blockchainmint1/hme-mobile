@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 /**
- * Shown in place of any swap / bridge screen on builds where exchange
- * features are disabled (iOS App Store build).
+ * Legacy fallback retained for existing route imports. Supported builds
+ * now allow exchange features through the shared capability helpers.
  */
 export function ExchangeUnavailable({ title = "Not available" }: { title?: string }) {
   return (
