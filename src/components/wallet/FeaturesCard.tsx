@@ -6,6 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFeature } from "@/lib/feature-prefs";
+import { Link } from "@tanstack/react-router";
+import { DELEGATE_LINKS_EVENT, listDelegateLinks } from "@/lib/xpub-link/delegate";
 import { useHideBalances } from "@/lib/hide-balances";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { unlockWallet } from "@/lib/txc/storage";
@@ -17,6 +19,14 @@ export function FeaturesCard({ compact }: { compact?: boolean }) {
   const [confirmLast4, setConfirmLast4] = useFeature("confirmLast4");
   const [hideSpam, setHideSpam] = useFeature("hideSpamTokens");
   const [hiddenBalances, setHiddenBalances] = useHideBalances();
+  const [sharedOn, setSharedOn] = useFeature("sharedWallets");
+  const [sharedActive, setSharedActive] = useState(0);
+  useEffect(() => {
+    const h = () => setSharedActive(listDelegateLinks().length);
+    h();
+    window.addEventListener(DELEGATE_LINKS_EVENT, h);
+    return () => window.removeEventListener(DELEGATE_LINKS_EVENT, h);
+  }, []);
   const exchangeAllowed = useExchangeFeaturesAllowed();
 
   const [bio, setBio] = useState({ available: false, enabled: false });
@@ -109,6 +119,32 @@ export function FeaturesCard({ compact }: { compact?: boolean }) {
             checked={hideSpam}
             onCheckedChange={setHideSpam}
           />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Label htmlFor="feat-shared-wallets" className="text-sm font-medium">
+                Shared wallets
+              </Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Small wallets a partner (like Seeds Exchange or a NectarPay tap card) can spend
+                from. They only hold what you move in. Shows them in the wallet switcher.
+              </p>
+            </div>
+            <Switch id="feat-shared-wallets" checked={sharedOn} onCheckedChange={setSharedOn} />
+          </div>
+          {sharedOn && (
+            <Link to="/wallet/shared" className="text-xs font-medium text-primary underline-offset-2 hover:underline">
+              Open shared wallets →
+            </Link>
+          )}
+          {!sharedOn && sharedActive > 0 && (
+            <p className="text-xs text-muted-foreground">
+              You have {sharedActive} active shared wallet{sharedActive === 1 ? "" : "s"} that keep working.{" "}
+              <Link to="/wallet/shared" className="font-medium text-primary">Shut them off</Link> if you want them gone.
+            </p>
+          )}
         </div>
 
         <div className="flex items-start justify-between gap-3">
