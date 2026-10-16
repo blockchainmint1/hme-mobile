@@ -5,8 +5,6 @@ import { pathToFileURL } from "node:url";
 
 const root = process.cwd();
 const capacitorWebDir = resolve(root, "dist/client");
-const iosWebDir = resolve(root, "ios/App/App/public");
-const iosConfigPath = resolve(root, "ios/App/App/capacitor.config.json");
 const publicCandidates = [resolve(root, "dist/client"), resolve(root, ".output/public")];
 const serverCandidates = [resolve(root, "dist/server/index.mjs"), resolve(root, ".output/server/index.mjs")];
 const staticSpaRoutes = [
@@ -98,8 +96,7 @@ if (!serverEntryPath) {
   throw new Error("No server entry found to render the TanStack Start SPA shell.");
 }
 
-const iosExists = await isDirectory(resolve(root, "ios/App/App"));
-const outputDirs = Array.from(new Set([capacitorWebDir, publicDir, ...(iosExists ? [iosWebDir] : [])]));
+const outputDirs = Array.from(new Set([capacitorWebDir, publicDir]));
 const routeHtml = new Map();
 const homeHtml = await renderSpaShell(serverEntryPath, "/");
 routeHtml.set("", homeHtml);
@@ -114,7 +111,7 @@ for (const outputDir of outputDirs) {
   if (outputDir !== publicDir) {
     await mkdir(dirname(outputDir), { recursive: true });
     // Purge hashed assets first: `cp --force` overwrites but never deletes, so
-    // a stale mirror (e.g. ios/App/App/public from an earlier build) can keep
+    // a stale mirror from an earlier build can keep
     // old chunk files around while index.html points at new hashes — or worse,
     // keep an old index.html pointing at hashes that no longer exist. That
     // ships a native app whose CSS and JS 404, rendering raw unstyled HTML.
@@ -160,21 +157,11 @@ for (const outputDir of outputDirs) {
 if (missing.length) {
   throw new Error(
     `Native bundle is inconsistent — missing assets:\n  ${missing.slice(0, 20).join("\n  ")}\n` +
-      `Run a clean build: rm -rf dist ios/App/App/public && bun run build (or build:ios).`,
+      `Run a clean build: rm -rf dist && bun run build.`,
   );
 }
 
 
 
-if (iosExists) {
-  try {
-    const capacitorConfigModule = await import(pathToFileURL(resolve(root, "capacitor.config.ts")).href + `?t=${Date.now()}`);
-    const capacitorConfig = capacitorConfigModule.default ?? capacitorConfigModule;
-    await mkdir(dirname(iosConfigPath), { recursive: true });
-    await writeFile(iosConfigPath, `${JSON.stringify(capacitorConfig, null, 2)}\n`);
-  } catch (error) {
-    console.warn(`Could not stage iOS capacitor.config.json: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
 
 console.log(`Generated Capacitor SPA entry: ${outputDirs.map((dir) => `${dir}/index.html`).join(", ")}`);

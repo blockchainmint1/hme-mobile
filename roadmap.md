@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Remove native iOS build/review restrictions and let the homepage footer scroll with its content; preserve iPhone web installation and Android/Chrome
 
 - [x] Make Tap card setup comfortable on actual mobile screens — verified touch-enabled 320/390/430px layouts, 44px controls, PIN modes, Cancel, and no horizontal overflow
 
