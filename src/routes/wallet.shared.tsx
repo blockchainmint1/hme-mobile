@@ -27,6 +27,12 @@ function SharedWalletsPage() {
   const [links, setLinks] = useState(() => listDelegateLinks().length);
   const [input, setInput] = useState("");
   const [target, setTarget] = useState<{ kind: "delegate" | "other"; url: string; n: number } | null>(null);
+  useEffect(() => {
+    const h = () => setLinks(listDelegateLinks().length);
+    h();
+    window.addEventListener(DELEGATE_LINKS_EVENT, h);
+    return () => window.removeEventListener(DELEGATE_LINKS_EVENT, h);
+  }, []);
 
   async function load(raw: string) {
     if (!raw.trim()) return;
