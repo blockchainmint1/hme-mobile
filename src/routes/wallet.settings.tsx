@@ -1,6 +1,6 @@
 import { useIsExtension } from "@/lib/native/use-is-extension";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BookUser,
   ChevronRight,
@@ -20,6 +20,7 @@ import {
   Link2,
   ScrollText,
   Nfc,
+  ArrowLeftRight,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TapCardCard } from "@/components/wallet/TapCardCard";
@@ -39,6 +40,9 @@ import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
 import { TsdNudgeToggleCard } from "@/components/wallet/TsdNudgeToggleCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { ProfilesCard } from "@/components/wallet/ProfilesCard";
+import { TradingPocketCard } from "@/components/wallet/TradingPocketCard";
+import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
+import { DELEGATE_LINKS_EVENT, listDelegateLinks } from "@/lib/xpub-link/delegate";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,6 +76,16 @@ function SettingsPage() {
   const isExt = useIsExtension();
   const { unlocked, forget } = useWallet();
   const keyOnly = unlocked?.mode === "keyonly";
+
+  // Trading pocket (Seeds) only appears once a trading link actually exists.
+  const tradingAllowed = useExchangeFeaturesAllowed();
+  const [tradingLinks, setTradingLinks] = useState(0);
+  useEffect(() => {
+    const h = () => setTradingLinks(listDelegateLinks().length);
+    h();
+    window.addEventListener(DELEGATE_LINKS_EVENT, h);
+    return () => window.removeEventListener(DELEGATE_LINKS_EVENT, h);
+  }, []);
 
   const navigate = useNavigate();
   const [confirmText, setConfirmText] = useState("");
@@ -226,6 +240,17 @@ function SettingsPage() {
         >
           <EcosystemLinksCard />
         </SettingsSection>
+
+        {tradingAllowed && tradingLinks > 0 && (
+          <SettingsSection
+            value="trading-pocket"
+            icon={ArrowLeftRight}
+            title="Trading pocket"
+            description="Coins a linked trading site may spend. Separate from your main wallet."
+          >
+            <TradingPocketCard />
+          </SettingsSection>
+        )}
 
         <SettingsSection
           value="hme-profile"
