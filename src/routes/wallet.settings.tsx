@@ -77,6 +77,16 @@ function SettingsPage() {
   const { unlocked, forget } = useWallet();
   const keyOnly = unlocked?.mode === "keyonly";
 
+  // Trading pocket (Seeds) only appears once a trading link actually exists.
+  const tradingAllowed = useExchangeFeaturesAllowed();
+  const [tradingLinks, setTradingLinks] = useState(0);
+  useEffect(() => {
+    const h = () => setTradingLinks(listDelegateLinks().length);
+    h();
+    window.addEventListener(DELEGATE_LINKS_EVENT, h);
+    return () => window.removeEventListener(DELEGATE_LINKS_EVENT, h);
+  }, []);
+
   const navigate = useNavigate();
   const [confirmText, setConfirmText] = useState("");
 
