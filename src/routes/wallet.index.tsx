@@ -1553,8 +1553,17 @@ function TxcTokens({
     const units = BigInt(raw);
     return { token: t, units, pending: pendingIn?.get(t.id) ?? 0n };
   });
+  // TSD is the ecosystem dollar — it stays in the list even at zero so people
+  // can see it exists and tap straight into Receive/Send. The spam filter only
+  // ever applies to other tokens.
   const visible = hideSpam
-    ? rows.filter((r) => balances.isLoading || r.units > 0n || r.pending > 0n)
+    ? rows.filter(
+        (r) =>
+          r.token.id === TSD_PROPERTY_ID ||
+          balances.isLoading ||
+          r.units > 0n ||
+          r.pending > 0n,
+      )
     : rows;
   const hiddenCount = rows.length - visible.length;
 
