@@ -163,7 +163,7 @@ export function TradingPocketCard() {
   }
 
   async function revoke(link: DelegateLinkRecord) {
-    if (!confirm(`Revoke ${link.appName}'s access? Coins in the Trading pocket will be moved back to your main wallet.`)) return;
+    if (!confirm(`Revoke ${link.appName}'s access? Coins in this shared wallet will be moved back to your main wallet.`)) return;
     setBusy(link.linkId);
     setResult(null);
     let serverNote = "";
@@ -180,16 +180,16 @@ export function TradingPocketCard() {
         retirePocketAccount();
     }
     removeDelegateLink(link.linkId);
-    setResult(`Revoked ${link.appName}. ${sweepNote}${serverNote} Tokens (TSD, USDC) stay put — send them from the pocket address manually if needed.`.trim());
+    setResult(`Revoked ${link.appName}. ${sweepNote}${serverNote} Tokens (TSD, USDC) stay put — send them from the shared wallet address manually if needed.`.trim());
     setBusy(null);
   }
 
   return (
     <Card className="mx-4 my-3">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Trading pocket</CardTitle>
+        <CardTitle className="text-base">Shared with trading sites</CardTitle>
         <CardDescription className="text-xs">
-          Separate from your main wallet. Only coins you move here can be traded.
+          Separate from your main wallet. The site can only trade what you move here.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

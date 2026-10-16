@@ -19,11 +19,9 @@ import {
   AlertTriangle,
   Link2,
   ScrollText,
-  Nfc,
   ArrowLeftRight,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { TapCardCard } from "@/components/wallet/TapCardCard";
 import { ChainsCard } from "@/components/wallet/ChainsCard";
 import { TokensCard } from "@/components/wallet/TokensCard";
 import { TxcTokensCard } from "@/components/wallet/TxcTokensCard";
@@ -40,8 +38,7 @@ import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
 import { TsdNudgeToggleCard } from "@/components/wallet/TsdNudgeToggleCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { ProfilesCard } from "@/components/wallet/ProfilesCard";
-import { TradingPocketCard } from "@/components/wallet/TradingPocketCard";
-import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
+import { useFeature } from "@/lib/feature-prefs";
 import { DELEGATE_LINKS_EVENT, listDelegateLinks } from "@/lib/xpub-link/delegate";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
@@ -78,7 +75,7 @@ function SettingsPage() {
   const keyOnly = unlocked?.mode === "keyonly";
 
   // Trading pocket (Seeds) only appears once a trading link actually exists.
-  const tradingAllowed = useExchangeFeaturesAllowed();
+  const [sharedOn] = useFeature("sharedWallets");
   const [tradingLinks, setTradingLinks] = useState(0);
   useEffect(() => {
     const h = () => setTradingLinks(listDelegateLinks().length);
@@ -241,15 +238,21 @@ function SettingsPage() {
           <EcosystemLinksCard />
         </SettingsSection>
 
-        {tradingAllowed && tradingLinks > 0 && (
-          <SettingsSection
-            value="trading-pocket"
-            icon={ArrowLeftRight}
-            title="Trading pocket"
-            description="Coins a linked trading site may spend. Separate from your main wallet."
-          >
-            <TradingPocketCard />
-          </SettingsSection>
+        {(sharedOn || tradingLinks > 0) && (
+          <Link to="/wallet/shared" className="block">
+            <Card className="hover:bg-accent/30 transition-colors">
+              <CardContent className="py-4 flex items-center gap-3">
+                <ArrowLeftRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-base font-semibold">Shared wallets</div>
+                  <div className="text-xs text-muted-foreground">
+                    Small wallets a trading site or tap card can spend from.
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </Link>
         )}
 
         <SettingsSection
@@ -260,17 +263,6 @@ function SettingsPage() {
         >
           <HmeProfileCard />
         </SettingsSection>
-
-        <SettingsSection
-          value="tap-card"
-          icon={Nfc}
-          title="Tap card"
-          description="Pay at NectarPay checkouts by tapping a card."
-        >
-          <TapCardCard />
-        </SettingsSection>
-
-
 
         <SettingsSection
           value="tsd-cashout"

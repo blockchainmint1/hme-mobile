@@ -28,6 +28,7 @@ import { Route as WalletContactsRouteImport } from './routes/wallet.contacts'
 import { Route as WalletReceiveRouteImport } from './routes/wallet.receive'
 import { Route as WalletSendRouteImport } from './routes/wallet.send'
 import { Route as WalletSettingsRouteImport } from './routes/wallet.settings'
+import { Route as WalletSharedRouteImport } from './routes/wallet.shared'
 import { Route as WalletSigninRouteImport } from './routes/wallet.signin'
 import { Route as WalletWatchAddRouteImport } from './routes/wallet.watch-add'
 import { Route as WalletWifAddRouteImport } from './routes/wallet.wif-add'
@@ -161,6 +162,11 @@ const WalletSendRoute = WalletSendRouteImport.update({
 const WalletSettingsRoute = WalletSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => WalletRoute,
+} as any)
+const WalletSharedRoute = WalletSharedRouteImport.update({
+  id: '/shared',
+  path: '/shared',
   getParentRoute: () => WalletRoute,
 } as any)
 const WalletSigninRoute = WalletSigninRouteImport.update({
@@ -379,6 +385,7 @@ export interface FileRoutesByFullPath {
   '/wallet/receive': typeof WalletReceiveRoute
   '/wallet/send': typeof WalletSendRoute
   '/wallet/settings': typeof WalletSettingsRoute
+  '/wallet/shared': typeof WalletSharedRoute
   '/wallet/signin': typeof WalletSigninRoute
   '/wallet/watch-add': typeof WalletWatchAddRoute
   '/wallet/wif-add': typeof WalletWifAddRoute
@@ -438,6 +445,7 @@ export interface FileRoutesByTo {
   '/wallet/receive': typeof WalletReceiveRoute
   '/wallet/send': typeof WalletSendRoute
   '/wallet/settings': typeof WalletSettingsRoute
+  '/wallet/shared': typeof WalletSharedRoute
   '/wallet/signin': typeof WalletSigninRoute
   '/wallet/watch-add': typeof WalletWatchAddRoute
   '/wallet/wif-add': typeof WalletWifAddRoute
@@ -499,6 +507,7 @@ export interface FileRoutesById {
   '/wallet/receive': typeof WalletReceiveRoute
   '/wallet/send': typeof WalletSendRoute
   '/wallet/settings': typeof WalletSettingsRoute
+  '/wallet/shared': typeof WalletSharedRoute
   '/wallet/signin': typeof WalletSigninRoute
   '/wallet/watch-add': typeof WalletWatchAddRoute
   '/wallet/wif-add': typeof WalletWifAddRoute
@@ -561,6 +570,7 @@ export interface FileRouteTypes {
     | '/wallet/receive'
     | '/wallet/send'
     | '/wallet/settings'
+    | '/wallet/shared'
     | '/wallet/signin'
     | '/wallet/watch-add'
     | '/wallet/wif-add'
@@ -620,6 +630,7 @@ export interface FileRouteTypes {
     | '/wallet/receive'
     | '/wallet/send'
     | '/wallet/settings'
+    | '/wallet/shared'
     | '/wallet/signin'
     | '/wallet/watch-add'
     | '/wallet/wif-add'
@@ -680,6 +691,7 @@ export interface FileRouteTypes {
     | '/wallet/receive'
     | '/wallet/send'
     | '/wallet/settings'
+    | '/wallet/shared'
     | '/wallet/signin'
     | '/wallet/watch-add'
     | '/wallet/wif-add'
@@ -882,6 +894,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/wallet/settings'
       preLoaderRoute: typeof WalletSettingsRouteImport
+      parentRoute: typeof WalletRoute
+    }
+    '/wallet/shared': {
+      id: '/wallet/shared'
+      path: '/shared'
+      fullPath: '/wallet/shared'
+      preLoaderRoute: typeof WalletSharedRouteImport
       parentRoute: typeof WalletRoute
     }
     '/wallet/signin': {
@@ -1182,6 +1201,7 @@ interface WalletRouteChildren {
   WalletReceiveRoute: typeof WalletReceiveRoute
   WalletSendRoute: typeof WalletSendRoute
   WalletSettingsRoute: typeof WalletSettingsRoute
+  WalletSharedRoute: typeof WalletSharedRoute
   WalletSigninRoute: typeof WalletSigninRoute
   WalletWatchAddRoute: typeof WalletWatchAddRoute
   WalletWifAddRoute: typeof WalletWifAddRoute
@@ -1216,6 +1236,7 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletReceiveRoute: WalletReceiveRoute,
   WalletSendRoute: WalletSendRoute,
   WalletSettingsRoute: WalletSettingsRoute,
+  WalletSharedRoute: WalletSharedRoute,
   WalletSigninRoute: WalletSigninRoute,
   WalletWatchAddRoute: WalletWatchAddRoute,
   WalletWifAddRoute: WalletWifAddRoute,

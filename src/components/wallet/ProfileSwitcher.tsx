@@ -8,7 +8,9 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Check, ChevronDown, Download, Eye, Key, Loader2, Pencil, Sparkles, Wallet } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronDown, Download, Eye, Key, Loader2, Nfc, Pencil, Plus, Sparkles, Wallet } from "lucide-react";
+import { useFeature } from "@/lib/feature-prefs";
+import { DELEGATE_LINKS_EVENT, listDelegateLinks, type DelegateLinkRecord } from "@/lib/xpub-link/delegate";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,15 @@ export function ProfileSwitcher() {
     if (open) refreshProfiles();
     else setEditingId(null);
   }, [open, refreshProfiles]);
+
+  const [sharedOn] = useFeature("sharedWallets");
+  const [sharedLinks, setSharedLinks] = useState<DelegateLinkRecord[]>([]);
+  useEffect(() => {
+    const h = () => setSharedLinks(listDelegateLinks());
+    h();
+    window.addEventListener(DELEGATE_LINKS_EVENT, h);
+    return () => window.removeEventListener(DELEGATE_LINKS_EVENT, h);
+  }, [open, activeProfileId]);
 
   const activeLabel =
     profiles.find((p) => p.id === activeProfileId)?.label ?? unlocked?.label ?? "Wallet";
@@ -171,6 +182,42 @@ export function ProfileSwitcher() {
             ),
           )}
         </div>
+
+        {(sharedOn || sharedLinks.length > 0) && (
+          <div className="mt-3 ml-4 grid gap-1.5 border-l border-border pl-3">
+            <p className="text-xs font-medium text-muted-foreground">
+              Shared wallets in {activeLabel}
+            </p>
+            {sharedLinks.map((l) => (
+              <Link
+                key={l.linkId}
+                to="/wallet/shared"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted"
+              >
+                <ArrowLeftRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">Shared with {l.appName}</span>
+              </Link>
+            ))}
+            <Link
+              to="/wallet/shared"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-muted"
+            >
+              <Nfc className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">Tap cards (NectarPay)</span>
+            </Link>
+            {sharedOn && (
+              <Link
+                to="/wallet/shared"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-primary hover:bg-muted"
+              >
+                <Plus className="h-4 w-4 shrink-0" /> Add shared wallet
+              </Link>
+            )}
+          </div>
+        )}
 
         {needPassword && (
           <form
