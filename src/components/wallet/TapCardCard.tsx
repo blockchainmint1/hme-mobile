@@ -34,35 +34,35 @@ function Rules({
 }) {
   const set = (k: keyof typeof value) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onChange({ ...value, [k]: e.target.value });
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <div>
-        <Label className="text-xs">Instant limit per tap ($)</Label>
-        <Input inputMode="decimal" value={value.perTapUsd} onChange={set("perTapUsd")} />
+    <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="min-w-0 space-y-2">
+        <Label htmlFor="card-per-tap" className="text-sm">Instant limit per tap ($)</Label>
+        <Input id="card-per-tap" className="h-11 min-w-0 text-base md:text-base" inputMode="decimal" value={value.perTapUsd} onChange={set("perTapUsd")} />
       </div>
-      <div>
-        <Label className="text-xs">Daily cap ($)</Label>
-        <Input inputMode="decimal" value={value.dailyUsd} onChange={set("dailyUsd")} />
+      <div className="min-w-0 space-y-2">
+        <Label htmlFor="card-daily" className="text-sm">Daily cap ($)</Label>
+        <Input id="card-daily" className="h-11 min-w-0 text-base md:text-base" inputMode="decimal" value={value.dailyUsd} onChange={set("dailyUsd")} />
       </div>
-      <div>
-        <Label className="text-xs">Ask for PIN</Label>
-        <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={value.pinRule} onChange={set("pinRule")}>
+      <div className="min-w-0 space-y-2">
+        <Label htmlFor="card-pin-rule" className="text-sm">Ask for PIN</Label>
+        <select id="card-pin-rule" className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-base" value={value.pinRule} onChange={set("pinRule")}>
           <option value="always">Every tap</option>
           <option value="above">Above an amount</option>
           <option value="never">Never</option>
         </select>
       </div>
       {value.pinRule === "above" ? (
-        <div>
-          <Label className="text-xs">PIN above ($)</Label>
-          <Input inputMode="decimal" value={value.pinAboveUsd} onChange={set("pinAboveUsd")} />
+        <div className="min-w-0 space-y-2">
+          <Label htmlFor="card-pin-above" className="text-sm">PIN above ($)</Label>
+          <Input id="card-pin-above" className="h-11 min-w-0 text-base md:text-base" inputMode="decimal" value={value.pinAboveUsd} onChange={set("pinAboveUsd")} />
         </div>
       ) : (
-        <div />
+        <div className="hidden sm:block" />
       )}
       {value.pinRule !== "never" && (
-        <div className="col-span-2">
-          <Label className="text-xs">{pinRequiredIfSet ? "New PIN (leave blank to keep)" : "PIN (4–8 digits)"}</Label>
-          <Input type="password" inputMode="numeric" maxLength={8} value={value.pin} onChange={set("pin")} />
+        <div className="min-w-0 space-y-2 sm:col-span-2">
+          <Label htmlFor="card-pin" className="text-sm">{pinRequiredIfSet ? "New PIN (leave blank to keep)" : "PIN (4–8 digits)"}</Label>
+          <Input id="card-pin" className="h-11 min-w-0 text-base md:text-base" type="password" inputMode="numeric" maxLength={8} value={value.pin} onChange={set("pin")} />
         </div>
       )}
     </div>
@@ -126,22 +126,22 @@ export function TapCardCard() {
   };
 
   return (
-    <div className="space-y-4 text-sm">
-      <p className="text-xs text-muted-foreground">
+    <div className="min-w-0 space-y-5 text-sm">
+      <p className="text-sm leading-relaxed text-muted-foreground">
         Tap your card at a NectarPay checkout. It pays in TSD from its own pocket, which is separate from your main wallet. Payments under your limit go through instantly. Bigger ones wait for your OK on Telegram.
       </p>
 
       {data?.cards.map((c) => (
         <div key={c.id} className="space-y-3 rounded-lg border border-border p-3">
-          <div className="flex items-center justify-between">
-            <p className="font-medium">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+            <p className="min-w-0 break-words font-medium">
               {c.label} {c.status === "locked" && <span className="text-xs text-destructive">· locked (wrong PINs)</span>}
             </p>
-            <span className="text-xs tabular-nums">{fmtTsd(c.tsd)} TSD</span>
+            <span className="shrink-0 text-xs tabular-nums">{fmtTsd(c.tsd)} TSD</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="flex-1 truncate font-mono text-xs text-muted-foreground">{c.pocketAddress}</span>
-            <Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Copy card pocket address" onClick={() => copy(c.pocketAddress)}>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+            <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{c.pocketAddress}</span>
+            <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0" aria-label="Copy card pocket address" onClick={() => copy(c.pocketAddress)}>
               {copied === c.pocketAddress ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
             </Button>
           </div>
@@ -210,19 +210,20 @@ export function TapCardCard() {
       ))}
 
       {adding ? (
-        <div className="space-y-3 rounded-lg border border-border p-3">
-          <div>
-            <Label className="text-xs">Card number (printed on the card)</Label>
-            <Input value={uid} onChange={(e) => setUid(e.target.value)} placeholder="04:A2:1B:…" autoCapitalize="characters" />
+        <div className="min-w-0 space-y-4 border-t border-border pt-5">
+          <div className="min-w-0 space-y-2">
+            <Label htmlFor="card-number" className="text-sm">Card number (printed on the card)</Label>
+            <Input id="card-number" className="h-11 min-w-0 text-base md:text-base" value={uid} onChange={(e) => setUid(e.target.value)} placeholder="04:A2:1B:…" autoCapitalize="characters" />
           </div>
-          <div>
-            <Label className="text-xs">Name</Label>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={40} />
+          <div className="min-w-0 space-y-2">
+            <Label htmlFor="card-name" className="text-sm">Name</Label>
+            <Input id="card-name" className="h-11 min-w-0 text-base md:text-base" value={label} onChange={(e) => setLabel(e.target.value)} maxLength={40} />
           </div>
           <Rules value={rules} onChange={setRules} />
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-3 pt-1">
             <Button
               size="sm"
+              className="h-11"
               disabled={!!busy || uid.replace(/[^0-9a-z]/gi, "").length < 4}
               onClick={() =>
                 run("link", async () => {
@@ -254,13 +255,13 @@ export function TapCardCard() {
               {busy === "link" && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
               Link card
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>
+            <Button size="sm" className="h-11" variant="ghost" onClick={() => setAdding(false)}>
               Cancel
             </Button>
           </div>
         </div>
       ) : (
-        <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+        <Button size="sm" className="h-11 w-full sm:w-auto" variant="outline" onClick={() => setAdding(true)}>
           Link a card
         </Button>
       )}
