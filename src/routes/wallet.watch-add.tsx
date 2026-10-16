@@ -3,7 +3,7 @@
  *
  * Watch-only tiles let people track a Cold Storage Coin or paper wallet's
  * address without importing any keys. Works for every UTXO chain the wallet
- * can read (TXC, ISK, BTC, LTC, DOGE) — we validate against that chain's
+ * can read (TXC, ISK, BTC, LTC, DOGE, ZCU) — we validate against that chain's
  * network params so bogus / wrong-network addresses can't create a dead tile.
  */
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -44,6 +44,9 @@ const CSC_CHAIN_MAP: Record<string, WatchChain> = {
   litecoin: "ltc",
   doge: "doge",
   dogecoin: "doge",
+  zcu: "zcu",
+  zerochill: "zcu",
+  "zero chill": "zcu",
 };
 
 /** First chain whose network params accept this address, if any. */

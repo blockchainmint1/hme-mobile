@@ -508,7 +508,7 @@ function WalletHome() {
     queryKey: ["all-prices"],
     queryFn: () => fetchAllPrices(),
     staleTime: 10 * 60_000,
-    enabled: evmEnabled.length > 0 || solanaEnabled,
+    enabled: evmEnabled.length > 0 || solanaEnabled || watchList.some((w) => w.chain === "zcu"),
   });
   // Native balances always run for all enabled EVM chains so the portfolio
   // total is complete on open. One RPC call each = cheap.
@@ -552,7 +552,9 @@ function WalletHome() {
           ? btcPrice.data?.usd
           : c === "ltc"
             ? ltcPrice.data?.usd
-            : dogePrice.data?.usd) ?? null;
+            : c === "zcu"
+              ? allPrices.data?.prices?.ZCU
+              : dogePrice.data?.usd) ?? null;
 
   // Long-press to remove a watch-only entry (chain tiles use reorder sheet).
   const [watchRemove, setWatchRemove] = useState<WatchWallet | null>(null);
@@ -1066,7 +1068,10 @@ function WalletHome() {
               loading={activeWatchTxs.isLoading}
               error={activeWatchTxs.isError}
               onRefresh={() => activeWatchTxs.refetch()}
-              onOpen={(tx, net, incoming) => setDetail({ kind: "txc", tx, net, incoming })}
+              onOpen={(tx, net, incoming) => {
+                if (activeWatch.chain === "zcu") return; // no UTXO detail view for ZCU
+                setDetail({ kind: "txc", tx, net, incoming });
+              }}
             />
           )}
           {activeWif && (
