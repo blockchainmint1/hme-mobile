@@ -1,6 +1,6 @@
 # Roadmap
 
-- [ ] Make Tap card setup comfortable on actual mobile screens and verify touch-sized controls without horizontal overflow
+- [x] Make Tap card setup comfortable on actual mobile screens — verified touch-enabled 320/390/430px layouts, 44px controls, PIN modes, Cancel, and no horizontal overflow
 
 - [x] Verify uploaded APK `hme-wallet-0.1.202608300600-release-2.apk` — byte-identical to the already-pinned build (md5 `49523ba1…`), nothing new to pin
 - [x] Show real app version in Settings, and show the available new version before installing (UpdateCheckCard)
