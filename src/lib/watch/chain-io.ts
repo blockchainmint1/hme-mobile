@@ -11,6 +11,7 @@ import * as isk from "@/lib/isk/mempool";
 import * as btc from "@/lib/btc/mempool";
 import * as ltc from "@/lib/ltc/mempool";
 import * as doge from "@/lib/doge/mempool";
+import * as zcu from "@/lib/zcu/watch";
 import { satsToTxc, formatTxc, formatTxcCompact } from "@/lib/txc/units";
 import { satsToIsk, formatIsk, formatIskCompact } from "@/lib/isk/units";
 import { satsToBtc, formatBtc, formatBtcCompact } from "@/lib/btc/units";
@@ -18,7 +19,7 @@ import { satsToLtc, formatLtc, formatLtcCompact } from "@/lib/ltc/units";
 import { satsToDoge, formatDoge, formatDogeCompact } from "@/lib/doge/units";
 
 /** Chains a watch-only address can be tracked on. */
-export const WATCH_CHAINS = ["txc", "isk", "btc", "ltc", "doge"] as const;
+export const WATCH_CHAINS = ["txc", "isk", "btc", "ltc", "doge", "zcu"] as const;
 export type WatchChain = (typeof WATCH_CHAINS)[number];
 
 export function isWatchChain(v: unknown): v is WatchChain {
@@ -33,7 +34,7 @@ interface WatchChainMeta {
   toCoin: (sats: number | bigint) => number;
   format: (sats: number | bigint) => string;
   formatCompact: (sats: number | bigint) => string;
-  api: typeof txc | typeof isk | typeof btc | typeof ltc | typeof doge;
+  api: typeof txc | typeof isk | typeof btc | typeof ltc | typeof doge | typeof zcu;
 }
 
 export const WATCH_CHAIN_META: Record<WatchChain, WatchChainMeta> = {
@@ -81,6 +82,16 @@ export const WATCH_CHAIN_META: Record<WatchChain, WatchChainMeta> = {
     format: (s) => formatDoge(s),
     formatCompact: formatDogeCompact,
     api: doge,
+  },
+  zcu: {
+    ticker: "ZCU",
+    label: "Zero Chill (ZCU)",
+    placeholder: "0x...",
+    // Amounts are carried in 1e-8 units, same scale as the UTXO chains.
+    toCoin: satsToDoge,
+    format: (s) => formatDoge(s).replace(/DOGE/g, "ZCU"),
+    formatCompact: formatDogeCompact,
+    api: zcu,
   },
 };
 
