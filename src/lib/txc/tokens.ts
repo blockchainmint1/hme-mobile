@@ -17,6 +17,7 @@
  */
 import { useEffect, useState } from "react";
 import type { BIP32Interface } from "bip32";
+import { TSD_PROPERTY_ID } from "@/lib/cashout/tsd";
 import { deriveAddress, type DerivedAddress } from "./wallet";
 
 /**
@@ -50,6 +51,17 @@ export const BUILTIN_TXC_TOKENS: TxcTokenMeta[] = [
   { id: 39, symbol: "TSD", name: "Texas Stable Dollar", divisible: true },
 ];
 
+/**
+ * Tokens the wallet never lets you hide. TSD is the ecosystem dollar — the home
+ * screen lists it even at a zero balance — so a "hidden" flag for it would only
+ * ever be confusing. It is ignored on read, and an older stored flag is dropped
+ * the next time the list is written.
+ */
+const ALWAYS_ON_TXC_TOKEN_IDS = new Set<number>([TSD_PROPERTY_ID]);
+
+export function isAlwaysOnTxcToken(id: number): boolean {
+  return ALWAYS_ON_TXC_TOKEN_IDS.has(id);
+}
 
 const CUSTOM_KEY = "hme:txc-tokens:custom:v1";
 const HIDDEN_KEY = "hme:txc-tokens:hidden:v1";
@@ -73,7 +85,11 @@ function readHidden(): Set<number> {
     const raw = localStorage.getItem(HIDDEN_KEY);
     if (!raw) return new Set();
     const arr = JSON.parse(raw) as number[];
-    return new Set(Array.isArray(arr) ? arr.filter((n) => Number.isInteger(n)) : []);
+    return new Set(
+      Array.isArray(arr)
+        ? arr.filter((n) => Number.isInteger(n) && !isAlwaysOnTxcToken(n))
+        : [],
+    );
   } catch {
     return new Set();
   }
@@ -103,10 +119,14 @@ export function getKnownTxcTokens(): TxcTokenMeta[] {
 
 export function getEnabledTxcTokens(): TxcTokenMeta[] {
   const hidden = readHidden();
-  return getKnownTxcTokens().filter((t) => !hidden.has(t.id));
+  return getKnownTxcTokens().filter(
+    (t) => isAlwaysOnTxcToken(t.id) || !hidden.has(t.id),
+  );
 }
 
 export function setTxcTokenEnabled(id: number, enabled: boolean) {
+  // Always-on tokens (TSD) can't be switched off — the toggle is locked.
+  if (isAlwaysOnTxcToken(id)) return;
   const s = readHidden();
   if (enabled) s.delete(id);
   else s.add(id);
@@ -115,7 +135,7 @@ export function setTxcTokenEnabled(id: number, enabled: boolean) {
 }
 
 export function isTxcTokenEnabled(id: number): boolean {
-  return !readHidden().has(id);
+  return isAlwaysOnTxcToken(id) || !readHidden().has(id);
 }
 
 export function isBuiltinTxcToken(id: number): boolean {
@@ -177,7 +197,7 @@ export function useAllTxcTokens(): {
   }, []);
   return {
     tokens: snapshot.tokens,
-    enabled: (t) => !snapshot.hidden.has(t.id),
+    enabled: (t) => isAlwaysOnTxcToken(t.id) || !snapshot.hidden.has(t.id),
     isCustom: (t) => !isBuiltinTxcToken(t.id),
   };
 }
