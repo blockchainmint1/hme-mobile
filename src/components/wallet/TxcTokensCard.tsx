@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   addCustomTxcToken,
+  isAlwaysOnTxcToken,
   isBuiltinTxcToken,
   removeCustomTxcToken,
   setTxcTokenEnabled,
@@ -61,6 +62,11 @@ export function TxcTokensCard({ compact }: { compact?: boolean }) {
                   className="text-sm block truncate"
                 >
                   {t.name || t.symbol}
+                  {isAlwaysOnTxcToken(t.id) && (
+                    <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+                      Always on
+                    </span>
+                  )}
                   {isCustom(t) && (
                     <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground">
                       Custom
@@ -76,6 +82,12 @@ export function TxcTokensCard({ compact }: { compact?: boolean }) {
                 <Switch
                   id={`txc-tok-${t.id}`}
                   checked={enabled(t)}
+                  disabled={isAlwaysOnTxcToken(t.id)}
+                  title={
+                    isAlwaysOnTxcToken(t.id)
+                      ? "This token is always shown"
+                      : undefined
+                  }
                   onCheckedChange={(v) => setTxcTokenEnabled(t.id, v)}
                 />
                 {!isBuiltinTxcToken(t.id) && (
