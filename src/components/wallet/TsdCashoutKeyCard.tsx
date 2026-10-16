@@ -5,7 +5,7 @@
  * send screen; removing it turns the feature back off. The key also carries
  * the account's fee tier, so there are no coupon codes in the wallet.
  *
- * Exchange/off-ramp feature — hidden on iOS via `useExchangeFeaturesAllowed()`.
+ * Available on all supported platforms when a cash-out key is configured.
  */
 import { useState } from "react";
 import { ArrowDownUp, Check, Trash2 } from "lucide-react";

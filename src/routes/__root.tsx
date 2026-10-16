@@ -72,11 +72,6 @@ if (typeof window !== "undefined") {
 
 
 const THEME_INIT_SCRIPT = `(function(){try{var k='txc.theme';var t=localStorage.getItem(k)||'system';var d=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);var r=document.documentElement;r.classList.toggle('dark',d);r.style.colorScheme=d?'dark':'light';}catch(e){document.documentElement.classList.add('dark');}})();`;
-// Lock the webview scale to 1 inside the native shell BEFORE first paint. A
-// stuck/implicit zoom renders the page wider than the window and clips the
-// right edge (App Store 4.0 rejection). Web keeps pinch-zoom for a11y.
-const NATIVE_VIEWPORT_LOCK_SCRIPT = `(function(){try{var w=window;var native=(w.Capacitor&&w.Capacitor.isNativePlatform&&w.Capacitor.isNativePlatform())||(w.webkit&&w.webkit.messageHandlers&&w.webkit.messageHandlers.bridge)||location.protocol==='capacitor:';if(!native)return;var content='width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover';var apply=function(){var m=document.querySelector('meta[name="viewport"]');if(!m){m=document.createElement('meta');m.setAttribute('name','viewport');document.head.appendChild(m);}if(m.getAttribute('content')!==content)m.setAttribute('content',content);};apply();document.addEventListener('DOMContentLoaded',apply);var mo=new MutationObserver(apply);if(document.head)mo.observe(document.head,{childList:true,subtree:true,attributes:true});setTimeout(function(){mo.disconnect();},8000);var block=function(e){e.preventDefault();};document.addEventListener('gesturestart',block,{passive:false});document.addEventListener('gesturechange',block,{passive:false});}catch(e){}})();`;
-
 const NATIVE_NAV_FALLBACK_SCRIPT = `(function(){if(window.__HME_NATIVE_NAV_FALLBACK__)return;window.__HME_NATIVE_NAV_FALLBACK__=true;function routeFromEvent(e){var t=e.target;if(!t||!t.closest)return null;var a=t.closest('a[data-native-route],a[href="/import"],a[href="/create"]');if(!a)return null;var h=a.getAttribute('data-native-route')||a.getAttribute('href');return h==='/import'||h==='/create'?h:null}function go(e){if(document.documentElement&&document.documentElement.dataset&&document.documentElement.dataset.hmeHydrated==='true')return;var h=routeFromEvent(e);if(!h)return;e.preventDefault();e.stopPropagation();location.assign(h)}document.addEventListener('pointerup',go,true);document.addEventListener('touchend',go,true);document.addEventListener('click',go,true);})();`;
 
 function NotFoundComponent() {
@@ -247,16 +242,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "Self-custodial multi-chain wallet for TEXITcoin and EVM assets. Hold your own keys.",
       },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e5412ff3-3f36-4086-9590-b2e64dae9c49/id-preview-32bb6bc2--633f1235-4607-4b38-ad25-8b0c6b359acb.lovable.app-1782729338829.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e5412ff3-3f36-4086-9590-b2e64dae9c49/id-preview-32bb6bc2--633f1235-4607-4b38-ad25-8b0c6b359acb.lovable.app-1782729338829.png",
-      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -276,7 +261,6 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        <script dangerouslySetInnerHTML={{ __html: NATIVE_VIEWPORT_LOCK_SCRIPT }} />
 
         <HeadContent />
       </head>
@@ -349,7 +333,7 @@ function RootComponent() {
     import("../lib/hme-profile/ref").then(({ captureRefFromUrl }) => captureRefFromUrl());
   }, []);
 
-  // Configure iOS/Android status bar + keyboard once on mount. No-op on web.
+  // Configure Android status bar + keyboard once on mount. No-op on web.
   useEffect(() => {
     import("../lib/native/ui").then(({ initNativeChrome }) => {
       initNativeChrome();
@@ -380,40 +364,6 @@ function RootComponent() {
     })();
     return () => remove?.();
   }, []);
-
-  // SCREEN FIT (App Store 4.0/2.4.1): inside the native shell the webview must
-  // never be pinch-zoomed — a stuck zoom makes the layout render wider than the
-  // window and the right edge gets clipped (Apple's rejection screenshot).
-  // Web keeps pinch-zoom for accessibility; only native locks the scale.
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const { isNative } = await import("../lib/native/platform");
-        if (cancelled || !isNative()) return;
-        const meta = document.querySelector<HTMLMetaElement>('meta[name="viewport"]');
-        if (meta) {
-          meta.setAttribute(
-            "content",
-            "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
-          );
-        }
-        const block = (e: Event) => e.preventDefault();
-        document.addEventListener("gesturestart", block);
-        document.addEventListener("gesturechange", block);
-        return () => {
-          document.removeEventListener("gesturestart", block);
-          document.removeEventListener("gesturechange", block);
-        };
-      } catch {
-        /* noop */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
 
   // Simple offline banner — @capacitor/network is only wired natively; on
   // the web we fall back to the browser's navigator.onLine + events.
@@ -453,14 +403,6 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <WalletProvider>
-          {/* Opaque status-bar scrim. Without this, scrolled content renders
-              underneath the iOS clock/battery (App Review Guideline 4 rejection
-              on iPhone 17 Pro Max). Fixed to the viewport so it never scrolls
-              away; zero height on devices with no top inset. */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-x-0 top-0 z-50 h-[env(safe-area-inset-top)] bg-background"
-          />
           {/* Mobile-only frame: on phones it fills the screen; on larger screens
               we center a phone-width column so the app always feels like a mobile app. */}
           <div data-wallet-frame className="min-h-[100dvh] w-full bg-muted/40 sm:py-6">
@@ -479,9 +421,9 @@ function RootComponent() {
                   (Settings) simply get cut off with no way to scroll. */}
               <div className="flex flex-1 min-h-0 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
                 <Outlet />
-              </div>
-              <div className="shrink-0 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
-                <SiteFooter />
+                <div className="pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+                  <SiteFooter />
+                </div>
               </div>
 
             </div>

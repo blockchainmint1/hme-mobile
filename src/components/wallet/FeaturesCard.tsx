@@ -136,7 +136,7 @@ export function FeaturesCard({ compact }: { compact?: boolean }) {
               <p className="text-xs text-muted-foreground mt-0.5">
                 {bio.available
                   ? "Unlock with Face ID / fingerprint."
-                  : "Only available in the installed iOS or Android app."}
+                  : "Only available in the installed Android app."}
               </p>
             </div>
             <Switch

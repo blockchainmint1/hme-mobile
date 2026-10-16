@@ -15,12 +15,12 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * store binary is a thin shell that executes whatever JavaScript the server
  * serves at launch, so a server/CDN compromise or one bad deploy can push code
  * that steals seed phrases from every user. It also has no Subresource
- * Integrity and is a poor fit for App Store 2.5.2 / Play policy. See
+ * Integrity and is a poor fit for Play policy. See
  * SECURITY-AUDIT.md (H1).
  *
  * Default here is BUNDLED (no `server.url`). To live-reload against a remote
  * preview during development only, set `HME_REMOTE_URL`, e.g.
- *   HME_REMOTE_URL=https://id-preview--xxxx.lovable.app bunx cap sync ios
+ *   HME_REMOTE_URL=https://id-preview--xxxx.lovable.app bunx cap sync android
  * Never ship a release with `HME_REMOTE_URL` set.
  *
  * MIGRATION-CRITICAL: `hostname` is kept at "mobile.honest.money" with the
@@ -45,14 +45,9 @@ const config: CapacitorConfig = {
     hostname: REMOTE_URL ? new URL(REMOTE_URL).hostname : WEBVIEW_HOSTNAME,
     cleartext: false,
     androidScheme: "https",
-    iosScheme: "https",
     // Only the payment processor needs to be navigable; the app itself is
     // served from the local bundle under the hostname above.
     allowNavigation: ["nectar-pay.com"],
-  },
-  ios: {
-    contentInset: "never",
-    backgroundColor: "#ffffff",
   },
   android: {
     backgroundColor: "#ffffff",
@@ -73,16 +68,11 @@ const config: CapacitorConfig = {
       backgroundColor: "#ffffff",
     },
     PrivacyScreen: {
-      // Do NOT enable at app startup. On iOS 17+ the screenshot-prevention
-      // implementation wraps the app window in a secure UITextField, and that
-      // can swallow every tap on the landing page. We still enable the privacy
-      // screen explicitly only while the seed phrase is being shown.
+      // Enable the privacy screen explicitly only while the seed is shown.
       enable: false,
       imageName: "Splash",
       contentMode: "center",
-      // Keep the app-switcher privacy cover, but avoid the iOS secure-textfield
-      // screenshot hack globally; it is the most likely cause of the "nothing is
-      // clickable" native build.
+      // Keep the app-switcher privacy cover without globally blocking screenshots.
       preventScreenshots: false,
     },
   },

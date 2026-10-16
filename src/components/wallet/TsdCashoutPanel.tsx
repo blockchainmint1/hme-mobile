@@ -9,8 +9,7 @@
  * address when it changes, and pre-fills the ordinary TSD send with the
  * deposit address — the broadcast path stays the same battle-tested code.
  *
- * Exchange/off-ramp feature — gated by `useExchangeFeaturesAllowed()` and
- * therefore absent from the iOS build. See AGENTS.md.
+ * Available on all supported platforms when a cash-out key is configured.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";

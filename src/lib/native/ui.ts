@@ -1,7 +1,7 @@
 /**
  * Native UI helpers: haptics, share sheet, status bar, keyboard.
  * All calls are safe to invoke on the web — they no-op unless we're
- * running inside the Capacitor native shell (iOS / Android).
+ * running inside the Android native shell.
  */
 import { isNative } from "./platform";
 
@@ -73,7 +73,7 @@ export async function shareText(opts: {
 }
 
 /**
- * Initialize iOS/Android status bar + keyboard behavior. Called once at
+ * Initialize Android status bar + keyboard behavior. Called once at
  * app start from the root component.
  */
 export async function initNativeChrome(): Promise<void> {
@@ -89,17 +89,13 @@ export async function initNativeChrome(): Promise<void> {
     // (env(safe-area-inset-top)) controls the look — matches native apps.
     await StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
     // KeyboardResize.Body is more predictable across Android WebView versions
-    // than Native — pair with env(keyboard-inset-height) padding for iOS.
+    // than Native.
     await Keyboard.setResizeMode({ mode: KeyboardResize.Body }).catch(() => {});
-    await Keyboard.setAccessoryBarVisible({ isVisible: true }).catch(() => {});
   } catch {
     /* plugin not present on this build */
   }
 
-  // Safety valve for iOS builds that still have PrivacyScreen enabled in the
-  // native config: its screenshot-prevention UITextField can sit above the
-  // WKWebView and swallow all touches. We only enable PrivacyScreen explicitly
-  // on the seed-backup screen, so force it off during normal app startup.
+  // Only protect screenshots on the seed-backup screen, not normal startup.
   try {
     const { PrivacyScreen } = await import("@capacitor-community/privacy-screen");
     await PrivacyScreen.disable().catch(() => {});

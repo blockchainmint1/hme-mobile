@@ -39,7 +39,7 @@ await build({
   target: "chrome111",
   jsx: "automatic",
   alias: { "@": join(root, "src") },
-  define: { "process.env.NODE_ENV": '"production"', "import.meta.env.VITE_DISABLE_EXCHANGE": '"true"' },
+  define: { "process.env.NODE_ENV": '"production"' },
   logLevel: "info",
 });
 

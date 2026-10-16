@@ -9,21 +9,9 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-## iOS App Store compliance — features that must NOT appear on iOS
-
-The iOS App Store build is produced with `VITE_DISABLE_EXCHANGE=true`
-(`bun run build:ios`). Any feature that could be classified as crypto
-exchange, swap, bridge, trading, or off-ramp must be hidden on iOS.
-
-Before adding one, gate it in `src/lib/native/capabilities.ts` and its UI, keep
-it out of iOS navigation/screenshots, and verify with `bun run build:ios`.
-
-Current gates:
-
-- `exchangeFeaturesAllowed()` / `useExchangeFeaturesAllowed()` — swap and
-  bridge features (LI.FI EVM swaps, THORChain LTC/DOGE swaps, Tron bridge).
-
-Default to excluding new exchange features from iOS unless explicitly requested.
+## Shared platform capabilities and layout
+- Keep the capability compatibility helpers unrestricted across supported builds; why: existing callers share one feature set without store-specific switches.
+- Render the public footer inside the frame's content scroller; why: legal links must not pin over or reduce the readable homepage content.
 
 ## Release delivery is database-driven
 

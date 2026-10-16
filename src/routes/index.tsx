@@ -22,6 +22,8 @@ export const Route = createFileRoute("/")({
           "Open an HME wallet in seconds. A self-custodial wallet for TEXITcoin (TXC), Iskander Coin (ISK), Zero Chill Units (ZCU), and EVM Stablecoins. Your keys stay on your device.",
       },
       { property: "og:title", content: "HME Wallet — self-custodial multi-chain" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       {
         property: "og:description",
         content: "A self-custodial wallet for TEXITcoin (TXC), Iskander Coin (ISK), Zero Chill Units (ZCU), and EVM Stablecoins.",
