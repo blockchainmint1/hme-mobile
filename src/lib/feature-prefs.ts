@@ -11,7 +11,8 @@ export type FeatureId =
   | "utxoSwap"
   | "confirmLast4"
   | "hideSpamTokens"
-  | "tsdConsolidateNudge";
+  | "tsdConsolidateNudge"
+  | "sharedWallets";
 
 /** Default value when the user hasn't set the toggle yet. */
 const DEFAULTS: Record<FeatureId, boolean> = {
@@ -20,6 +21,7 @@ const DEFAULTS: Record<FeatureId, boolean> = {
   confirmLast4: true,
   hideSpamTokens: true,
   tsdConsolidateNudge: true,
+  sharedWallets: false,
 };
 
 const STORAGE_KEY_BASE = "hme:features";
