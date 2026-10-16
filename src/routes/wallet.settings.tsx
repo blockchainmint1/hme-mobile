@@ -1,6 +1,6 @@
 import { useIsExtension } from "@/lib/native/use-is-extension";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BookUser,
   ChevronRight,
@@ -20,6 +20,7 @@ import {
   Link2,
   ScrollText,
   Nfc,
+  ArrowLeftRight,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TapCardCard } from "@/components/wallet/TapCardCard";
@@ -39,6 +40,9 @@ import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
 import { TsdNudgeToggleCard } from "@/components/wallet/TsdNudgeToggleCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
 import { ProfilesCard } from "@/components/wallet/ProfilesCard";
+import { TradingPocketCard } from "@/components/wallet/TradingPocketCard";
+import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
+import { DELEGATE_LINKS_EVENT, listDelegateLinks } from "@/lib/xpub-link/delegate";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
