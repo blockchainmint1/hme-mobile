@@ -82,7 +82,7 @@ export function SecurityCheckupCard({ compact }: { compact?: boolean }) {
               level: "info",
               label: "Running in a web browser",
               detail:
-                "For biometric unlock and hardware-backed key storage, install the iOS or Android app.",
+                "For biometric unlock and hardware-backed key storage, install the Android app.",
             },
       );
 
@@ -140,12 +140,12 @@ export function SecurityCheckupCard({ compact }: { compact?: boolean }) {
           "The wallet locks after 5 minutes idle and immediately when you background the app.",
       });
 
-      // Screenshot protection (Android system-enforced; iOS best-effort).
+      // Android screenshot protection.
       out.push({
         level: "info",
         label: "Protect your seed screen",
         detail: native
-          ? "On Android the seed screen blocks screenshots. iOS cannot block on-device screenshots, so make sure no one is watching."
+          ? "On Android the seed screen blocks screenshots. Make sure no one is watching."
           : "Never screenshot your seed phrase. Write it on paper.",
       });
 

@@ -7,7 +7,7 @@
  * — when a newer build exists — hands the user a single Install button.
  *
  * Version vocabulary shown to the user:
- *  - native: "Installed <shell version>" (the APK/IPA actually on the phone)
+ *  - native: "Installed <shell version>" (the APK actually on the phone)
  *  - web:    "Installed <bundle version>" (the JS build this tab is running)
  * The web-bundle stamp is only shown as a secondary detail on native, because
  * it is never what a user needs to act on.
@@ -71,7 +71,7 @@ export function UpdateCheckCard({ compact }: { compact?: boolean }) {
   const [copied, setCopied] = useState(false);
   const native = isNative();
   const platform = nativePlatform();
-  const releasePlatform = native ? (platform === "ios" ? "ios" : "android") : "web";
+  const releasePlatform = native ? "android" : "web";
 
   const check = useCallback(
     async (opts?: { quiet?: boolean }) => {
@@ -139,11 +139,6 @@ export function UpdateCheckCard({ compact }: { compact?: boolean }) {
             </p>
             {latest.notes && <p className="text-sm text-muted-foreground">{latest.notes}</p>}
 
-            {releasePlatform === "ios" ? (
-              <p className="text-sm text-muted-foreground">
-                iOS updates arrive through the App Store.
-              </p>
-            ) : (
               <>
                 <Button className="w-full" onClick={() => void openDownload(downloadUrl)}>
                   <Download className="h-4 w-4 mr-2" /> Install {latest.version}
@@ -173,7 +168,6 @@ export function UpdateCheckCard({ compact }: { compact?: boolean }) {
                   Copy download link
                 </Button>
               </>
-            )}
           </div>
         )}
 
