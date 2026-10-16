@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ArrowLeftRight, Nfc, QrCode } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { QrScanButton } from "@/components/wallet/QrScanButton";
+import { DelegateLinkCard } from "@/components/wallet/DelegateLinkCard";
 import { TradingPocketCard } from "@/components/wallet/TradingPocketCard";
 import { TapCardCard } from "@/components/wallet/TapCardCard";
-import { DELEGATE_LINKS_EVENT, listDelegateLinks } from "@/lib/xpub-link/delegate";
+import { DELEGATE_LINKS_EVENT, listDelegateLinks, peekManifestType } from "@/lib/xpub-link/delegate";
+import { parseLinkInput } from "@/lib/nectar/link";
 import { useFeature } from "@/lib/feature-prefs";
 
 export const Route = createFileRoute("/wallet/shared")({
@@ -20,13 +24,18 @@ export const Route = createFileRoute("/wallet/shared")({
 
 function SharedWalletsPage() {
   const [enabled, setEnabled] = useFeature("sharedWallets");
-  const [links, setLinks] = useState(0);
-  useEffect(() => {
-    const h = () => setLinks(listDelegateLinks().length);
-    h();
-    window.addEventListener(DELEGATE_LINKS_EVENT, h);
-    return () => window.removeEventListener(DELEGATE_LINKS_EVENT, h);
-  }, []);
+  const [links, setLinks] = useState(() => listDelegateLinks().length);
+  const [input, setInput] = useState("");
+  const [target, setTarget] = useState<{ kind: "delegate" | "other"; url: string; n: number } | null>(null);
+
+  async function load(raw: string) {
+    if (!raw.trim()) return;
+    const url = parseLinkInput(raw);
+    const kind =
+      url && (await peekManifestType(url)) === "hm-link-delegate" ? ("delegate" as const) : ("other" as const);
+    setTarget({ kind, url: (url ?? raw).trim(), n: (target?.n ?? 0) + 1 });
+    setInput(kind === "delegate" ? (url ?? raw).trim() : input);
+  }
 
   return (
     <main className="mx-auto max-w-xl space-y-4 px-4 py-8">
@@ -63,12 +72,43 @@ function SharedWalletsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button asChild variant="outline" className="h-11 w-full sm:w-auto">
-            <Link to="/wallet/settings">
-              <QrCode className="mr-2 h-4 w-4" /> Scan a site's QR (Settings → Ecosystem links)
-            </Link>
-          </Button>
-          {links === 0 && (
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Paste or scan the site's link code"
+              className="text-xs"
+              autoComplete="off"
+              spellCheck={false}
+              inputMode="url"
+            />
+            <QrScanButton
+              onScan={(text) => {
+                setInput(text);
+                void load(text);
+              }}
+            />
+            <Button type="button" variant="outline" disabled={!input.trim()} onClick={() => void load(input)}>
+              Read
+            </Button>
+          </div>
+
+          {target?.kind === "delegate" && (
+            <div className="mt-4">
+              <DelegateLinkCard key={`d-${target.n}`} manifestUrl={target.url} />
+            </div>
+          )}
+          {target?.kind === "other" && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              That doesn't look like a trading-site link. Other ecosystem sites link in Settings →
+              Ecosystem links.{" "}
+              <Link to="/wallet/settings" className="underline">
+                Open Settings
+              </Link>
+            </p>
+          )}
+
+          {links === 0 && target?.kind !== "delegate" && (
             <p className="mt-3 text-xs text-muted-foreground">Nothing shared with a trading site yet.</p>
           )}
         </CardContent>
@@ -88,6 +128,11 @@ function SharedWalletsPage() {
           <TapCardCard />
         </CardContent>
       </Card>
+
+      <p className="flex items-center gap-2 text-xs text-muted-foreground">
+        <QrCode className="h-3.5 w-3.5 shrink-0" />
+        Tip: the same scanner also lives in Settings → Ecosystem links.
+      </p>
     </main>
   );
 }
