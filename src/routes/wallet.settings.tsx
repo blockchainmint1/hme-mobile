@@ -241,6 +241,17 @@ function SettingsPage() {
           <EcosystemLinksCard />
         </SettingsSection>
 
+        {tradingAllowed && tradingLinks > 0 && (
+          <SettingsSection
+            value="trading-pocket"
+            icon={ArrowLeftRight}
+            title="Trading pocket"
+            description="Coins a linked trading site may spend. Separate from your main wallet."
+          >
+            <TradingPocketCard />
+          </SettingsSection>
+        )}
+
         <SettingsSection
           value="hme-profile"
           icon={Link2}
