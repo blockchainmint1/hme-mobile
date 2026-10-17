@@ -174,6 +174,7 @@ export async function saveWallet(
     iterations: PBKDF2_ITERATIONS,
     pathsV: 2,
     ...(keyOnly ? { mode: "keyonly" as const } : {}),
+    ...(vault ? { mode: "vault" as const } : {}),
   };
   registerProfile(activeProfileId());
   localStorage.setItem(walletKey(), JSON.stringify(env));
@@ -197,6 +198,29 @@ export async function createKeyOnlyWallet(
     kind: "bip84",
     label,
     mode: "keyonly",
+    anchor: b64encode(anchorBytes),
+  };
+  await saveWallet(unlocked, password);
+  return unlocked;
+}
+
+/**
+ * Create a Vault-paired wallet profile. No seed, no private keys — just a
+ * random anchor so the normal unlock/session machinery works unchanged. The
+ * watch-only account keys from the Vault device are stored separately by
+ * src/lib/vault-link/pairing.ts. Signing always happens on the Vault device.
+ */
+export async function createVaultWallet(
+  password: string,
+  label = "Vault",
+): Promise<UnlockedWallet> {
+  const anchorBytes = crypto.getRandomValues(new Uint8Array(32));
+  const unlocked: UnlockedWallet = {
+    mnemonic: "",
+    passphrase: "",
+    kind: "bip84",
+    label,
+    mode: "vault",
     anchor: b64encode(anchorBytes),
   };
   await saveWallet(unlocked, password);
