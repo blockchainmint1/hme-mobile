@@ -4,7 +4,7 @@
  * profile can see balances and build transactions, but every signature
  * happens on the Vault device.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2, ScanLine, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -42,6 +42,8 @@ function VaultAddPage() {
   const [label, setLabel] = useState("Vault");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanProgress, setScanProgress] = useState<{ have: number; total: number } | null>(null);
+  const collectorRef = useRef<PartCollector | null>(null);
 
   function tryParse(text: string) {
     setError(null);
@@ -49,6 +51,33 @@ function VaultAddPage() {
       setPairing(parsePairing(text));
     } catch (e) {
       setPairing(null);
+      setError((e as Error).message);
+    }
+  }
+
+  // Vault shows the pairing payload as an animated QR when it's long: each
+  // frame is one HMQR2 chunk. Collect frames until the transfer completes,
+  // then parse the reassembled payload. Single-frame codes parse directly.
+  function onScanned(text: string) {
+    if (pairing) return;
+    if (!text.startsWith("HMQR")) {
+      setRaw(text);
+      tryParse(text);
+      return;
+    }
+    try {
+      const collector = (collectorRef.current ??= new PartCollector());
+      const done = collector.add(text);
+      setScanProgress(collector.progress);
+      if (done) {
+        collectorRef.current = null;
+        setScanProgress(null);
+        setRaw(done);
+        tryParse(done);
+      }
+    } catch (e) {
+      collectorRef.current = null;
+      setScanProgress(null);
       setError((e as Error).message);
     }
   }
