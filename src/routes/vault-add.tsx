@@ -4,7 +4,7 @@
  * profile can see balances and build transactions, but every signature
  * happens on the Vault device.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2, ScanLine, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { useWallet } from "@/lib/txc/wallet-context";
 import { createVaultWallet, saveWalletToNewProfile } from "@/lib/txc/storage";
 import { getSessionPassword } from "@/lib/txc/session-cache";
 import { parsePairing, savePairing, type VaultPairing } from "@/lib/vault-link/pairing";
+import { PartCollector } from "@/lib/vault-link/qr-parts";
 import { pairingPreviewAddresses, VAULT_CHAIN_META } from "@/lib/vault-link/derive";
 
 export const Route = createFileRoute("/vault-add")({
@@ -41,6 +42,8 @@ function VaultAddPage() {
   const [label, setLabel] = useState("Vault");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scanProgress, setScanProgress] = useState<{ have: number; total: number } | null>(null);
+  const collectorRef = useRef<PartCollector | null>(null);
 
   function tryParse(text: string) {
     setError(null);
@@ -48,6 +51,33 @@ function VaultAddPage() {
       setPairing(parsePairing(text));
     } catch (e) {
       setPairing(null);
+      setError((e as Error).message);
+    }
+  }
+
+  // Vault shows the pairing payload as an animated QR when it's long: each
+  // frame is one HMQR2 chunk. Collect frames until the transfer completes,
+  // then parse the reassembled payload. Single-frame codes parse directly.
+  function onScanned(text: string) {
+    if (pairing) return;
+    if (!text.startsWith("HMQR")) {
+      setRaw(text);
+      tryParse(text);
+      return;
+    }
+    try {
+      const collector = (collectorRef.current ??= new PartCollector());
+      const done = collector.add(text);
+      setScanProgress(collector.progress);
+      if (done) {
+        collectorRef.current = null;
+        setScanProgress(null);
+        setRaw(done);
+        tryParse(done);
+      }
+    } catch (e) {
+      collectorRef.current = null;
+      setScanProgress(null);
       setError((e as Error).message);
     }
   }
@@ -100,13 +130,12 @@ function VaultAddPage() {
                 scan the QR it shows.
               </p>
               <div className="flex items-center gap-2">
-                <QrScanButton
-                  onScan={(text) => {
-                    setRaw(text);
-                    tryParse(text);
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">Scan the Vault pairing QR</span>
+                <QrScanButton continuous onScan={onScanned} />
+                <span className="text-xs text-muted-foreground">
+                  {scanProgress && scanProgress.total > 1
+                    ? `Reading animated QR… part ${scanProgress.have} of ${scanProgress.total} — keep pointing`
+                    : "Scan the Vault pairing QR"}
+                </span>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">…or paste the pairing code:</p>

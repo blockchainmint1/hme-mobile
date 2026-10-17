@@ -266,7 +266,7 @@ export function VaultSendDialog({
             </ol>
             <VaultAnimatedQr text={step.payload} />
             <div className="flex items-center gap-2">
-              <QrScanButton onScan={(t) => void onScanned(t)} />
+              <QrScanButton continuous onScan={(t) => void onScanned(t)} />
               <span className="text-xs text-muted-foreground">
                 {busy ? "Broadcasting…" : "Scan the signed transaction from Vault"}
               </span>

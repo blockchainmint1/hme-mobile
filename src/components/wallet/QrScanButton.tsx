@@ -27,7 +27,14 @@ declare global {
   }
 }
 
-export function QrScanButton({ onScan }: { onScan: (text: string) => void }) {
+export function QrScanButton({
+  onScan,
+  continuous = false,
+}: {
+  onScan: (text: string) => void;
+  /** Keep scanning after each code (for animated multi-part QRs); caller decides when to stop via onClose. */
+  continuous?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -45,7 +52,7 @@ export function QrScanButton({ onScan }: { onScan: (text: string) => void }) {
         <ScannerDialog
           onClose={() => setOpen(false)}
           onScan={(text) => {
-            setOpen(false);
+            if (!continuous) setOpen(false);
             onScan(text);
           }}
         />
@@ -129,16 +136,25 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
       canvasRef.current = canvas;
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
 
+      let lastCode = "";
+      let lastAt = 0;
+      const emit = (text: string) => {
+        // The same frame decodes many times per second; only forward new codes
+        // (or the same code again after a pause, so single-frame scans repeat).
+        const now = Date.now();
+        if (text === lastCode && now - lastAt < 1500) return;
+        lastCode = text;
+        lastAt = now;
+        onScanRef.current(text);
+      };
+
       const tick = async () => {
         if (cancelled || !video) return;
         if (video.readyState >= 2 && video.videoWidth > 0) {
           try {
             if (detector) {
               const codes = await detector.detect(video);
-              if (codes.length > 0 && codes[0].rawValue) {
-                onScanRef.current(codes[0].rawValue);
-                return;
-              }
+              if (codes.length > 0 && codes[0].rawValue) emit(codes[0].rawValue);
             } else if (jsQR && ctx) {
               const w = video.videoWidth;
               const h = video.videoHeight;
@@ -147,10 +163,7 @@ function ScannerDialog({ onClose, onScan }: { onClose: () => void; onScan: (t: s
               ctx.drawImage(video, 0, 0, w, h);
               const img = ctx.getImageData(0, 0, w, h);
               const code = jsQR(img.data, w, h, { inversionAttempts: "attemptBoth" });
-              if (code && code.data) {
-                onScanRef.current(code.data);
-                return;
-              }
+              if (code && code.data) emit(code.data);
             }
           } catch {
             // ignore per-frame errors
