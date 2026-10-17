@@ -418,7 +418,12 @@ export function listWalletProfiles(): WalletProfileSummary[] {
         id,
         label: env.label || "Wallet",
         createdAt: env.createdAt ?? 0,
-        mode: env.mode === "keyonly" ? ("keyonly" as const) : ("seed" as const),
+        mode:
+          env.mode === "keyonly"
+            ? ("keyonly" as const)
+            : env.mode === "vault"
+              ? ("vault" as const)
+              : ("seed" as const),
         isActive: id === active,
       };
     })

@@ -90,15 +90,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // correct immediately, while background scanning continues to cover all
     // historical paths.
     const loadedWallet =
-      w.mode !== "keyonly" && w.kind !== "bip44" ? { ...w, kind: "bip44" as const } : w;
+      w.mode !== "keyonly" && w.mode !== "vault" && w.kind !== "bip44"
+        ? { ...w, kind: "bip44" as const }
+        : w;
     if (loadedWallet !== w) setStoredKind("bip44");
 
-    // Key-only wallets have no mnemonic. Their BIP32 "root" is derived from a
-    // random anchor and is used only as the wrapping key for imported WIFs —
-    // no addresses are ever derived from it.
+    // Key-only and Vault-paired wallets have no mnemonic. Their BIP32 "root"
+    // is derived from a random anchor and is used only as the wrapping key for
+    // imported WIFs — no addresses are ever derived from it. Vault profiles
+    // derive everything from the paired account xpubs instead.
     let nextRoot;
     let nextSeed: Uint8Array | null = null;
-    if (loadedWallet.mode === "keyonly") {
+    if (loadedWallet.mode === "keyonly" || loadedWallet.mode === "vault") {
       const bin = atob(loadedWallet.anchor ?? "");
       const bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
