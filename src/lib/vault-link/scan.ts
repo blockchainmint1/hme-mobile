@@ -55,6 +55,8 @@ export interface VaultChainScan {
   nextReceive: string;
   nextReceiveIndex: number;
   utxos: VaultUtxo[];
+  /** Every address on this branch that has ever had activity (receive + change). */
+  used: VaultAddress[];
   /** Total addresses checked (used + gap). */
   scanned: number;
 }
@@ -70,6 +72,7 @@ export async function scanVaultChain(
 ): Promise<VaultChainScan> {
   const io = IO[chain];
   const utxos: VaultUtxo[] = [];
+  const used: VaultAddress[] = [];
   let balanceSats = 0;
   let scanned = 0;
   let nextReceive = "";
@@ -101,6 +104,7 @@ export async function scanVaultChain(
         continue;
       }
       gap = 0;
+      used.push(derived);
       balanceSats +=
         stats.chain_stats.funded_txo_sum -
         stats.chain_stats.spent_txo_sum +
@@ -133,7 +137,7 @@ export async function scanVaultChain(
     nextReceive = derived.address;
   }
 
-  return { chain, purpose, balanceSats, nextReceive, nextReceiveIndex, utxos, scanned };
+  return { chain, purpose, balanceSats, nextReceive, nextReceiveIndex, utxos, used, scanned };
 }
 
 /** Every paired chain/purpose branch, scanned in parallel. */
