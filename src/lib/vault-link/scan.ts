@@ -12,7 +12,7 @@ import * as iskMempool from "@/lib/isk/mempool";
 import * as btcMempool from "@/lib/btc/mempool";
 import * as ltcMempool from "@/lib/ltc/mempool";
 import * as dogeMempool from "@/lib/doge/mempool";
-import { deriveVaultAddress, VAULT_CHAIN_META } from "./derive";
+import { deriveVaultAddress, VAULT_CHAIN_META, type VaultAddress } from "./derive";
 import type { VaultPairing, VaultUtxoChain } from "./pairing";
 
 const GAP_LIMIT = 20;
