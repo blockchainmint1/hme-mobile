@@ -73,8 +73,13 @@ export interface StoredWalletEnvelope {
    * "keyonly" = seed-free wallet. There is no BIP39 mnemonic; the envelope
    * holds a random 32-byte anchor used solely to derive the wrapping key for
    * imported WIF private keys. Absent = normal seed wallet.
+   *
+   * "vault" = offline-signer wallet paired with HME Vault. Same shape as
+   * keyonly (random anchor, no seed) — the watch-only account xpubs live in
+   * the separate vault-link store. Signing always happens on the Vault
+   * device via QR; this profile can never spend on its own.
    */
-  mode?: "keyonly";
+  mode?: "keyonly" | "vault";
 }
 
 export interface UnlockedWallet {
@@ -83,8 +88,8 @@ export interface UnlockedWallet {
   kind: DerivationKind;
   label: string;
   /** Seed-free wallets carry no mnemonic; see StoredWalletEnvelope.mode. */
-  mode?: "seed" | "keyonly";
-  /** base64 random anchor — present only for key-only wallets. */
+  mode?: "seed" | "keyonly" | "vault";
+  /** base64 random anchor — present only for key-only and vault wallets. */
   anchor?: string;
 }
 
@@ -142,13 +147,16 @@ export async function saveWallet(
 ): Promise<StoredWalletEnvelope> {
   if (typeof window === "undefined") throw new Error("saveWallet requires a browser");
   const keyOnly = unlocked.mode === "keyonly";
+  const vault = unlocked.mode === "vault";
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt, PBKDF2_ITERATIONS);
   const payload = new TextEncoder().encode(
     keyOnly
       ? JSON.stringify({ mode: "keyonly", a: unlocked.anchor })
-      : JSON.stringify({ m: unlocked.mnemonic, p: unlocked.passphrase }),
+      : vault
+        ? JSON.stringify({ mode: "vault", a: unlocked.anchor })
+        : JSON.stringify({ m: unlocked.mnemonic, p: unlocked.passphrase }),
   );
   const ct = new Uint8Array(
     await crypto.subtle.encrypt({ name: "AES-GCM", iv: toAB(iv) }, key, toAB(payload)),
