@@ -11,7 +11,7 @@
  * We never sign here — the PSBT goes to the Vault device by QR and comes back
  * as signed raw transaction hex.
  */
-import { payments, Psbt } from "bitcoinjs-lib";
+import { payments, Psbt, Transaction } from "bitcoinjs-lib";
 import { deriveVaultAddress, VAULT_CHAIN_META } from "./derive";
 import type { VaultPairing, VaultUtxoChain } from "./pairing";
 import type { VaultUtxo } from "./scan";
