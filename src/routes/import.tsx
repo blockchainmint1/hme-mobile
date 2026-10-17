@@ -234,6 +234,9 @@ function ImportPage() {
         await saveWallet(u, password);
       }
       await loadFromMemory(u);
+      // Cache the password with the new session so a full page reload right
+      // after import doesn't hit the lock screen.
+      await saveSession(u, addingProfile ? sessionPw! : password);
       navigate({ to: "/wallet" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed");
