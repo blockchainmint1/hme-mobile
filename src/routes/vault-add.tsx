@@ -17,6 +17,7 @@ import { useWallet } from "@/lib/txc/wallet-context";
 import { createVaultWallet, saveWalletToNewProfile } from "@/lib/txc/storage";
 import { getSessionPassword } from "@/lib/txc/session-cache";
 import { parsePairing, savePairing, type VaultPairing } from "@/lib/vault-link/pairing";
+import { PartCollector } from "@/lib/vault-link/qr-parts";
 import { pairingPreviewAddresses, VAULT_CHAIN_META } from "@/lib/vault-link/derive";
 
 export const Route = createFileRoute("/vault-add")({
