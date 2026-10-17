@@ -16,6 +16,7 @@ import { Route as ImportRouteImport } from './routes/import'
 import { Route as ImportKeyRouteImport } from './routes/import-key'
 import { Route as ManifestoRouteImport } from './routes/manifesto'
 import { Route as SsoRouteImport } from './routes/sso'
+import { Route as VaultAddRouteImport } from './routes/vault-add'
 import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as ApiSolanaRouteImport } from './routes/api/solana'
 import { Route as ApiZcuExplorerBaseRouteImport } from './routes/api/zcu-explorer-base'
@@ -102,6 +103,11 @@ const ManifestoRoute = ManifestoRouteImport.update({
 const SsoRoute = SsoRouteImport.update({
   id: '/sso',
   path: '/sso',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VaultAddRoute = VaultAddRouteImport.update({
+  id: '/vault-add',
+  path: '/vault-add',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WalletRoute = WalletRouteImport.update({
@@ -374,6 +380,7 @@ export interface FileRoutesByFullPath {
   '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
   '/sso': typeof SsoRoute
+  '/vault-add': typeof VaultAddRoute
   '/wallet': typeof WalletRouteWithChildren
   '/api/solana': typeof ApiSolanaRoute
   '/api/zcu-explorer-base': typeof ApiZcuExplorerBaseRoute
@@ -435,6 +442,7 @@ export interface FileRoutesByTo {
   '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
   '/sso': typeof SsoRoute
+  '/vault-add': typeof VaultAddRoute
   '/api/solana': typeof ApiSolanaRoute
   '/api/zcu-explorer-base': typeof ApiZcuExplorerBaseRoute
   '/legal/privacy': typeof LegalPrivacyRoute
@@ -496,6 +504,7 @@ export interface FileRoutesById {
   '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
   '/sso': typeof SsoRoute
+  '/vault-add': typeof VaultAddRoute
   '/wallet': typeof WalletRouteWithChildren
   '/api/solana': typeof ApiSolanaRoute
   '/api/zcu-explorer-base': typeof ApiZcuExplorerBaseRoute
@@ -559,6 +568,7 @@ export interface FileRouteTypes {
     | '/import-key'
     | '/manifesto'
     | '/sso'
+    | '/vault-add'
     | '/wallet'
     | '/api/solana'
     | '/api/zcu-explorer-base'
@@ -620,6 +630,7 @@ export interface FileRouteTypes {
     | '/import-key'
     | '/manifesto'
     | '/sso'
+    | '/vault-add'
     | '/api/solana'
     | '/api/zcu-explorer-base'
     | '/legal/privacy'
@@ -680,6 +691,7 @@ export interface FileRouteTypes {
     | '/import-key'
     | '/manifesto'
     | '/sso'
+    | '/vault-add'
     | '/wallet'
     | '/api/solana'
     | '/api/zcu-explorer-base'
@@ -742,6 +754,7 @@ export interface RootRouteChildren {
   ImportKeyRoute: typeof ImportKeyRoute
   ManifestoRoute: typeof ManifestoRoute
   SsoRoute: typeof SsoRoute
+  VaultAddRoute: typeof VaultAddRoute
   WalletRoute: typeof WalletRouteWithChildren
   ApiSolanaRoute: typeof ApiSolanaRoute
   ApiZcuExplorerBaseRoute: typeof ApiZcuExplorerBaseRoute
@@ -810,6 +823,13 @@ declare module '@tanstack/react-router' {
       path: '/sso'
       fullPath: '/sso'
       preLoaderRoute: typeof SsoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vault-add': {
+      id: '/vault-add'
+      path: '/vault-add'
+      fullPath: '/vault-add'
+      preLoaderRoute: typeof VaultAddRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/wallet': {
@@ -1276,6 +1296,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImportKeyRoute: ImportKeyRoute,
   ManifestoRoute: ManifestoRoute,
   SsoRoute: SsoRoute,
+  VaultAddRoute: VaultAddRoute,
   WalletRoute: WalletRouteWithChildren,
   ApiSolanaRoute: ApiSolanaRoute,
   ApiZcuExplorerBaseRoute: ApiZcuExplorerBaseRoute,
