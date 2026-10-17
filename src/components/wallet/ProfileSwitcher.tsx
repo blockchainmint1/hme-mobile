@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeftRight, Check, ChevronDown, Download, Eye, Key, Loader2, Nfc, Pencil, Plus, Sparkles, Wallet } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronDown, Download, Eye, Key, Loader2, Nfc, Pencil, Plus, ShieldCheck, Sparkles, Wallet } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
 import { DELEGATE_LINKS_EVENT, listDelegateLinks, type DelegateLinkRecord } from "@/lib/xpub-link/delegate";
 import { toast } from "sonner";
@@ -162,7 +162,11 @@ export function ProfileSwitcher() {
                 >
                   <span className="block truncate font-medium">{p.label}</span>
                   <span className="block text-xs text-muted-foreground">
-                    {p.mode === "keyonly" ? "Imported keys" : "Seed phrase wallet"}
+                    {p.mode === "keyonly"
+                      ? "Imported keys"
+                      : p.mode === "vault"
+                        ? "Vault · signs by QR"
+                        : "Seed phrase wallet"}
                   </span>
                 </button>
                 <button
@@ -256,6 +260,11 @@ export function ProfileSwitcher() {
           <Button asChild variant="outline" onClick={() => setOpen(false)}>
             <Link to="/import" search={{ add: true }}>
               <Download className="h-4 w-4 mr-2" /> Import a seed
+            </Link>
+          </Button>
+          <Button asChild variant="outline" onClick={() => setOpen(false)}>
+            <Link to="/vault-add">
+              <ShieldCheck className="h-4 w-4 mr-2" /> Add Vault wallet
             </Link>
           </Button>
           <Button asChild variant="outline" onClick={() => setOpen(false)}>

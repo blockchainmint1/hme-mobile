@@ -73,8 +73,13 @@ export interface StoredWalletEnvelope {
    * "keyonly" = seed-free wallet. There is no BIP39 mnemonic; the envelope
    * holds a random 32-byte anchor used solely to derive the wrapping key for
    * imported WIF private keys. Absent = normal seed wallet.
+   *
+   * "vault" = offline-signer wallet paired with HME Vault. Same shape as
+   * keyonly (random anchor, no seed) — the watch-only account xpubs live in
+   * the separate vault-link store. Signing always happens on the Vault
+   * device via QR; this profile can never spend on its own.
    */
-  mode?: "keyonly";
+  mode?: "keyonly" | "vault";
 }
 
 export interface UnlockedWallet {
@@ -83,8 +88,8 @@ export interface UnlockedWallet {
   kind: DerivationKind;
   label: string;
   /** Seed-free wallets carry no mnemonic; see StoredWalletEnvelope.mode. */
-  mode?: "seed" | "keyonly";
-  /** base64 random anchor — present only for key-only wallets. */
+  mode?: "seed" | "keyonly" | "vault";
+  /** base64 random anchor — present only for key-only and vault wallets. */
   anchor?: string;
 }
 
@@ -142,13 +147,16 @@ export async function saveWallet(
 ): Promise<StoredWalletEnvelope> {
   if (typeof window === "undefined") throw new Error("saveWallet requires a browser");
   const keyOnly = unlocked.mode === "keyonly";
+  const vault = unlocked.mode === "vault";
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt, PBKDF2_ITERATIONS);
   const payload = new TextEncoder().encode(
     keyOnly
       ? JSON.stringify({ mode: "keyonly", a: unlocked.anchor })
-      : JSON.stringify({ m: unlocked.mnemonic, p: unlocked.passphrase }),
+      : vault
+        ? JSON.stringify({ mode: "vault", a: unlocked.anchor })
+        : JSON.stringify({ m: unlocked.mnemonic, p: unlocked.passphrase }),
   );
   const ct = new Uint8Array(
     await crypto.subtle.encrypt({ name: "AES-GCM", iv: toAB(iv) }, key, toAB(payload)),
@@ -166,6 +174,7 @@ export async function saveWallet(
     iterations: PBKDF2_ITERATIONS,
     pathsV: 2,
     ...(keyOnly ? { mode: "keyonly" as const } : {}),
+    ...(vault ? { mode: "vault" as const } : {}),
   };
   registerProfile(activeProfileId());
   localStorage.setItem(walletKey(), JSON.stringify(env));
@@ -189,6 +198,29 @@ export async function createKeyOnlyWallet(
     kind: "bip84",
     label,
     mode: "keyonly",
+    anchor: b64encode(anchorBytes),
+  };
+  await saveWallet(unlocked, password);
+  return unlocked;
+}
+
+/**
+ * Create a Vault-paired wallet profile. No seed, no private keys — just a
+ * random anchor so the normal unlock/session machinery works unchanged. The
+ * watch-only account keys from the Vault device are stored separately by
+ * src/lib/vault-link/pairing.ts. Signing always happens on the Vault device.
+ */
+export async function createVaultWallet(
+  password: string,
+  label = "Vault",
+): Promise<UnlockedWallet> {
+  const anchorBytes = crypto.getRandomValues(new Uint8Array(32));
+  const unlocked: UnlockedWallet = {
+    mnemonic: "",
+    passphrase: "",
+    kind: "bip84",
+    label,
+    mode: "vault",
     anchor: b64encode(anchorBytes),
   };
   await saveWallet(unlocked, password);
@@ -261,22 +293,24 @@ export async function unlockWallet(password: string): Promise<UnlockedWallet | n
       a?: string;
     };
     const keyOnly = env.mode === "keyonly" || parsed.mode === "keyonly";
-    const unlocked: UnlockedWallet = keyOnly
-      ? {
-          mnemonic: "",
-          passphrase: "",
-          kind: migrateKind(env),
-          label: env.label,
-          mode: "keyonly",
-          anchor: parsed.a ?? "",
-        }
-      : {
-          mnemonic: parsed.m ?? "",
-          passphrase: parsed.p ?? "",
-          kind: migrateKind(env),
-          label: env.label,
-          mode: "seed",
-        };
+    const vault = env.mode === "vault" || parsed.mode === "vault";
+    const unlocked: UnlockedWallet =
+      keyOnly || vault
+        ? {
+            mnemonic: "",
+            passphrase: "",
+            kind: migrateKind(env),
+            label: env.label,
+            mode: vault ? "vault" : "keyonly",
+            anchor: parsed.a ?? "",
+          }
+        : {
+            mnemonic: parsed.m ?? "",
+            passphrase: parsed.p ?? "",
+            kind: migrateKind(env),
+            label: env.label,
+            mode: "seed",
+          };
 
     // Silent KDF upgrade: if this envelope predates the current cost (or has
     // no recorded iteration count), transparently re-encrypt at the stronger
@@ -368,7 +402,7 @@ export interface WalletProfileSummary {
   id: string;
   label: string;
   createdAt: number;
-  mode: "seed" | "keyonly";
+  mode: "seed" | "keyonly" | "vault";
   isActive: boolean;
 }
 
@@ -384,7 +418,12 @@ export function listWalletProfiles(): WalletProfileSummary[] {
         id,
         label: env.label || "Wallet",
         createdAt: env.createdAt ?? 0,
-        mode: env.mode === "keyonly" ? ("keyonly" as const) : ("seed" as const),
+        mode:
+          env.mode === "keyonly"
+            ? ("keyonly" as const)
+            : env.mode === "vault"
+              ? ("vault" as const)
+              : ("seed" as const),
         isActive: id === active,
       };
     })

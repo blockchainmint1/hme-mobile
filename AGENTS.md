@@ -39,3 +39,7 @@ Friendly site names/trust badges for sign-in and xpub links load from the HMAC-s
 ## Tap card (NFC) service
 - We are the card service: card pockets live on HME-reserved branch 1107' (card N = `m/44'/696969'/1107'/0/N`, owner signing key `/1/0`); only that pocket key is sent to the backend, AES-GCM encrypted with `CARD_KEY_ENC` (`src/lib/card/*`). Why: a tapped card must pay while the phone is offline, and the blast radius must stay one small pocket. Trading pocket rotation skips reserved branches.
 - Partners pay via `/api/public/card/pay` signed with `HME_ECOSYSTEM`; over-limit taps go to Telegram approvers via `/api/public/telegram/webhook`. Owner actions are wallet-signed envelopes, never accounts. Why: no extra service and no email logins.
+
+## Vault wallets (offline signing via HME Vault)
+- Vault profiles are envelope `mode: "vault"` — random anchor like keyonly, no seed; watch-only account xpubs live in `src/lib/vault-link/pairing.ts` (scoped `hme.vault-link.v1`). Why: unlock/session/switch machinery stays byte-identical and no key material is ever stored.
+- Vault profiles render `VaultHome` (early return in `wallet.index.tsx` after hooks), never the seed-wallet UI; sends build unsigned PSBTs (`psbt-build.ts`) or `hm-evm-tx` intents (`evm-intent.ts`), shown as HMQR2 animated QRs (`qr-parts.ts` — must stay byte-compatible with HME Vault's `src/lib/signer/qr-parts.ts`), and only signed hex comes back for verify + broadcast. Why: the offline device is the only signer; the online wallet must never ask for an xprv.
