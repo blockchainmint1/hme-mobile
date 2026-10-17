@@ -866,7 +866,7 @@ function WalletHome() {
             />
           )}
           {activeChain === "txc" && !activeWatch && !activeWif && (
-            <TxcTokens addresses={[...ownAddresses]} pendingIn={pendingOmniIn} />
+            <TxcTokens addresses={[...ownAddresses]} pendingIn={pendingOmniIn} readOnly={isVault} />
           )}
           {/* Imported keys / watch-only TXC addresses can also hold Omni tokens */}
           {activeWif?.chain === "txc" && (
