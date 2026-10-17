@@ -108,7 +108,13 @@ export function VaultHome() {
 
       {[...grouped.entries()].map(([chain, list]) => {
         const meta = VAULT_CHAIN_META[chain];
-        const total = list.reduce((s, x) => s + x.balanceSats, 0);
+        // Count each coin (txid:vout) once — the same output can show up under
+        // more than one address-type scan, which double-counted the balance.
+        const seen = new Map<string, number>();
+        for (const s of list) for (const u of s.utxos) seen.set(`${u.txid}:${u.vout}`, u.value);
+        const statsTotal = list.reduce((s, x) => s + x.balanceSats, 0);
+        const utxoTotal = [...seen.values()].reduce((a, b) => a + b, 0);
+        const total = seen.size > 0 ? Math.min(utxoTotal, statsTotal) : statsTotal;
         const primary = list.find((s) => s.balanceSats > 0) ?? list[0];
         return (
           <Card key={chain}>
