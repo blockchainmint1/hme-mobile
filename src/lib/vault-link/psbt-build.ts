@@ -151,7 +151,6 @@ export function verifySignedTx(
   if (!/^[0-9a-f]+$/.test(clean) || clean.length < 20) {
     throw new Error("That QR code didn't contain a signed transaction.");
   }
-  const { Transaction } = require("bitcoinjs-lib") as typeof import("bitcoinjs-lib");
   const tx = Transaction.fromHex(clean);
   const meta = VAULT_CHAIN_META[chain];
   const seen = tx.outs.map((o) => ({
