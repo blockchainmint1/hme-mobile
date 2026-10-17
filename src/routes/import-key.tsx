@@ -9,6 +9,7 @@ import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { decodeWif, defaultKindFor, type DecodedWif, type WifAddressKind } from "@/lib/wif/decode";
 import { addWifWallet } from "@/lib/wif/store";
 import { createKeyOnlyWallet, hasWallet } from "@/lib/txc/storage";
+import { saveSession } from "@/lib/txc/session-cache";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { assessPassword } from "@/lib/security/password-strength";
 import { rootFromSeed } from "@/lib/txc/wallet";
