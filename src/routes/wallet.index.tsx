@@ -55,6 +55,7 @@ import { getChainLabel, CHAIN_LABEL_EVENT } from "@/lib/chain-labels";
 import { EVM_CHAINS, deriveEvmAccount, evmClient, formatEth, setZcuExplorerBase, type EvmChainId } from "@/lib/chains/evm";
 
 import { TxDetailSheet, type TxDetail } from "@/components/wallet/TxDetailSheet";
+import { VaultHome } from "@/components/wallet/VaultHome";
 import { WalletDetailSheet } from "@/components/wallet/WalletDetailSheet";
 import { ReorderTilesSheet } from "@/components/wallet/ReorderTilesSheet";
 import { useHideBalances, maskAmount } from "@/lib/hide-balances";
@@ -573,6 +574,19 @@ function WalletHome() {
     enabled: !!activeWif,
     queryFn: () => wifApi(activeWif!.chain).getAddressTxs(activeWif!.address),
   });
+
+  // Vault-paired profiles get their own home screen: balances come from the
+  // paired account xpubs and Send goes through the QR signing flow. The
+  // seed-wallet UI below is untouched by vault mode.
+  if (unlocked?.mode === "vault") {
+    return (
+      <main className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+          <VaultHome />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 flex flex-col min-h-0">
