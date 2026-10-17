@@ -56,6 +56,9 @@ import { EVM_CHAINS, deriveEvmAccount, evmClient, formatEth, setZcuExplorerBase,
 
 import { TxDetailSheet, type TxDetail } from "@/components/wallet/TxDetailSheet";
 import { VaultHome } from "@/components/wallet/VaultHome";
+import { VaultBottomActions } from "@/components/wallet/VaultBottomActions";
+import { loadPairing } from "@/lib/vault-link/pairing";
+import { vaultAccountSnapshot, vaultHasChain } from "@/lib/vault-link/snapshot";
 import { WalletDetailSheet } from "@/components/wallet/WalletDetailSheet";
 import { ReorderTilesSheet } from "@/components/wallet/ReorderTilesSheet";
 import { useHideBalances, maskAmount } from "@/lib/hide-balances";
@@ -88,13 +91,26 @@ export const Route = createFileRoute("/wallet/")({
 });
 
 function WalletHome() {
-  const { root, unlocked, seed } = useWallet();
+  const { root, unlocked, seed, activeProfileId } = useWallet();
+  // Vault-paired profiles reuse this whole screen; balances come from the
+  // paired xpubs and only signing differs (QR via HME Vault).
+  const isVault = unlocked?.mode === "vault";
+  const vaultPairing = useMemo(() => (isVault ? loadPairing(activeProfileId) : null), [isVault, activeProfileId]);
+  const vaultKey = vaultPairing ? `vault:${vaultPairing.fp}` : null;
   const fetchPrice = useServerFn(getTxcPriceUsd);
   const fetchAllPrices = useServerFn(getAllPricesUsd);
   const qc = useQueryClient();
 
   // Reactive enabled chain list
-  const [enabled, setEnabled] = useState<ChainId[]>(() => getEnabledChains());
+  const [enabledRaw, setEnabled] = useState<ChainId[]>(() => getEnabledChains());
+  const enabled = useMemo<ChainId[]>(() => {
+    if (!vaultPairing) return enabledRaw;
+    return enabledRaw.filter((c) => {
+      if (c === "txc" || c === "isk" || c === "btc" || c === "ltc" || c === "doge") return vaultHasChain(vaultPairing, c);
+      if (c in EVM_CHAINS) return !!vaultPairing.evm;
+      return false; // Tron / Solana aren't signed by Vault
+    });
+  }, [enabledRaw, vaultPairing]);
   useEffect(() => {
     const h = () => setEnabled(getEnabledChains());
     window.addEventListener("hme:chains-changed", h);
@@ -208,9 +224,9 @@ function WalletHome() {
   // accurate at open. With the persisted scan-hint this is only ~5–10
   // mempool.space calls after the first deep scan.
   const account = useQuery({
-    queryKey: ["account", unlocked?.kind, root?.neutered().toBase58().slice(0, 24)],
+    queryKey: ["account", unlocked?.kind, vaultKey ?? root?.neutered().toBase58().slice(0, 24)],
     enabled: !!root && !!unlocked,
-    queryFn: () => scanAccount(root!, unlocked!.kind),
+    queryFn: () => (vaultPairing ? vaultAccountSnapshot(vaultPairing, "txc") : scanAccount(root!, unlocked!.kind)),
   });
   const price = useQuery({
     queryKey: ["txc-price"],
@@ -338,7 +354,7 @@ function WalletHome() {
     walletKind: unlocked?.kind ?? null,
     snapshot: account.data,
     tokens: enabledTxcTokens,
-    enabled: !!root && !!unlocked && activeChain === "txc",
+    enabled: !!root && !!unlocked && !isVault && activeChain === "txc",
     onFunded: () => void account.refetch(),
   });
 
@@ -350,9 +366,9 @@ function WalletHome() {
   const iskEnabled = enabled.includes("isk");
   const fetchIskPrice = useServerFn(getIskPriceUsd);
   const iskAccount = useQuery({
-    queryKey: ["isk-account", ISK_DEFAULT_KIND, root?.neutered().toBase58().slice(0, 24)],
+    queryKey: ["isk-account", ISK_DEFAULT_KIND, vaultKey ?? root?.neutered().toBase58().slice(0, 24)],
     enabled: !!root && !!unlocked && iskEnabled,
-    queryFn: () => scanIskAccount(root!, ISK_DEFAULT_KIND),
+    queryFn: () => (vaultPairing ? vaultAccountSnapshot(vaultPairing, "isk") : scanIskAccount(root!, ISK_DEFAULT_KIND)),
   });
   const iskPrice = useQuery({
     queryKey: ["isk-price"],
@@ -385,9 +401,9 @@ function WalletHome() {
   const btcEnabled = enabled.includes("btc");
   const fetchBtcPrice = useServerFn(getBtcPriceUsd);
   const btcAccount = useQuery({
-    queryKey: ["btc-account", BTC_DEFAULT_KIND, root?.neutered().toBase58().slice(0, 24)],
+    queryKey: ["btc-account", BTC_DEFAULT_KIND, vaultKey ?? root?.neutered().toBase58().slice(0, 24)],
     enabled: !!root && !!unlocked && btcEnabled,
-    queryFn: () => scanBtcAccount(root!, BTC_DEFAULT_KIND),
+    queryFn: () => (vaultPairing ? vaultAccountSnapshot(vaultPairing, "btc") : scanBtcAccount(root!, BTC_DEFAULT_KIND)),
   });
   const btcPrice = useQuery({
     queryKey: ["btc-price"],
@@ -420,9 +436,9 @@ function WalletHome() {
   const ltcEnabled = enabled.includes("ltc");
   const fetchLtcPrice = useServerFn(getLtcPriceUsd);
   const ltcAccount = useQuery({
-    queryKey: ["ltc-account", LTC_DEFAULT_KIND, root?.neutered().toBase58().slice(0, 24)],
+    queryKey: ["ltc-account", LTC_DEFAULT_KIND, vaultKey ?? root?.neutered().toBase58().slice(0, 24)],
     enabled: !!root && !!unlocked && ltcEnabled,
-    queryFn: () => scanLtcAccount(root!, LTC_DEFAULT_KIND),
+    queryFn: () => (vaultPairing ? vaultAccountSnapshot(vaultPairing, "ltc") : scanLtcAccount(root!, LTC_DEFAULT_KIND)),
   });
   const ltcPrice = useQuery({
     queryKey: ["ltc-price"],
@@ -455,9 +471,9 @@ function WalletHome() {
   const dogeEnabled = enabled.includes("doge");
   const fetchDogePrice = useServerFn(getDogePriceUsd);
   const dogeAccount = useQuery({
-    queryKey: ["doge-account", DOGE_DEFAULT_KIND, root?.neutered().toBase58().slice(0, 24)],
+    queryKey: ["doge-account", DOGE_DEFAULT_KIND, vaultKey ?? root?.neutered().toBase58().slice(0, 24)],
     enabled: !!root && !!unlocked && dogeEnabled,
-    queryFn: () => scanDogeAccount(root!, DOGE_DEFAULT_KIND),
+    queryFn: () => (vaultPairing ? vaultAccountSnapshot(vaultPairing, "doge") : scanDogeAccount(root!, DOGE_DEFAULT_KIND)),
   });
   const dogePrice = useQuery({
     queryKey: ["doge-price"],
@@ -488,7 +504,7 @@ function WalletHome() {
 
   // TRON data
   const tronEnabled = enabled.includes("tron");
-  const tronAddress = useMemo(() => (root ? deriveTronAccount(root).address : null), [root]);
+  const tronAddress = useMemo(() => (root && !isVault ? deriveTronAccount(root).address : null), [root, isVault]);
   const tron = useTronData(tronAddress, !!unlocked && tronEnabled);
   const tronTokenRows = TRC20_TOKENS.map((t, i) => ({
     symbol: t.symbol,
@@ -503,7 +519,10 @@ function WalletHome() {
 
   // EVM data (only for enabled EVM chains)
   const evmEnabled = enabled.filter((c) => c in EVM_CHAINS) as EvmChainId[];
-  const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
+  const evmAddress = useMemo(
+    () => (vaultPairing ? (vaultPairing.evm?.address ?? null) : root ? deriveEvmAccount(root).address : null),
+    [root, vaultPairing],
+  );
   // Prices are cheap and needed for portfolio total. Long stale time.
   const allPrices = useQuery({
     queryKey: ["all-prices"],
@@ -578,7 +597,7 @@ function WalletHome() {
   // Vault-paired profiles get their own home screen: balances come from the
   // paired account xpubs and Send goes through the QR signing flow. The
   // seed-wallet UI below is untouched by vault mode.
-  if (unlocked?.mode === "vault") {
+  if (isVault && !vaultPairing) {
     return (
       <main className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
@@ -1109,7 +1128,22 @@ function WalletHome() {
             ) : activeWif ? (
               <WifBottomActions entry={activeWif} />
             ) : (
-              <BottomActions chain={activeChain} />
+              vaultPairing ? (
+                <VaultBottomActions
+                  pairing={vaultPairing}
+                  chain={activeChain}
+                  receiveAddress={
+                    activeChain === "txc" ? account.data?.nextReceiveAddress ?? null
+                    : activeChain === "isk" ? iskAccount.data?.nextReceiveAddress ?? null
+                    : activeChain === "btc" ? btcAccount.data?.nextReceiveAddress ?? null
+                    : activeChain === "ltc" ? ltcAccount.data?.nextReceiveAddress ?? null
+                    : activeChain === "doge" ? dogeAccount.data?.nextReceiveAddress ?? null
+                    : evmAddress
+                  }
+                />
+              ) : (
+                <BottomActions chain={activeChain} />
+              )
             )}
           </div>
         </div>
