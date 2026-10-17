@@ -112,6 +112,9 @@ function ImportKeyPage() {
         root,
       );
       await loadFromMemory(unlocked);
+      // Cache the password with the new session so a full page reload right
+      // after importing keys doesn't hit the lock screen.
+      await saveSession(unlocked, password);
       toast.success("Key-only wallet created");
       await navigate({ to: "/wallet" });
     } catch (err) {
