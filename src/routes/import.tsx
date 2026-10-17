@@ -8,7 +8,7 @@ import {
   deriveAddress,
 } from "@/lib/txc/wallet";
 import { saveWallet, saveWalletToNewProfile } from "@/lib/txc/storage";
-import { getSessionPassword } from "@/lib/txc/session-cache";
+import { getSessionPassword, saveSession } from "@/lib/txc/session-cache";
 import { assessPassword } from "@/lib/security/password-strength";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { getAddressStats } from "@/lib/txc/mempool";
@@ -234,6 +234,9 @@ function ImportPage() {
         await saveWallet(u, password);
       }
       await loadFromMemory(u);
+      // Cache the password with the new session so a full page reload right
+      // after import doesn't hit the lock screen.
+      await saveSession(u, addingProfile ? sessionPw! : password);
       navigate({ to: "/wallet" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed");

@@ -9,6 +9,7 @@ import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { decodeWif, defaultKindFor, type DecodedWif, type WifAddressKind } from "@/lib/wif/decode";
 import { addWifWallet } from "@/lib/wif/store";
 import { createKeyOnlyWallet, hasWallet } from "@/lib/txc/storage";
+import { saveSession } from "@/lib/txc/session-cache";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { assessPassword } from "@/lib/security/password-strength";
 import { rootFromSeed } from "@/lib/txc/wallet";
@@ -112,6 +113,9 @@ function ImportKeyPage() {
         root,
       );
       await loadFromMemory(unlocked);
+      // Cache the password with the new session so a full page reload right
+      // after importing keys doesn't hit the lock screen.
+      await saveSession(unlocked, password);
       toast.success("Key-only wallet created");
       await navigate({ to: "/wallet" });
     } catch (err) {

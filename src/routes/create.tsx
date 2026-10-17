@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { generateMnemonic, generateMnemonicFromUserEntropy } from "@/lib/txc/wallet";
 import { saveWallet, saveWalletToNewProfile } from "@/lib/txc/storage";
-import { getSessionPassword } from "@/lib/txc/session-cache";
+import { getSessionPassword, saveSession } from "@/lib/txc/session-cache";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -137,6 +137,9 @@ function CreatePage() {
         await saveWallet(u, password);
       }
       await loadFromMemory(u);
+      // Cache the password with the new session so a full page reload right
+      // after creation doesn't hit the lock screen.
+      await saveSession(u, addingProfile ? sessionPw! : password);
       clearDraftMnemonic();
       navigate({ to: "/wallet" });
     } catch (err) {
