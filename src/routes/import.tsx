@@ -8,7 +8,7 @@ import {
   deriveAddress,
 } from "@/lib/txc/wallet";
 import { saveWallet, saveWalletToNewProfile } from "@/lib/txc/storage";
-import { getSessionPassword } from "@/lib/txc/session-cache";
+import { getSessionPassword, saveSession } from "@/lib/txc/session-cache";
 import { assessPassword } from "@/lib/security/password-strength";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { getAddressStats } from "@/lib/txc/mempool";
