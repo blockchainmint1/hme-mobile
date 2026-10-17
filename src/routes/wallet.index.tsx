@@ -520,7 +520,7 @@ function WalletHome() {
   // EVM data (only for enabled EVM chains)
   const evmEnabled = enabled.filter((c) => c in EVM_CHAINS) as EvmChainId[];
   const evmAddress = useMemo(
-    () => (vaultPairing ? (vaultPairing.evm?.address ?? null) : root ? deriveEvmAccount(root).address : null),
+    () => (vaultPairing ? ((vaultPairing.evm?.address as `0x${string}` | undefined) ?? null) : root ? deriveEvmAccount(root).address : null),
     [root, vaultPairing],
   );
   // Prices are cheap and needed for portfolio total. Long stale time.
