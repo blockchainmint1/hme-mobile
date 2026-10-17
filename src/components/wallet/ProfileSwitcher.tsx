@@ -8,7 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowLeftRight, Check, ChevronDown, Download, Eye, Key, Loader2, Nfc, Pencil, Plus, Sparkles, Wallet } from "lucide-react";
+import { ArrowLeftRight, Check, ChevronDown, Download, Eye, Key, Loader2, Nfc, Pencil, Plus, ShieldCheck, Sparkles, Wallet } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
 import { DELEGATE_LINKS_EVENT, listDelegateLinks, type DelegateLinkRecord } from "@/lib/xpub-link/delegate";
 import { toast } from "sonner";
