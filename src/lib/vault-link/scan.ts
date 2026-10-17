@@ -78,59 +78,71 @@ export async function scanVaultChain(
   let nextReceive = "";
   let nextReceiveIndex = 0;
 
-  for (const change of [0, 1] as const) {
-    let gap = 0;
-    let index = 0;
-    while (gap < GAP_LIMIT) {
-      const derived = deriveVaultAddress(pairing, chain, purpose, change, index);
-      let stats;
-      try {
-        stats = await io.stats(derived.address);
-      } catch {
-        // A failed lookup must not abort the whole scan — treat as unused.
-        gap++;
-        index++;
-        continue;
-      }
-      scanned++;
-      const txCount = stats.chain_stats.tx_count + stats.mempool_stats.tx_count;
-      if (txCount === 0) {
-        gap++;
-        if (change === 0 && !nextReceive) {
-          nextReceive = derived.address;
-          nextReceiveIndex = index;
+  // Check addresses in parallel windows of GAP_LIMIT instead of one at a
+  // time — same gap-limit result, a few round trips instead of 40+.
+  const scanBranch = async (change: 0 | 1) => {
+    const hits: { derived: VaultAddress; index: number; addrUtxos: { txid: string; vout: number; value: number }[]; bal: number }[] = [];
+    let firstUnused = -1;
+    let lastUsed = -1;
+    let start = 0;
+    let count = 0;
+    while (true) {
+      const window = Array.from({ length: GAP_LIMIT }, (_, k) => start + k);
+      const results = await Promise.all(
+        window.map(async (index) => {
+          const derived = deriveVaultAddress(pairing, chain, purpose, change, index);
+          try {
+            const stats = await io.stats(derived.address);
+            return { index, derived, stats };
+          } catch {
+            return { index, derived, stats: null };
+          }
+        }),
+      );
+      for (const r of results) {
+        if (r.stats) count++;
+        const txCount = r.stats ? r.stats.chain_stats.tx_count + r.stats.mempool_stats.tx_count : 0;
+        if (txCount === 0) {
+          if (firstUnused < 0) firstUnused = r.index;
+          continue;
         }
-        index++;
-        continue;
+        lastUsed = r.index;
+        const s = r.stats!;
+        const bal =
+          s.chain_stats.funded_txo_sum - s.chain_stats.spent_txo_sum +
+          s.mempool_stats.funded_txo_sum - s.mempool_stats.spent_txo_sum;
+        hits.push({ derived: r.derived, index: r.index, addrUtxos: [], bal });
       }
-      gap = 0;
-      used.push(derived);
-      balanceSats +=
-        stats.chain_stats.funded_txo_sum -
-        stats.chain_stats.spent_txo_sum +
-        stats.mempool_stats.funded_txo_sum -
-        stats.mempool_stats.spent_txo_sum;
-      try {
-        const addrUtxos = await io.utxos(derived.address);
-        for (const u of addrUtxos) {
-          utxos.push({
-            txid: u.txid,
-            vout: u.vout,
-            value: u.value,
-            purpose,
-            change,
-            index,
-            path: derived.path,
-            address: derived.address,
-            pubkey: derived.pubkey,
-          });
-        }
-      } catch {
-        /* UTXO fetch failure — balance still shown, send will re-check */
-      }
-      index++;
+      start += GAP_LIMIT;
+      if (start - 1 - lastUsed >= GAP_LIMIT) break;
     }
-  }
+    await Promise.all(
+      hits.map(async (h) => {
+        try { h.addrUtxos = await io.utxos(h.derived.address); } catch { /* send re-checks */ }
+      }),
+    );
+    return { hits, firstUnused: firstUnused < 0 ? start : firstUnused, count };
+  };
+
+  const branches = await Promise.all([scanBranch(0), scanBranch(1)]);
+  branches.forEach((b, change) => {
+    scanned += b.count;
+    if (change === 0) {
+      nextReceiveIndex = b.firstUnused;
+      nextReceive = deriveVaultAddress(pairing, chain, purpose, 0, b.firstUnused).address;
+    }
+    for (const h of b.hits.sort((a, c) => a.index - c.index)) {
+      used.push(h.derived);
+      balanceSats += h.bal;
+      for (const u of h.addrUtxos) {
+        utxos.push({
+          txid: u.txid, vout: u.vout, value: u.value, purpose,
+          change: change as 0 | 1, index: h.index, path: h.derived.path,
+          address: h.derived.address, pubkey: h.derived.pubkey,
+        });
+      }
+    }
+  });
 
   if (!nextReceive) {
     const derived = deriveVaultAddress(pairing, chain, purpose, 0, nextReceiveIndex);
