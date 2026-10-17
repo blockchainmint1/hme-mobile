@@ -130,13 +130,12 @@ function VaultAddPage() {
                 scan the QR it shows.
               </p>
               <div className="flex items-center gap-2">
-                <QrScanButton
-                  onScan={(text) => {
-                    setRaw(text);
-                    tryParse(text);
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">Scan the Vault pairing QR</span>
+                <QrScanButton continuous onScan={onScanned} />
+                <span className="text-xs text-muted-foreground">
+                  {scanProgress && scanProgress.total > 1
+                    ? `Reading animated QR… part ${scanProgress.have} of ${scanProgress.total} — keep pointing`
+                    : "Scan the Vault pairing QR"}
+                </span>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">…or paste the pairing code:</p>
