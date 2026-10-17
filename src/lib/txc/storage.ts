@@ -211,11 +211,14 @@ export async function createKeyOnlyWallet(
  * src/lib/vault-link/pairing.ts. Signing always happens on the Vault device.
  */
 export async function createVaultWallet(
-  password: string,
   label = "Vault",
 ): Promise<UnlockedWallet> {
   const anchorBytes = crypto.getRandomValues(new Uint8Array(32));
-  const unlocked: UnlockedWallet = {
+  // NOTE: this only builds the wallet — it must NOT save. The caller saves
+  // via saveWalletToNewProfile, which picks the new profile's storage slot.
+  // Saving here would write to whichever profile is currently active and
+  // overwrite that wallet's envelope (this bug destroyed a seed wallet once).
+  return {
     mnemonic: "",
     passphrase: "",
     kind: "bip84",
@@ -223,8 +226,6 @@ export async function createVaultWallet(
     mode: "vault",
     anchor: b64encode(anchorBytes),
   };
-  await saveWallet(unlocked, password);
-  return unlocked;
 }
 
 /**

@@ -18,6 +18,7 @@ import { createVaultWallet, saveWalletToNewProfile } from "@/lib/txc/storage";
 import { getSessionPassword } from "@/lib/txc/session-cache";
 import { parsePairing, savePairing, type VaultPairing } from "@/lib/vault-link/pairing";
 import { PartCollector } from "@/lib/vault-link/qr-parts";
+import { setActiveProfileId } from "@/lib/profiles";
 import { pairingPreviewAddresses, VAULT_CHAIN_META } from "@/lib/vault-link/derive";
 
 export const Route = createFileRoute("/vault-add")({
@@ -36,7 +37,7 @@ export const Route = createFileRoute("/vault-add")({
 
 function VaultAddPage() {
   const navigate = useNavigate();
-  const { loadFromMemory, refreshProfiles } = useWallet();
+  const { loadFromMemory, refreshProfiles, unlocked: currentWallet, activeProfileId } = useWallet();
   const [raw, setRaw] = useState("");
   const [pairing, setPairing] = useState<VaultPairing | null>(null);
   const [label, setLabel] = useState("Vault");
@@ -92,12 +93,20 @@ function VaultAddPage() {
     setBusy(true);
     setError(null);
     try {
-      const unlocked = await createVaultWallet(password, label.trim() || "Vault");
+      const unlocked = await createVaultWallet(label.trim() || "Vault");
       const profileId = await saveWalletToNewProfile(unlocked, password);
       savePairing(profileId, pairing);
-      await loadFromMemory(unlocked);
+      // Adding a wallet must not hijack the screen: switch back to the wallet
+      // the user was on, so their coins stay exactly where they were. The new
+      // Vault wallet waits in the selector.
+      if (currentWallet && activeProfileId !== profileId) {
+        setActiveProfileId(activeProfileId);
+        await loadFromMemory(currentWallet);
+      } else {
+        await loadFromMemory(unlocked);
+      }
       refreshProfiles();
-      toast.success("Vault wallet added");
+      toast.success("Vault wallet added — find it in the wallet selector at the top");
       void navigate({ to: "/wallet" });
     } catch (e) {
       setError((e as Error).message || "Couldn't create the Vault wallet.");
