@@ -27,7 +27,14 @@ declare global {
   }
 }
 
-export function QrScanButton({ onScan }: { onScan: (text: string) => void }) {
+export function QrScanButton({
+  onScan,
+  continuous = false,
+}: {
+  onScan: (text: string) => void;
+  /** Keep scanning after each code (for animated multi-part QRs); caller decides when to stop via onClose. */
+  continuous?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -45,7 +52,7 @@ export function QrScanButton({ onScan }: { onScan: (text: string) => void }) {
         <ScannerDialog
           onClose={() => setOpen(false)}
           onScan={(text) => {
-            setOpen(false);
+            if (!continuous) setOpen(false);
             onScan(text);
           }}
         />
