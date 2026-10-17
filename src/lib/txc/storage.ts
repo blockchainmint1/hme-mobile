@@ -293,22 +293,24 @@ export async function unlockWallet(password: string): Promise<UnlockedWallet | n
       a?: string;
     };
     const keyOnly = env.mode === "keyonly" || parsed.mode === "keyonly";
-    const unlocked: UnlockedWallet = keyOnly
-      ? {
-          mnemonic: "",
-          passphrase: "",
-          kind: migrateKind(env),
-          label: env.label,
-          mode: "keyonly",
-          anchor: parsed.a ?? "",
-        }
-      : {
-          mnemonic: parsed.m ?? "",
-          passphrase: parsed.p ?? "",
-          kind: migrateKind(env),
-          label: env.label,
-          mode: "seed",
-        };
+    const vault = env.mode === "vault" || parsed.mode === "vault";
+    const unlocked: UnlockedWallet =
+      keyOnly || vault
+        ? {
+            mnemonic: "",
+            passphrase: "",
+            kind: migrateKind(env),
+            label: env.label,
+            mode: vault ? "vault" : "keyonly",
+            anchor: parsed.a ?? "",
+          }
+        : {
+            mnemonic: parsed.m ?? "",
+            passphrase: parsed.p ?? "",
+            kind: migrateKind(env),
+            label: env.label,
+            mode: "seed",
+          };
 
     // Silent KDF upgrade: if this envelope predates the current cost (or has
     // no recorded iteration count), transparently re-encrypt at the stronger
@@ -400,7 +402,7 @@ export interface WalletProfileSummary {
   id: string;
   label: string;
   createdAt: number;
-  mode: "seed" | "keyonly";
+  mode: "seed" | "keyonly" | "vault";
   isActive: boolean;
 }
 
