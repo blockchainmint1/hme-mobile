@@ -137,6 +137,9 @@ function CreatePage() {
         await saveWallet(u, password);
       }
       await loadFromMemory(u);
+      // Cache the password with the new session so a full page reload right
+      // after creation doesn't hit the lock screen.
+      await saveSession(u, addingProfile ? sessionPw! : password);
       clearDraftMnemonic();
       navigate({ to: "/wallet" });
     } catch (err) {
