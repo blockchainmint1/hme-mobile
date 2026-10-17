@@ -93,7 +93,7 @@ function VaultAddPage() {
     setBusy(true);
     setError(null);
     try {
-      const unlocked = await createVaultWallet(password, label.trim() || "Vault");
+      const unlocked = await createVaultWallet(label.trim() || "Vault");
       const profileId = await saveWalletToNewProfile(unlocked, password);
       savePairing(profileId, pairing);
       // Adding a wallet must not hijack the screen: switch back to the wallet
