@@ -14,3 +14,6 @@
 - [x] Tap card (NFC): server card service, owner settings, NectarPay pay endpoint, Telegram approvals, kill + sweep, NectarPay handoff
 - [x] Tap card uses reserved HME branch 1107 (card N = m/44'/696969'/1107'/0/N); Trading pocket rotation must skip 1107
 - [ ] Tap card: native NFC reading in the APK (needs NFC plugin + new APK build)
+- [ ] Cut new APK with Vault + session + speed + tap-to-copy fixes (Bobby runs the GitHub Actions Android APK workflow, release branch main); then unpack, pin, register `app_releases` row, and set as required update
+- [ ] Real-device Vault end-to-end test on a throwaway seed: pair → tiny TXC send → sign by QR → broadcast (needs the new APK + the Vault device)
+
