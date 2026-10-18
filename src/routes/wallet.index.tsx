@@ -1118,10 +1118,11 @@ function WalletHome() {
           )}
         </div>
 
-        {/* Sticky bottom send/receive — routes based on the active slot.
-            Sticky (not fixed) so it stays visible inside the WKWebView frame,
-            which clips/contains fixed positioning on iOS. */}
-        <div className="sticky bottom-0 z-10 mt-auto shrink-0 border-t border-border/60 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 pb-[env(safe-area-inset-bottom)]">
+      </div>
+
+        {/* Outside the content scroller: actions stay at the frame's bottom,
+            with the navigation safe area reserved once, not by a hidden footer. */}
+        <div data-wallet-bottom-actions className="z-10 shrink-0 border-t border-border/60 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 pb-[env(safe-area-inset-bottom)]">
           <div className="mx-auto max-w-3xl px-4 py-3 flex gap-2">
             {activeWatch ? (
               <WatchOnlyBottomActions wallet={activeWatch} />
@@ -1147,7 +1148,6 @@ function WalletHome() {
             )}
           </div>
         </div>
-      </div>
       <TxDetailSheet detail={detail} onClose={() => setDetail(null)} />
       <ReorderTilesSheet open={reorderOpen} onClose={() => setReorderOpen(false)} />
       <WifRemoveDialog entry={wifRemove} onClose={() => setWifRemove(null)} />

@@ -12,6 +12,7 @@
 ## Shared platform capabilities and layout
 - Keep the capability compatibility helpers unrestricted across supported builds; why: existing callers share one feature set without store-specific switches.
 - Render the public footer inside the frame's content scroller; why: legal links must not pin over or reduce the readable homepage content.
+- Keep wallet Send/Receive outside the home content scroller and apply bottom safe-area spacing only once; hidden public footers must occupy no space. Why: phone actions must stay at the bottom without an extra gap.
 
 ## Release delivery is database-driven
 

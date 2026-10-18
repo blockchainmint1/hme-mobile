@@ -28,7 +28,7 @@ export function SiteFooter() {
   if (native || pathname.startsWith("/wallet")) return null;
 
   return (
-    <footer className="border-t border-border/60 bg-background/60 py-8 mt-12">
+    <footer className="border-t border-border/60 bg-background/60 pt-8 pb-[max(env(safe-area-inset-bottom),2rem)] mt-12">
       <div className="mx-auto max-w-5xl px-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
         <p>
           Part of the{" "}
