@@ -78,6 +78,11 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/wallet/evm/$chain/send")({
+  validateSearch: (raw): z.infer<typeof searchSchema> => searchSchema.parse(raw),
+  beforeLoad: ({ params }) => {
+    if (!(params.chain in EVM_CHAINS)) throw notFound();
+    return {};
+  },
   head: ({ params }) => {
     const name = EVM_CHAINS[params.chain as EvmChainId]?.name ?? "Ethereum";
     const title = `Send on ${name} — HME Wallet`;
@@ -85,10 +90,6 @@ export const Route = createFileRoute("/wallet/evm/$chain/send")({
     return { meta: [{ title }, { name: "description", content: description }, { property: "og:title", content: title }, { property: "og:description", content: description }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] };
   },
   component: EvmSend,
-  validateSearch: (raw) => searchSchema.parse(raw),
-  beforeLoad: ({ params }): void => {
-    if (!(params.chain in EVM_CHAINS)) throw notFound();
-  },
 });
 
 /**

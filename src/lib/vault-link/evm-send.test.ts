@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { privateKeyToAccount } from "viem/accounts";
 import { rootFromSeed } from "@/lib/txc/wallet";
 import { buildErc20Intent, buildNativeIntent, type EvmIntent } from "./evm-intent";
@@ -29,7 +29,7 @@ describe("Vault EVM sending", () => {
     const native = JSON.parse(buildNativeIntent({ ...common, valueWei: 1n })) as EvmIntent;
     await expect(verifyVaultEvmSend(await signed(native), native)).resolves.toBeUndefined();
   });
-  it.each([{ chainId: 8453 }, { nonce: 8 }, { to: common.to }, { value: 1n }, { data: "0x" }, { gas: 65001n }, { maxFeePerGas: 40000000000n }, { maxPriorityFeePerGas: 2n }])("rejects altered signed fields %j", async (change) => {
+  it.each([{ chainId: 8453 }, { nonce: 8 }, { to: common.to }, { value: 1n }, { data: "0x" }, { gas: 65001n }, { maxFeePerGas: 40000000000n }, { maxPriorityFeePerGas: 2n }])("rejects altered signed fields %#", async (change) => {
     await expect(verifyVaultEvmSend(await signed(intent, change), intent)).rejects.toThrow();
   });
   it("rejects a different signer", async () => {
