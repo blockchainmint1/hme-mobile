@@ -30,7 +30,7 @@ function SolanaReceive() {
     <h1 className="text-2xl font-semibold mb-1">Receive SOL</h1>
     <p className="text-sm text-muted-foreground mb-6">on Solana</p>
     <Card><CardContent className="pt-6 flex flex-col items-center gap-4">
-      {address && <div className="bg-white p-3 rounded-lg"><QrCode value={address} size={220} /></div>}
+      {address && <div className="bg-white p-3 rounded-lg"><QrCode value={address} size={220} copyValue={address} /></div>}
       <p className="font-mono text-xs break-all text-center">{address ?? "..."}</p>
       <Button variant={copied ? "default" : "secondary"} onClick={async () => { if (address && await copy(address)) toast.success("Address copied"); }} disabled={!address} aria-live="polite">
         {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}{copied ? "Copied!" : "Copy address"}

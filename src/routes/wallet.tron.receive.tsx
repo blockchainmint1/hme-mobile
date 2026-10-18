@@ -50,7 +50,7 @@ function TronReceive() {
         <CardContent className="pt-6 flex flex-col items-center gap-4">
           {address && (
             <div className="bg-white p-3 rounded-lg">
-              <QrCode value={address} size={220} />
+              <QrCode value={address} size={220} copyValue={address} />
             </div>
           )}
           <p className="font-mono text-xs break-all text-center">{address ?? "..."}</p>

@@ -55,7 +55,7 @@ function WifReceivePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
-          <QrCode value={`${uriScheme}:${address}`} size={240} />
+          <QrCode value={`${uriScheme}:${address}`} size={240} copyValue={address} />
           <code className="font-mono text-sm text-center break-all px-2">{address}</code>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button

@@ -184,7 +184,7 @@ export function VaultHome() {
               <DialogTitle>Receive {receive.title}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center gap-3">
-              <QrCode value={receive.address} />
+              <QrCode value={receive.address} copyValue={receive.address} />
               <p className="font-mono text-xs break-all text-center">{receive.address}</p>
             </div>
           </DialogContent>
