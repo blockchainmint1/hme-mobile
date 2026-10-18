@@ -421,9 +421,7 @@ function RootComponent() {
                   (Settings) simply get cut off with no way to scroll. */}
               <div className="flex flex-1 min-h-0 flex-col overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
                 <Outlet />
-                <div className="pb-[max(env(safe-area-inset-bottom),0.75rem)]">
-                  <SiteFooter />
-                </div>
+                <SiteFooter />
               </div>
 
             </div>
