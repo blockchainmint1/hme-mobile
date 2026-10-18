@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Fix Vault EVM token-send balances and route USDC through verified offline QR signing; test without risking funds
 - [x] Remove native iOS build/review restrictions and let the homepage footer scroll with its content; verified at 393px and desktop, iPhone web installation retained
 
 - [x] Make Tap card setup comfortable on actual mobile screens — verified touch-enabled 320/390/430px layouts, 44px controls, PIN modes, Cancel, and no horizontal overflow
