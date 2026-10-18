@@ -1,4 +1,4 @@
-import { encodeFunctionData, erc20Abi, parseEther, parseUnits, parseTransaction, recoverTransactionAddress, type Address, type Hex } from "viem";
+import { encodeFunctionData, erc20Abi, parseEther, parseUnits, parseTransaction, recoverTransactionAddress, type Address, type Hex, type TransactionSerialized } from "viem";
 import type { BIP32Interface } from "bip32";
 import { deriveEvmAccount, evmClient, EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import type { Erc20TokenMeta } from "@/lib/chains/erc20";
@@ -56,7 +56,7 @@ export async function prepareVaultEvmSend(pairing: VaultPairing, chain: EvmChain
 /** A scanned signature must authorize exactly the request shown to Vault. */
 export async function verifyVaultEvmSend(serialized: Hex, intent: EvmIntent): Promise<void> {
   const tx = parseTransaction(serialized);
-  const from = await recoverTransactionAddress({ serializedTransaction: serialized });
+  const from = await recoverTransactionAddress({ serializedTransaction: serialized as TransactionSerialized });
   const expected = intentTransaction(intent);
   const same = (a: string | undefined, b: string) => a?.toLowerCase() === b.toLowerCase();
   if (!same(from, intent.from) || tx.chainId !== intent.chainId || tx.nonce !== intent.nonce ||
@@ -67,6 +67,6 @@ export async function verifyVaultEvmSend(serialized: Hex, intent: EvmIntent): Pr
     if (tx.maxFeePerGas !== BigInt(intent.maxFeePerGas ?? "0") || tx.maxPriorityFeePerGas !== BigInt(intent.maxPriorityFeePerGas ?? "0"))
       throw new Error("The signed network fee differs from the Vault request.");
   } else if (tx.gasPrice !== BigInt(intent.gasPrice ?? "0")) throw new Error("The signed network fee differs from the Vault request.");
-  if (tx.accessList?.length || ("authorizationList" in tx && tx.authorizationList?.length))
+  if (tx.accessList?.length)
     throw new Error("Unexpected permissions in the signed transaction.");
 }

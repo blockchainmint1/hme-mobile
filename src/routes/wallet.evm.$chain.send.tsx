@@ -86,7 +86,7 @@ export const Route = createFileRoute("/wallet/evm/$chain/send")({
   },
   component: EvmSend,
   validateSearch: (raw) => searchSchema.parse(raw),
-  beforeLoad: ({ params }) => {
+  beforeLoad: ({ params }): void => {
     if (!(params.chain in EVM_CHAINS)) throw notFound();
   },
 });
