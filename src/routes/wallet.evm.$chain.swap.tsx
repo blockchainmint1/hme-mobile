@@ -65,6 +65,7 @@ function assetAddress(a: AssetKind): string {
 }
 
 export const Route = createFileRoute("/wallet/evm/$chain/swap")({
+  head: () => ({ meta: [{ title: "Swap EVM assets — HME Wallet" }, { name: "description", content: "Exchange supported Ethereum-network coins and tokens in HME Wallet." }, { property: "og:title", content: "Swap EVM assets — HME Wallet" }, { property: "og:description", content: "Exchange supported Ethereum-network coins and tokens." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   component: EvmSwapGate,
   beforeLoad: ({ params }) => {
     if (!(params.chain in EVM_CHAINS)) throw notFound();
@@ -73,6 +74,8 @@ export const Route = createFileRoute("/wallet/evm/$chain/swap")({
 
 function EvmSwapGate() {
   const exchangeAllowed = useExchangeFeaturesAllowed();
+  const { unlocked } = useWallet();
+  if (unlocked?.mode === "vault") return <main className="mx-auto max-w-3xl px-4 py-6"><h1 className="text-2xl font-semibold">Swap unavailable for Vault</h1><p className="my-4 text-muted-foreground">HME Vault supports coin and token transfers, but not swap approvals.</p><Button asChild variant="outline"><Link to="/wallet">Back to wallet</Link></Button></main>;
   if (!exchangeAllowed) return <ExchangeUnavailable title="Swap" />;
   return <EvmSwap />;
 }

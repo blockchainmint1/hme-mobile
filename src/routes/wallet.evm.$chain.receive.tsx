@@ -8,11 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { QrCode } from "@/components/wallet/QrCode";
 import { useWallet } from "@/lib/txc/wallet-context";
-import { EVM_CHAINS, deriveEvmAccount, type EvmChainId } from "@/lib/chains/evm";
+import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
+import { loadPairing } from "@/lib/vault-link/pairing";
+import { evmSourceAddress } from "@/lib/vault-link/evm-send";
 import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/wallet/evm/$chain/receive")({
+  head: () => ({ meta: [{ title: "Receive EVM coins and tokens — HME Wallet" }, { name: "description", content: "Receive coins and tokens at your HME Wallet or paired HME Vault address." }, { property: "og:title", content: "Receive EVM coins and tokens — HME Wallet" }, { property: "og:description", content: "Receive coins and tokens at your wallet address." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] }),
   component: EvmReceive,
   beforeLoad: ({ params }) => {
     if (!(params.chain in EVM_CHAINS)) throw notFound();
@@ -23,8 +26,8 @@ function EvmReceive() {
   const { chain } = useParams({ from: "/wallet/evm/$chain/receive" });
   const chainId = chain as EvmChainId;
   const meta = EVM_CHAINS[chainId];
-  const { root } = useWallet();
-  const address = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
+  const { root, unlocked, activeProfileId } = useWallet();
+  const address = useMemo(() => evmSourceAddress(unlocked?.mode, root, unlocked?.mode === "vault" ? loadPairing(activeProfileId) : null), [root, unlocked?.mode, activeProfileId]);
   const { copied, copy } = useCopyFeedback();
 
   return (

@@ -62,6 +62,9 @@ import { confirmWithBiometric } from "@/lib/native/biometric";
 import { useFeature } from "@/lib/feature-prefs";
 import { addPendingTx } from "@/lib/pending-tx";
 import { sendEvmTransaction } from "@/lib/chains/evm-send";
+import { loadPairing } from "@/lib/vault-link/pairing";
+import { evmSourceAddress, prepareVaultEvmSend } from "@/lib/vault-link/evm-send";
+import { VaultEvmSigning } from "@/components/wallet/VaultEvmSigning";
 
 function findKnownToken(chain: EvmChainId, symbol: string): Erc20TokenMeta | null {
   const s = symbol.toUpperCase();
@@ -75,11 +78,18 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/wallet/evm/$chain/send")({
-  component: EvmSend,
-  validateSearch: (raw) => searchSchema.parse(raw),
+  validateSearch: (raw): z.infer<typeof searchSchema> => searchSchema.parse(raw),
   beforeLoad: ({ params }) => {
     if (!(params.chain in EVM_CHAINS)) throw notFound();
+    return {};
   },
+  head: ({ params }) => {
+    const name = EVM_CHAINS[params.chain as EvmChainId]?.name ?? "Ethereum";
+    const title = `Send on ${name} — HME Wallet`;
+    const description = `Send ${name} coins and tokens with HME Wallet, including offline signing through HME Vault.`;
+    return { meta: [{ title }, { name: "description", content: description }, { property: "og:title", content: title }, { property: "og:description", content: description }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary_large_image" }] };
+  },
+  component: EvmSend,
 });
 
 /**
@@ -147,10 +157,14 @@ function EvmSend() {
   const chainId = chain as EvmChainId;
   const meta = EVM_CHAINS[chainId];
   const tokens = useTokensForChain(chainId);
-  const { root } = useWallet();
+  const { root, unlocked, activeProfileId } = useWallet();
   const navigate = useNavigate();
 
-  const account = useMemo(() => (root ? deriveEvmAccount(root) : null), [root]);
+  const isVault = unlocked?.mode === "vault";
+  const pairing = useMemo(() => isVault ? loadPairing(activeProfileId) : null, [isVault, activeProfileId]);
+  const account = useMemo(() => (root && !isVault && unlocked?.mode !== "keyonly" ? deriveEvmAccount(root) : null), [root, isVault, unlocked?.mode]);
+  const address = useMemo(() => evmSourceAddress(unlocked?.mode, root, pairing), [unlocked?.mode, root, pairing]);
+  const [vaultPayload, setVaultPayload] = useState<string | null>(null);
 
   // Selected asset: derive initial from ?asset= then let user change.
   const initialAsset: AssetKind = useMemo(() => {
@@ -177,18 +191,24 @@ function EvmSend() {
 
   // Native balance (always fetched — used for gas visibility and native sends).
   const nativeBal = useQuery({
-    queryKey: ["evm-balance", chainId, account?.address],
-    enabled: !!account,
-    queryFn: () => evmClient(chainId).getBalance({ address: account!.address }),
+    queryKey: ["evm-balance", chainId, address],
+    enabled: !!address,
+    queryFn: () => {
+      if (!address) throw new Error("No Ethereum address is paired.");
+      return evmClient(chainId).getBalance({ address });
+    },
     staleTime: 15_000,
   });
 
   // ERC20 balances for every listed token on this chain (for the asset picker).
   const tokenBalances = useQueries({
     queries: tokens.map((t) => ({
-      queryKey: ["erc20-balance", chainId, t.address, account?.address],
-      enabled: !!account,
-      queryFn: () => readErc20Balance(chainId, t, account!.address),
+      queryKey: ["erc20-balance", chainId, t.address, address],
+      enabled: !!address,
+      queryFn: () => {
+        if (!address) throw new Error("No Ethereum address is paired.");
+        return readErc20Balance(chainId, t, address);
+      },
       staleTime: 30_000,
     })),
   });
@@ -221,7 +241,7 @@ function EvmSend() {
 
   const send = useMutation({
     mutationFn: async () => {
-      if (!account) throw new Error("Wallet locked");
+      if (!address) throw new Error(isVault ? "Pair this Vault's Ethereum address before sending." : "Wallet locked");
       if (!isAddress(to)) throw new Error("Invalid address");
       if (confirmLast4Enabled) {
         const last4 = to.slice(-4).toLowerCase();
@@ -230,6 +250,13 @@ function EvmSend() {
         }
       }
       if (!amount || Number(amount) <= 0) throw new Error("Enter an amount");
+
+      if (isVault) {
+        if (!pairing) throw new Error("Vault pairing is missing.");
+        const payload = await prepareVaultEvmSend(pairing, chainId, to as Address, amount, asset.kind === "erc20" ? asset.token : undefined);
+        return { kind: "vault" as const, payload };
+      }
+      if (!account) throw new Error("Wallet locked");
 
       const ok = await confirmWithBiometric(`Confirm sending ${symbol}`);
       if (!ok) throw new Error("Biometric confirmation was cancelled");
@@ -243,41 +270,39 @@ function EvmSend() {
 
       if (asset.kind === "native") {
         const value = parseEther(amount as `${number}`);
-        return sendEvmTransaction(chainId, walletClient, {
+        const hash = await sendEvmTransaction(chainId, walletClient, {
           to: to as Address,
           value,
         });
+        return { kind: "sent" as const, hash };
       }
 
       // ERC20 transfer(to, amount)
       const raw = tokenAmountToRaw(amount, asset.token.decimals);
       const data = encodeTransfer(to as Address, raw);
-      return sendEvmTransaction(chainId, walletClient, {
+      const hash = await sendEvmTransaction(chainId, walletClient, {
         to: asset.token.address,
         data,
         value: 0n,
       });
+      return { kind: "sent" as const, hash };
     },
     onError: (e: Error) => {
       hapticError();
       setError(e.message);
     },
-    onSuccess: (hash) => {
-      hapticSuccess();
-      setTxHash(hash as `0x${string}`);
-      if (account) {
-        addPendingTx({
-          hash: hash as string,
-          chain: chainId,
-          from: account.address,
-          to,
-          value: amount,
-          asset: symbol,
-          createdAt: Date.now(),
-        });
-      }
+    onSuccess: (result) => {
+      if (result.kind === "vault") setVaultPayload(result.payload);
+      else onBroadcast(result.hash as `0x${string}`);
     },
   });
+
+  function onBroadcast(hash: `0x${string}`) {
+    hapticSuccess();
+    setTxHash(hash);
+    setVaultPayload(null);
+    if (address) addPendingTx({ hash, chain: chainId, from: address, to, value: amount, asset: symbol, createdAt: Date.now() });
+  }
 
   // Poll for the receipt so a broadcast that never lands is visible instead of
   // silently "succeeding".
@@ -363,6 +388,7 @@ function EvmSend() {
 
       <Card>
         <CardContent className="pt-6 space-y-4">
+          {vaultPayload ? <VaultEvmSigning payload={vaultPayload} chain={chainId} onSent={onBroadcast} onBack={() => setVaultPayload(null)} /> : <>
           {/* Asset picker */}
           <div>
             <label className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -373,12 +399,12 @@ function EvmSend() {
                 selected={asset.kind === "native"}
                 onClick={() => setAsset({ kind: "native" })}
                 label={meta.nativeSymbol}
-                sub={nativeBal.data != null ? formatEth(nativeBal.data) : "…"}
+                sub={nativeBal.isError ? "Unavailable" : nativeBal.data != null ? formatEth(nativeBal.data) : "…"}
               />
               {tokens.map((t, i) => {
                 const raw = tokenBalances[i]?.data;
                 const pretty =
-                  raw == null
+                  tokenBalances[i]?.isError ? "Unavailable" : raw == null
                     ? "…"
                     : Number(tokenAmountFromRaw(raw, t.decimals)).toLocaleString(
                         undefined,
@@ -463,18 +489,22 @@ function EvmSend() {
             )}
           </div>
 
-          {error && <p className="text-sm text-rose-400">{error}</p>}
+          {!address && <p className="text-sm text-destructive">{isVault ? "Pair this Vault's Ethereum address before sending." : "Wallet locked"}</p>}
+          {(nativeBal.isError || tokenBalances.some((q) => q.isError)) && <div className="text-sm text-destructive">
+            Balances could not be loaded. <Button variant="link" onClick={() => { void nativeBal.refetch(); tokenBalances.forEach((q) => { void q.refetch(); }); }}>Retry</Button>
+          </div>}
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
                 onClick={() => setError(null)}
-                disabled={!to || !amount || send.isPending}
+                disabled={!address || !to || !amount || send.isPending}
                 className="w-full"
                 size="lg"
               >
                 {send.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Send {symbol}
+                {isVault ? `Prepare ${symbol} for Vault` : `Send ${symbol}`}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -505,17 +535,17 @@ function EvmSend() {
                   onClick={() => send.mutate()}
                   disabled={send.isPending}
                 >
-                  Confirm & send
+                  {isVault ? "Prepare for Vault signing" : "Confirm & send"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+          </>}
         </CardContent>
       </Card>
 
       <p className="mt-4 text-xs text-muted-foreground">
-        Gas is estimated automatically. The transaction is signed on this device and broadcast through
-        the wallet's RPC.
+        {isVault ? "Gas is estimated automatically. Signing happens only on HME Vault; this wallet checks the signed payment before broadcasting." : "Gas is estimated automatically. The transaction is signed on this device and broadcast through the wallet's RPC."}
       </p>
     </main>
   );
@@ -534,10 +564,11 @@ function AssetChip({
   sub: string;
 }) {
   return (
-    <button
+    <Button
+      variant="outline"
       type="button"
       onClick={onClick}
-      className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+      className={`h-auto flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${
         selected
           ? "border-primary bg-primary/10"
           : "border-border/60 bg-card/40 hover:bg-card"
@@ -545,6 +576,6 @@ function AssetChip({
     >
       <div className="text-sm font-semibold">{label}</div>
       <div className="text-xs text-muted-foreground truncate">{sub}</div>
-    </button>
+    </Button>
   );
 }

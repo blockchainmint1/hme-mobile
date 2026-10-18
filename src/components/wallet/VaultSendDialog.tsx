@@ -18,7 +18,8 @@ import { VaultAnimatedQr } from "@/components/wallet/VaultAnimatedQr";
 import { TxidCard } from "@/components/wallet/TxidCard";
 import { PartCollector } from "@/lib/vault-link/qr-parts";
 import { buildVaultPsbt, verifySignedTx } from "@/lib/vault-link/psbt-build";
-import { buildNativeIntent } from "@/lib/vault-link/evm-intent";
+import type { EvmIntent } from "@/lib/vault-link/evm-intent";
+import { prepareVaultEvmSend, verifyVaultEvmSend } from "@/lib/vault-link/evm-send";
 import { chainIo, type VaultChainScan } from "@/lib/vault-link/scan";
 import { VAULT_CHAIN_META } from "@/lib/vault-link/derive";
 import type { VaultPairing, VaultUtxoChain } from "@/lib/vault-link/pairing";
@@ -118,30 +119,8 @@ export function VaultSendDialog({
   }
 
   async function buildEvm() {
-    const evm = pairing.evm;
-    if (!evm) throw new Error("This Vault pairing has no Ethereum key.");
-    const chainMeta = EVM_CHAINS[evmChain];
-    const pub = evmClient(evmChain);
-    const valueWei = BigInt(Math.round(Number(amount) * 1e6)) * 10n ** 12n;
-    if (valueWei <= 0n) throw new Error("Enter an amount.");
     if (!/^0x[0-9a-fA-F]{40}$/.test(to.trim())) throw new Error("Enter a valid 0x recipient address.");
-    const [nonce, fees] = await Promise.all([
-      pub.getTransactionCount({ address: evm.address as `0x${string}`, blockTag: "pending" }),
-      pub.estimateFeesPerGas().catch(() => null),
-    ]);
-    const gas = 21_000n;
-    const feeFields = fees?.maxFeePerGas
-      ? { type: "eip1559" as const, maxFeePerGas: fees.maxFeePerGas, maxPriorityFeePerGas: fees.maxPriorityFeePerGas ?? 1_000_000_000n }
-      : { type: "legacy" as const, gasPrice: await pub.getGasPrice() };
-    const json = buildNativeIntent({
-      pairing,
-      chainId: chainMeta.viemChain.id,
-      to: to.trim(),
-      valueWei,
-      nonce,
-      gas,
-      fees: feeFields,
-    });
+    const json = await prepareVaultEvmSend(pairing, evmChain, to.trim() as `0x${string}`, amount);
     setStep({ name: "show", payload: json, expected: [] });
   }
 
@@ -170,6 +149,7 @@ export function VaultSendDialog({
         if (isEvm) {
           const hex = full.trim();
           if (!/^0x[0-9a-fA-F]+$/.test(hex)) throw new Error("That QR code didn't contain a signed transaction.");
+          await verifyVaultEvmSend(hex as `0x${string}`, JSON.parse(step.payload) as EvmIntent);
           const pub = evmClient(evmChain);
           const hash = await pub.sendRawTransaction({ serializedTransaction: hex as `0x${string}` });
           setStep({ name: "done", txid: hash });
