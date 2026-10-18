@@ -2629,7 +2629,7 @@ function WatchOnlyBottomActions({ wallet }: { wallet: WatchWallet }) {
           </DialogHeader>
           <div className="flex flex-col items-center gap-3">
             <div className="rounded-lg bg-white p-3">
-              <QrCodeSvg value={wallet.address} size={220} />
+              <QrCodeSvg value={wallet.address} size={220} copyValue={wallet.address} />
             </div>
             <code className="text-xs break-all text-center px-2">{wallet.address}</code>
           </div>

@@ -157,7 +157,7 @@ function ReceivePage() {
               <div className="w-60 h-60 rounded-lg bg-muted animate-pulse" />
             ) : (
               <>
-                <QrCode value={`texitcoin:${tsdAddress}`} size={240} />
+                <QrCode value={`texitcoin:${tsdAddress}`} size={240} copyValue={tsdAddress} />
                 <code className="font-mono text-sm text-center break-all px-2">{tsdAddress}</code>
                 <div className="text-xs text-muted-foreground text-center">
                   Pinned token address · <span className="font-mono">{omniDeposit.path}</span>
@@ -194,7 +194,7 @@ function ReceivePage() {
             <div className="w-60 h-60 rounded-lg bg-muted animate-pulse" />
           ) : address ? (
             <>
-              <QrCode value={`texitcoin:${address}`} size={240} />
+              <QrCode value={`texitcoin:${address}`} size={240} copyValue={address} />
               <code className="font-mono text-sm text-center break-all px-2">{address}</code>
               <div className="text-xs text-muted-foreground text-center">
                 Address #{shown.index} · <span className="font-mono">{shown.path}</span>

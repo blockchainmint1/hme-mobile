@@ -71,7 +71,7 @@ function ReceiveIskPage() {
             <div className="w-60 h-60 rounded-lg bg-muted animate-pulse" />
           ) : address ? (
             <>
-              <QrCode value={`iskandercoin:${address}`} size={240} />
+              <QrCode value={`iskandercoin:${address}`} size={240} copyValue={address} />
               <code className="font-mono text-sm text-center break-all px-2">{address}</code>
               <div className="text-xs text-muted-foreground text-center">
                 Address #{shown.index} · <span className="font-mono">{shown.path}</span>

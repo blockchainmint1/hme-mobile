@@ -66,7 +66,7 @@ export function VaultBottomActions({
               <DialogTitle>Receive {title}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center gap-3">
-              <QrCode value={receiveAddress} />
+              <QrCode value={receiveAddress} copyValue={receiveAddress} />
               <p className="font-mono text-xs break-all text-center">{receiveAddress}</p>
             </div>
           </DialogContent>
