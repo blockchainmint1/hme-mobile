@@ -1,5 +1,6 @@
 # Roadmap
-- [ ] Fix Vault EVM token-send balances and route USDC through verified offline QR signing; test without risking funds
+- [x] Fix Vault EVM token-send balances and route USDC through verified offline QR signing; 27 tests passed, paired-address balances and QR preparation verified with simulated network data at desktop and 390px
+- [ ] Verify a real-device USDC Vault send after installing the next APK (needs Bobby's Vault device; no funded transaction performed here)
 - [x] Remove native iOS build/review restrictions and let the homepage footer scroll with its content; verified at 393px and desktop, iPhone web installation retained
 
 - [x] Make Tap card setup comfortable on actual mobile screens — verified touch-enabled 320/390/430px layouts, 44px controls, PIN modes, Cancel, and no horizontal overflow
@@ -15,6 +16,7 @@
 - [x] Tap card (NFC): server card service, owner settings, NectarPay pay endpoint, Telegram approvals, kill + sweep, NectarPay handoff
 - [x] Tap card uses reserved HME branch 1107 (card N = m/44'/696969'/1107'/0/N); Trading pocket rotation must skip 1107
 - [ ] Tap card: native NFC reading in the APK (needs NFC plugin + new APK build)
-- [ ] Cut new APK with Vault + session + speed + tap-to-copy fixes (Bobby runs the GitHub Actions Android APK workflow, release branch main); then unpack, pin, register `app_releases` row, and set as required update
+- [x] APK 0.1.202610181617 pinned and distributed with Vault + session + speed + tap-to-copy fixes
+- [ ] Cut APK and extension builds including the Vault EVM token-send fix (needs new release builds)
 - [ ] Real-device Vault end-to-end test on a throwaway seed: pair → tiny TXC send → sign by QR → broadcast (needs the new APK + the Vault device)
 

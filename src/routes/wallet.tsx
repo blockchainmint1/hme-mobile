@@ -28,6 +28,9 @@ import { QrScanButton } from "@/components/wallet/QrScanButton";
 import { looksLikeLoginQr } from "@/lib/nectar/auth";
 import { ProfileSwitcher } from "@/components/wallet/ProfileSwitcher";
 import { toast } from "sonner";
+import { loadPairing } from "@/lib/vault-link/pairing";
+import { evmSourceAddress } from "@/lib/vault-link/evm-send";
+import { vaultAccountSnapshot } from "@/lib/vault-link/snapshot";
 import {
   Dialog,
   DialogContent,
@@ -45,7 +48,8 @@ export const Route = createFileRoute("/wallet")({
 });
 
 function WalletLayout() {
-  const { unlocked, root, seed } = useWallet();
+  const { unlocked, root, seed, activeProfileId } = useWallet();
+  const pairing = useMemo(() => unlocked?.mode === "vault" ? loadPairing(activeProfileId) : null, [unlocked?.mode, activeProfileId]);
   const navigate = useNavigate();
   const [showPortfolio, setShowPortfolio] = useState(false);
 
@@ -63,13 +67,20 @@ function WalletLayout() {
 
   const account = useQuery({
     queryKey: ["account", unlocked?.kind, root ? rootFingerprintHex(root) : null],
-    enabled: !!root && !!unlocked,
-    queryFn: () => scanAccount(root!, unlocked!.kind),
+    enabled: !!root && !!unlocked && (unlocked.mode !== "vault" || !!pairing?.chains.txc),
+    queryFn: () => {
+      if (unlocked?.mode === "vault") {
+        if (!pairing) throw new Error("Vault pairing missing.");
+        return vaultAccountSnapshot(pairing, "txc");
+      }
+      if (!root || !unlocked) throw new Error("Wallet locked.");
+      return scanAccount(root, unlocked.kind);
+    },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 
-  const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
+  const evmAddress = useMemo(() => evmSourceAddress(unlocked?.mode, root, pairing), [root, unlocked?.mode, pairing]);
   const solanaAddress = useMemo(() => (seed ? deriveSolanaAccount(seed).address : null), [seed]);
   const solanaBalance = useQuery({
     queryKey: ["solana-balance", solanaAddress],
