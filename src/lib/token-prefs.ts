@@ -56,7 +56,7 @@ type HiddenSet = string[];
 
 function readCustom(): CustomMap {
   try {
-    const raw = localStorage.getItem(CUSTOM_KEY());
+    const raw = localStorage.getItem(CUSTOM_KEY()) ?? adoptLegacy(CUSTOM_KEY_BASE);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return typeof parsed === "object" && parsed ? parsed : {};
@@ -69,7 +69,7 @@ function writeCustom(v: CustomMap) {
 }
 function readHidden(): Set<string> {
   try {
-    const raw = localStorage.getItem(HIDDEN_KEY());
+    const raw = localStorage.getItem(HIDDEN_KEY()) ?? adoptLegacy(HIDDEN_KEY_BASE);
     if (!raw) return new Set();
     const arr = JSON.parse(raw) as HiddenSet;
     return new Set(Array.isArray(arr) ? arr : []);
