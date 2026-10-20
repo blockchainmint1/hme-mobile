@@ -8,6 +8,13 @@
       "when": 1792075745621,
       "tag": "0000_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792496629281,
+      "tag": "0001_atomic_card_payment_security",
+      "breakpoints": true
     }
   ]
 }
