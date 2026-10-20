@@ -1,4 +1,4 @@
 /** Quote APIs are not signing authorities. Re-enable only after calldata/contract verification. */
-export function assertReviewedExecution(provider: "lifi" | "relay-tron"): never {
+export function assertReviewedExecution(provider: "lifi" | "relay-tron"): void {
   throw new Error(`${provider === "lifi" ? "EVM swaps" : "Tron bridging"} are temporarily paused while spending-contract verification is completed. Sending and receiving still work.`);
 }

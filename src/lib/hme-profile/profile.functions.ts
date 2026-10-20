@@ -84,11 +84,17 @@ export const linkHmeProfile = createServerFn({ method: "POST" })
     const expected = await hmacHex(secret(), `hme-wallet-link:${payload}`);
     if (!safeEq(expected, data.receipt)) throw new Error("Link could not be verified.");
 
+    const apiKey = process.env["HME_SITE_API_KEY"];
+    const site = process.env["HME_SITE_CODE"];
+    // Optional attribution must never transmit the cross-partner signing secret.
+    if (!apiKey || !site) return { reported: false, memberFound: null };
     const res = await fetch("https://honest.money/api/public/hub/events", {
       method: "POST",
-      headers: { Authorization: `Bearer ${secret()}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${apiKey}`, "X-HME-Site": site, "Content-Type": "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({
-        service: "hme-wallet",
+        service: site,
         event: "wallet_download",
         member_id: data.memberId,
         ...(data.ref ? { ref: data.ref } : {}),

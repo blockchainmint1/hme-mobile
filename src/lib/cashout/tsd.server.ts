@@ -116,7 +116,10 @@ export interface DepositNotice {
  * knows it came from our server, plus the user's x-api-key for the account.
  */
 export async function notifyDeposit(n: DepositNotice): Promise<void> {
-  const secret = process.env["HME_ECOSYSTEM"];
+  const secret = process.env["TSD_NOTIFY_SIGNING_KEY"];
+  // Cash-out still works without this optional hint; do not expose a shared
+  // cross-partner signing oracle while a dedicated key is being coordinated.
+  if (!secret) return;
   const { createHmac } = await import("crypto");
   const body = JSON.stringify({
     txid: n.txid,
