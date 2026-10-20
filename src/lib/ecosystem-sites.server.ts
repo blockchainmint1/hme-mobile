@@ -15,7 +15,7 @@ export interface EcosystemSite {
 
 const DEFAULT_URL = "https://honest.money/api/public/v1/trusted-sites";
 let cache: { at: number; sites: EcosystemSite[] } | null = null;
-const TTL_MS = 10 * 60 * 1000;
+const TTL_MS = 5 * 60 * 1000;
 
 export async function loadEcosystemSites(): Promise<EcosystemSite[]> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.sites;
@@ -29,6 +29,7 @@ export async function loadEcosystemSites(): Promise<EcosystemSite[]> {
   const body = await res.text();
   const ts = res.headers.get("x-hme-timestamp") ?? "";
   const sig = res.headers.get("x-hme-signature") ?? "";
+  if (!/^\d{10,13}$/.test(ts) || !/^[0-9a-f]{64}$/i.test(sig)) throw new Error("registry signature malformed");
   const expected = createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex");
   const a = Buffer.from(sig, "hex");
   const b = Buffer.from(expected, "hex");

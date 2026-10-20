@@ -19,8 +19,7 @@ export function useEcosystemSites(): void {
     }
     getEcosystemSites()
       .then(({ sites }) => {
-        if (!sites.length) return;
-        setEcosystemSites(sites);
+        setEcosystemSites(sites, true);
         try {
           localStorage.setItem(KEY, JSON.stringify(sites));
         } catch {

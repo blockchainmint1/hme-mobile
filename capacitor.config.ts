@@ -45,9 +45,8 @@ const config: CapacitorConfig = {
     hostname: REMOTE_URL ? new URL(REMOTE_URL).hostname : WEBVIEW_HOSTNAME,
     cleartext: false,
     androidScheme: "https",
-    // Only the payment processor needs to be navigable; the app itself is
-    // served from the local bundle under the hostname above.
-    allowNavigation: ["nectar-pay.com"],
+    // Partner pages open in the system browser, never inside the wallet origin.
+    allowNavigation: [],
   },
   android: {
     backgroundColor: "#ffffff",

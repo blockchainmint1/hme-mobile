@@ -45,8 +45,8 @@ const FIRST_PARTY_APEX = "honest.money";
 
 function isFirstParty(hostname: string): boolean {
   if (hostname === FIRST_PARTY_APEX || hostname.endsWith(`.${FIRST_PARTY_APEX}`)) return true;
-  // Our own Lovable preview / published hosts for the ecosystem apps.
-  return /^(hme|honest)[a-z0-9-]*\.lovable\.app$/i.test(hostname);
+  // Hosting-provider names are open to anyone: never trust a name pattern.
+  return false;
 }
 
 /**
@@ -80,20 +80,31 @@ export function isPublicHostname(raw: string): boolean {
  * built-in list above stays as the offline fallback.
  */
 let ecosystemNames: Record<string, string> = {};
+let spendingHosts = new Set<string>();
+let verifiedUntil = 0;
 
-export function setEcosystemSites(sites: { host: string; label: string }[]): void {
-  const next: Record<string, string> = {};
+export function setEcosystemSites(sites: { host: string; label: string }[], verified = false): void {
+  const next: Record<string, string> = Object.create(null);
   for (const s of sites) {
     const host = s.host.trim().toLowerCase();
     if (!isPublicHostname(host)) continue;
     next[host] = (s.label || host).slice(0, 40);
   }
   ecosystemNames = next;
+  if (verified) {
+    spendingHosts = new Set(Object.keys(next));
+    verifiedUntil = Date.now() + 5 * 60 * 1000;
+  }
 }
 
 export function isEcosystemSite(hostname: string): boolean {
   const host = hostname.trim().toLowerCase();
-  return !!ecosystemNames[host] || !!PARTNER_NAMES[host] || isFirstParty(host);
+  return Object.hasOwn(ecosystemNames, host) || Object.hasOwn(PARTNER_NAMES, host) || isFirstParty(host);
+}
+
+/** Spending is authorized ONLY by a fresh server-verified registry, never offline labels. */
+export function isSpendingSite(hostname: string): boolean {
+  return Date.now() < verifiedUntil && spendingHosts.has(hostname.trim().toLowerCase());
 }
 
 /** Tier + display name for a sign-in host. */
