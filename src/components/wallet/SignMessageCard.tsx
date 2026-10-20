@@ -9,6 +9,7 @@ import { useCopyFeedback } from "@/hooks/use-copy-feedback";
 import { WebsiteSignInCard } from "@/components/wallet/WebsiteSignInCard";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { signMessageWithSeed, verifyMessage, type SignedMessage } from "@/lib/txc/message-sign";
+import { assertFreeformMessage } from "@/lib/security/signing-policy";
 
 export function SignMessageCard({ compact }: { compact?: boolean }) {
   const { unlocked } = useWallet();
@@ -32,6 +33,7 @@ export function SignMessageCard({ compact }: { compact?: boolean }) {
     setResult(null);
     setBusy(true);
     try {
+      assertFreeformMessage(message);
       const i = Math.max(0, Math.min(1000, Number.parseInt(index || "0", 10) || 0));
       const signed = await signMessageWithSeed({
         mnemonic: unlocked.mnemonic,
@@ -60,7 +62,7 @@ export function SignMessageCard({ compact }: { compact?: boolean }) {
           </CardTitle>
           <CardDescription>
             Prove you control a TEXITcoin address by signing a message with its key. Signing costs
-            nothing, never touches the blockchain, and never moves funds.
+            nothing and does not broadcast a transaction. Only sign messages you understand.
           </CardDescription>
         </CardHeader>
       )}

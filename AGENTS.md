@@ -32,7 +32,7 @@ The extension packages the full web app: `bun scripts/build-extension.mjs` runs 
 - Popup theme follows system by default with a light/dark override saved only in extension localStorage. Why: appearance should not change web/mobile settings or wallet data.
 
 ## Trusted ecosystem sites come from honest.money
-Friendly site names/trust badges for sign-in and xpub links load from the HMAC-signed (`HME_ECOSYSTEM`) registry at honest.money (`src/lib/ecosystem-sites*`, spec `docs/ecosystem-trusted-sites.md`); the built-in list in `src/lib/web-login-hosts.ts` is only the offline fallback. Why: adding a partner site must never need a wallet release. The registry only labels — it never relaxes message/path rules.
+Registry uses a dedicated site credential (docs/ecosystem-trusted-sites.md). Spending requires fresh exact membership; offline labels never authorize it. Why: names and caches cannot grant spending access.
 
 ## Trading links (hm-link-delegate)
 - Spending access is only ever for the Trading pocket account (1106'+, rotated on revoke) and only for sites on the honest.money trusted list; look-only links stay xpub-only. Why: a shared spending key can't be taken back, so the blast radius must be one separate, retirable pocket.
@@ -43,6 +43,10 @@ Friendly site names/trust badges for sign-in and xpub links load from the HMAC-s
 
 ## Vault wallets (offline signing via HME Vault)
 - Rules live in `src/lib/vault-link/AGENTS.md` — read it before changing files there. Why: subdirectories carry their own scoped rules.
+
+## Security boundaries
+- Read src/lib/security/AGENTS.md before changing security controls; why: shared guardrails cover web, Android and extension.
+- Card PIN verification and payment reservation run atomically in the database; why: concurrent taps cannot race limits or lockout.
 
 ## Settings scope (app-wide vs per-wallet)
 - Chain prefs (`chain-prefs.ts`) and EVM token prefs (`token-prefs.ts`) are APP-WIDE: they use the unprefixed historical keys and adopt a profile's legacy scoped values copy-only on first read (never delete the scoped copy, never touch the profile list or envelopes). Why: users expect chains/tokens to follow them across wallets, and copy-only migration can never strand a wallet's data.

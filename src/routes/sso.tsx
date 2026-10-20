@@ -36,7 +36,7 @@ function SsoReturn() {
         if (window.opener) {
           // Only a verified receipt (no raw ticket) is posted; the wallet
           // re-checks it server-side, so a fake message can't link anything.
-          window.opener.postMessage(message, "*");
+          window.opener.postMessage(message, window.location.origin);
           setMsg("Linked. You can close this window.");
           setTimeout(() => window.close(), 600);
         } else {

@@ -15,6 +15,7 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { isPublicHostname } from "@/lib/web-login-hosts";
+import { validateRelayPost } from "@/lib/security/relay-policy";
 
 const MAX_BODY_BYTES = 32 * 1024;
 const TIMEOUT_MS = 10_000;
@@ -44,6 +45,10 @@ async function forward(request: Request, method: "GET" | "POST", body?: string):
   const target = targetFrom(request);
   if (!target) return jsonError("untrusted_url", 400);
   if (body !== undefined && body.length > MAX_BODY_BYTES) return jsonError("payload_too_large", 413);
+  if (body !== undefined) {
+    try { validateRelayPost(JSON.parse(body), target); }
+    catch { return jsonError("invalid_protocol_body", 400); }
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -61,12 +66,14 @@ async function forward(request: Request, method: "GET" | "POST", body?: string):
       signal: controller.signal,
     });
     if (res.status >= 300 && res.status < 400) return jsonError("redirect_not_allowed", 502);
-    const text = await res.text();
+    const { readBoundedText } = await import("@/lib/security/json-proxy.server");
+    const text = await readBoundedText(res);
     if (text.length > MAX_BODY_BYTES) return jsonError("response_too_large", 502);
     const contentType = res.headers.get("content-type") ?? "application/json";
     if (!/^application\/(json|[a-z.+-]*\+json)/i.test(contentType)) {
       return jsonError("unexpected_response_type", 502);
     }
+    JSON.parse(text);
     return new Response(text, {
       status: res.status,
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
@@ -83,8 +90,9 @@ export const Route = createFileRoute("/api/nectar/link")({
     handlers: {
       GET: async ({ request }) => forward(request, "GET"),
       POST: async ({ request }) => {
-        const body = await request.text();
-        return forward(request, "POST", body);
+        const { readBoundedText } = await import("@/lib/security/json-proxy.server");
+        try { return await forward(request, "POST", await readBoundedText(request)); }
+        catch { return jsonError("payload_too_large", 413); }
       },
     },
   },

@@ -45,21 +45,12 @@ function Rules({
       </div>
       <div className="min-w-0 space-y-2">
         <Label htmlFor="card-pin-rule" className="text-sm">Ask for PIN</Label>
-        <select id="card-pin-rule" className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-base" value={value.pinRule} onChange={set("pinRule")}>
+        <select id="card-pin-rule" className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-base" value="always" disabled>
           <option value="always">Every tap</option>
-          <option value="above">Above an amount</option>
-          <option value="never">Never</option>
         </select>
       </div>
-      {value.pinRule === "above" ? (
-        <div className="min-w-0 space-y-2">
-          <Label htmlFor="card-pin-above" className="text-sm">PIN above ($)</Label>
-          <Input id="card-pin-above" className="h-11 min-w-0 text-base md:text-base" inputMode="decimal" value={value.pinAboveUsd} onChange={set("pinAboveUsd")} />
-        </div>
-      ) : (
-        <div className="hidden sm:block" />
-      )}
-      {value.pinRule !== "never" && (
+      <div className="hidden sm:block" />
+      {(
         <div className="min-w-0 space-y-2 sm:col-span-2">
           <Label htmlFor="card-pin" className="text-sm">{pinRequiredIfSet ? "New PIN (leave blank to keep)" : "PIN (4–8 digits)"}</Label>
           <Input id="card-pin" className="h-11 min-w-0 text-base md:text-base" type="password" inputMode="numeric" maxLength={8} value={value.pin} onChange={set("pin")} />
@@ -69,7 +60,7 @@ function Rules({
   );
 }
 
-const DEFAULT_RULES = { pinRule: "above" as PinRule, pin: "", pinAboveUsd: "25", perTapUsd: "100", dailyUsd: "500" };
+const DEFAULT_RULES = { pinRule: "always" as PinRule, pin: "", pinAboveUsd: "0", perTapUsd: "100", dailyUsd: "500" };
 
 export function TapCardCard() {
   const allowed = useExchangeFeaturesAllowed();
@@ -154,7 +145,7 @@ export function TapCardCard() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Instant up to ${c.perTapUsd} a tap, ${c.dailyUsd} a day. PIN: {c.pinRule === "always" ? "every tap" : c.pinRule === "above" ? `above $${c.pinAboveUsd}` : "never"}.
+            Instant up to ${c.perTapUsd} a tap, ${c.dailyUsd} a day. PIN required every tap.
           </p>
           <div className="rounded-md bg-muted/40 p-2 text-xs">
             {c.approvers > 0 ? `${c.approvers} Telegram approver${c.approvers > 1 ? "s" : ""} linked. ` : "No Telegram approver yet. Over-limit taps will be declined. "}
@@ -185,6 +176,12 @@ export function TapCardCard() {
             </ul>
           )}
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" disabled={!!busy} onClick={() => {
+              const pin = prompt("Set a card PIN (4–8 digits). Required on every tap.");
+              if (pin === null) return;
+              if (!/^\d{4,8}$/.test(pin)) { setMsg("Use a PIN with 4–8 digits."); return; }
+              void run(c.id + ":pin", async () => void (await update({ data: signEnvelope(seed, "update", { cardId: c.id, pin, pinRule: "always" }) })));
+            }}>Set / change PIN</Button>
             {c.status === "locked" && (
               <Button size="sm" variant="outline" disabled={!!busy} onClick={() => run(c.id + ":unlock", async () => void (await update({ data: signEnvelope(seed, "update", { cardId: c.id, unlock: true }) })))}>
                 Unlock card
@@ -212,7 +209,7 @@ export function TapCardCard() {
       {adding ? (
         <div className="min-w-0 space-y-4 border-t border-border pt-5">
           <div className="min-w-0 space-y-2">
-            <Label htmlFor="card-number" className="text-sm">Card number (printed on the card)</Label>
+            <Label htmlFor="card-number" className="text-sm">Card identifier</Label>
             <Input id="card-number" className="h-11 min-w-0 text-base md:text-base" value={uid} onChange={(e) => setUid(e.target.value)} placeholder="04:A2:1B:…" autoCapitalize="characters" />
           </div>
           <div className="min-w-0 space-y-2">
@@ -233,8 +230,8 @@ export function TapCardCard() {
                     data: signEnvelope(seed, "link", {
                       uid,
                       label: label.trim() || "My card",
-                      pinRule: rules.pinRule,
-                      ...(rules.pinRule !== "never" ? { pin: rules.pin } : {}),
+                      pinRule: "always",
+                      pin: rules.pin,
                       pinAboveUsd: num(rules.pinAboveUsd),
                       perTapUsd: num(rules.perTapUsd),
                       dailyUsd: num(rules.dailyUsd),

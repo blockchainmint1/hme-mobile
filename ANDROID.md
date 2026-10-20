@@ -15,7 +15,7 @@ bun run android:apk       # debug-signed APK at android/app/build/outputs/apk/de
 
 ## Automated APK builds (GitHub Actions)
 
-Two workflows ship in `.github/workflows/`:
+The APK workflow ships in `.github/workflows/`:
 
 - **`android-apk.yml`** — builds an installable APK
   - manual "Run workflow" → pick any branch (usually `main`), choose `release`
@@ -24,10 +24,9 @@ Two workflows ship in `.github/workflows/`:
   - Release builds require the four `ANDROID_*` signing secrets; pick `debug`
     if you just want a quick sideloadable build.
 
-- **`generate-keystore.yml`** — one-time helper. Run manually to generate a
-  release keystore + the four `ANDROID_*` secrets you paste into repo settings.
-  Download the `.jks` artifact and store it safely (1Password + offline). If
-  you lose it you can never update existing installs on the Play Store.
+- Never generate signing keys in CI, print their values, or upload them as artifacts.
+  Existing releases must keep their existing signing certificate unless a tested
+  Android proof-of-rotation migration has been arranged. Keep an offline encrypted backup.
 
 Recommended flow for the first APK on your device:
 
@@ -72,10 +71,9 @@ Recommended flow for the first APK on your device:
 
 ## Signing / release
 
-- App ID: `money.honest.txcwallet` (matches iOS bundle so the same Nectar
-  universal-link config on the backend covers both platforms).
-- Generate a keystore via the `Generate Android Keystore` workflow (or locally:
-  `keytool -genkey -v -keystore hme.jks -alias hme -keyalg RSA -keysize 4096 -validity 10950`).
+- App ID: `money.honest.txcwallet`; keep this and the WebView origin unchanged so updates preserve stored wallets.
+- For a genuinely new app only, create the signing keystore offline with Android Studio.
+  Do not replace this app's established key when hardening CI.
 - Add these repo secrets so `android-apk.yml` produces a signed APK/AAB:
   - `ANDROID_KEYSTORE_BASE64`
   - `ANDROID_STORE_PASSWORD`

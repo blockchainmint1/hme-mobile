@@ -22,7 +22,8 @@ import { base64url, base64urlnopad } from "@scure/base";
 import { seedFromMnemonic } from "@/lib/txc/wallet";
 import { signMessageWithSeed } from "@/lib/txc/message-sign";
 import { scopedKey } from "@/lib/profiles";
-import { isEcosystemSite, loginSiteName } from "@/lib/web-login-hosts";
+import { isSpendingSite, loginSiteName, setEcosystemSites } from "@/lib/web-login-hosts";
+import { getEcosystemSites } from "@/lib/ecosystem-sites.functions";
 import {
   accountPath,
   activePocketAccount,
@@ -60,7 +61,7 @@ export function validateDelegate(raw: Record<string, unknown>, manifestUrl: stri
   if (!isDelegateDialect(raw)) fail("That code isn't a trading link.");
   const u = new URL(manifestUrl);
   const host = u.hostname;
-  if (!isEcosystemSite(host))
+  if (!isSpendingSite(host))
     fail(`${host} isn't on the honest.money trusted list, so it can't be given trading access.`);
   const sameOrigin = (s: unknown) => {
     try {
@@ -185,6 +186,9 @@ export async function submitDelegate(args: {
   passphrase?: string;
 }): Promise<DelegateLinkRecord> {
   const { manifest, mode, mnemonic, passphrase = "" } = args;
+  const registry = await getEcosystemSites();
+  setEcosystemSites(registry.sites, true);
+  if (!isSpendingSite(manifest.host)) throw new Error("This site is no longer on the verified spending list.");
   const account = activePocketAccount();
   const seed = await seedFromMnemonic(mnemonic, passphrase);
   const xpubs: Record<string, string> = {};
@@ -308,6 +312,8 @@ export function removeDelegateLink(linkId: string) {
 }
 
 export async function fetchDelegateManifest(manifestUrl: string): Promise<DelegateManifest> {
+  const registry = await getEcosystemSites();
+  setEcosystemSites(registry.sites, true);
   const res = await fetch(`${PROXY}?url=${encodeURIComponent(manifestUrl)}`, { headers: { Accept: "application/json" } });
   const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
   if (!res.ok || !body) throw new Error((body?.["error"] as string) ?? "Could not read the link");

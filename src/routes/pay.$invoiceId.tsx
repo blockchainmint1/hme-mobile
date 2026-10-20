@@ -51,6 +51,7 @@ import {
 import { pickBestOption, type BalanceSnapshot, type SupportedAsset } from "@/lib/nectar/selector";
 import { getAllPricesUsd } from "@/lib/chains/prices.functions";
 import { confirmWithBiometric } from "@/lib/native/biometric";
+import { validateCheckoutAmount } from "@/lib/security/checkout-policy";
 
 interface PaySearch {
   /** Nonce from the NDEF tag. Required. */
@@ -58,6 +59,7 @@ interface PaySearch {
 }
 
 export const Route = createFileRoute("/pay/$invoiceId")({
+  head: () => ({ meta: [{ title: "Confirm merchant payment — HME Wallet" }, { name: "description", content: "Review the recipient and exact coin amount before paying a NectarPay invoice." }, { property: "og:title", content: "Confirm merchant payment — HME Wallet" }, { property: "og:description", content: "Review and confirm a merchant invoice with HME Wallet." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: PayRoute,
   validateSearch: (search): PaySearch => ({
     t: typeof search.t === "string" ? search.t : undefined,
@@ -169,6 +171,7 @@ function PayRoute() {
   const payMut = useMutation({
     mutationFn: async () => {
       if (!locked || !pick || !evmAccount) throw new Error("Not ready to pay");
+      if (unlocked?.mode === "vault" || unlocked?.mode === "keyonly") throw new Error("Use this wallet's Send screen; checkout cannot sign from this wallet type.");
       const chainId = evmChainIdFromString(locked.chain);
       if (!chainId) {
         throw new Error(
@@ -178,6 +181,10 @@ function PayRoute() {
 
       // Sanity-check the server actually picked an asset we have.
       const wantsErc20 = !!locked.token_symbol;
+      const cryptoAmount = Number(locked.crypto_amount);
+      const ownPrice = wantsErc20 ? 1 : (prices.data?.prices?.[EVM_CHAINS[chainId].priceSymbol] ?? 0);
+      validateCheckoutAmount(cryptoAmount, locked.fiat_amount, ownPrice, locked.token_symbol);
+      if (!invoice.data || locked.currency !== "USD" || Math.abs(locked.fiat_amount - invoice.data.fiat_amount) > invoice.data.fiat_amount * 0.02) throw new Error("Checkout total changed; read the invoice again.");
       const expected: SupportedAsset = wantsErc20
         ? { kind: "evm-erc20", chain: chainId, symbol: "USDC" }
         : { kind: "evm-native", chain: chainId, symbol: EVM_CHAINS[chainId].nativeSymbol };
@@ -395,7 +402,7 @@ function PayRoute() {
           ) : (
             <>
               <ShieldCheck className="mr-2 h-4 w-4" />
-              Pay {locked.fiat_amount.toFixed(2)} {locked.currency}
+              Pay {locked.crypto_amount} {locked.token_symbol ?? EVM_CHAINS[locked.chain as EvmChainId]?.nativeSymbol}
             </>
           )}
         </Button>

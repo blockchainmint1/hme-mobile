@@ -30,6 +30,8 @@ import { broadcastTx, explorerAddressUrl, explorerTxUrl, getFeeEstimates } from 
 import { deriveEvmAccount } from "@/lib/chains/evm";
 import { signMessageWithSeed, verifyMessage } from "@/lib/txc/message-sign";
 import { checkLoginMessageShape } from "@/lib/hm-login-template";
+import { assessPassword } from "@/lib/security/password-strength";
+import { validateSiwe } from "@/lib/security/signing-policy";
 
 declare const chrome: any;
 
@@ -113,6 +115,7 @@ function App() {
   }, []);
 
   const load = useCallback(async (w: UnlockedWallet) => {
+    if (!w.mnemonic || w.mode === "vault" || w.mode === "keyonly") { setWallet(null); setRoot(null); setView({ name: "unlock" }); return; }
     const seed = await seedFromMnemonic(w.mnemonic, w.passphrase);
     setRoot(rootFromSeed(seed));
     setWallet(w);
@@ -170,7 +173,9 @@ function Create({ onDone, onBack }: { onDone: (w: UnlockedWallet) => void; onBac
 
   async function finish() {
     setError(null);
-    if (password.length < 8) return setError("Password must be at least 8 characters.");
+    const verdict = assessPassword(password);
+    if (!verdict.ok) return setError(verdict.message);
+    if (hasWallet()) return setError("A wallet already exists. Open the full wallet to add another without replacing it.");
     if (password !== confirm) return setError("Passwords don't match.");
     if (!words) return;
     setBusy(true);
@@ -220,7 +225,9 @@ function Import({ onDone, onBack }: { onDone: (w: UnlockedWallet) => void; onBac
     setError(null);
     const normalized = normalizeMnemonic(phrase);
     if (!validateMnemonic(normalized)) return setError("That seed phrase isn't valid. Check the words and order.");
-    if (password.length < 8) return setError("Password must be at least 8 characters.");
+    const verdict = assessPassword(password);
+    if (!verdict.ok) return setError(verdict.message);
+    if (hasWallet()) return setError("A wallet already exists. Open the full wallet to add another without replacing it.");
     if (password !== confirm) return setError("Passwords don't match.");
     setBusy(true);
     try {
@@ -463,7 +470,7 @@ function Send({ snap, root, kind, onSent }: { snap: AccountSnapshot | null; root
   );
 }
 
-type ApprovalReq = { origin: string; method: string; params: unknown };
+type ApprovalReq = { origin: string; method: string; params: unknown; chainId: string };
 
 function hexToText(hex: string): string {
   if (!/^0x[0-9a-f]*$/i.test(hex)) return hex;
@@ -493,14 +500,18 @@ function Approve({ reqId, wallet, root }: { reqId: string; wallet: UnlockedWalle
   let title = "";
   let body: React.ReactNode = null;
   let signin: { ok: boolean; siteLabel?: string } | null = null;
+  let signingError: string | null = null;
 
   if (req.method === "eth_requestAccounts" || req.method === "wallet_requestPermissions") {
     title = "Connect to this site?";
     body = <p className="desc">The site will see your Ethereum address:<span className="addr" style={{ display: "block" }}>{account.address}</span>It can't move funds — every signature asks you first.</p>;
   } else if (req.method === "personal_sign") {
-    title = "Sign a message";
+    title = "Sign in to this site";
+    try { validateSiwe(hexToText(String(params?.[0] ?? "")), req.origin, account.address, req.chainId); }
+    catch (e) { signingError = e instanceof Error ? e.message : "Invalid sign-in message."; }
     body = <div className="addr" style={{ whiteSpace: "pre-wrap", maxHeight: 220, overflow: "auto" }}>{hexToText(String(params?.[0] ?? ""))}</div>;
   } else if (req.method === "eth_signTypedData_v4") {
+    signingError = "Typed-data spending authorizations are disabled pending security review.";
     title = "Sign structured data";
     let pretty = String(params?.[1] ?? "");
     try { pretty = JSON.stringify(JSON.parse(pretty), null, 2); } catch { /* raw */ }
@@ -519,25 +530,21 @@ function Approve({ reqId, wallet, root }: { reqId: string; wallet: UnlockedWalle
   }
 
   async function approve() {
+    if (!req || signingError) return;
     setError(null);
     setBusy(true);
     try {
-      if (req!.method === "eth_requestAccounts") return finish({ result: [account.address], connect: { address: account.address } });
-      if (req!.method === "wallet_requestPermissions") return finish({ result: [{ parentCapability: "eth_accounts" }], connect: { address: account.address } });
-      if (req!.method === "personal_sign") {
+      if (req.method === "eth_requestAccounts") return finish({ result: [account.address], connect: { address: account.address } });
+      if (req.method === "wallet_requestPermissions") return finish({ result: [{ parentCapability: "eth_accounts" }], connect: { address: account.address } });
+      if (req.method === "personal_sign") {
+        validateSiwe(hexToText(String(params?.[0] ?? "")), req.origin, account.address, req.chainId);
         const [data, addr] = params as [string, string];
         if (String(addr).toLowerCase() !== account.address.toLowerCase()) throw new Error("That address isn't in this wallet.");
         const raw = /^0x[0-9a-f]*$/i.test(data) ? (data as `0x${string}`) : undefined;
         return finish({ result: await account.signMessage({ message: raw ? { raw } : String(data) }) });
       }
-      if (req!.method === "eth_signTypedData_v4") {
-        const [addr, json] = params as [string, string];
-        if (String(addr).toLowerCase() !== account.address.toLowerCase()) throw new Error("That address isn't in this wallet.");
-        const td = typeof json === "string" ? JSON.parse(json) : json;
-        const { EIP712Domain: _d, ...types } = td.types ?? {};
-        return finish({ result: await account.signTypedData({ domain: td.domain, types, primaryType: td.primaryType, message: td.message }) });
-      }
-      if (req!.method === "txc_signIn") {
+      if (req.method === "eth_signTypedData_v4") throw new Error("Typed-data signing is disabled.");
+      if (req.method === "txc_signIn") {
         if (!signin?.ok) throw new Error("Invalid sign-in message.");
         const signed = await signMessageWithSeed({ mnemonic: wallet.mnemonic, passphrase: wallet.passphrase, kind: "bip44", change: 0, index: 0, message: String(params.message) });
         if (!verifyMessage(signed.address, signed.message, signed.signature)) throw new Error("Couldn't verify the signature.");
@@ -557,9 +564,10 @@ function Approve({ reqId, wallet, root }: { reqId: string; wallet: UnlockedWalle
         <h2>{title}</h2>
         <p className="muted" style={{ marginBottom: 8 }}>Requested by <b style={{ color: "var(--text)" }}>{host}</b></p>
         {body}
+        {signingError && <p className="error">{signingError}</p>}
         {error && <p className="error">{error}</p>}
         <div className="row">
-          <button onClick={approve} disabled={busy || (signin !== null && !signin.ok)}>{busy ? "Signing…" : "Approve"}</button>
+          <button onClick={approve} disabled={busy || !!signingError || (signin !== null && !signin.ok)}>{busy ? "Signing…" : "Approve"}</button>
           <button className="secondary" onClick={() => finish({ error: "User rejected the request." })}>Reject</button>
         </div>
       </div>

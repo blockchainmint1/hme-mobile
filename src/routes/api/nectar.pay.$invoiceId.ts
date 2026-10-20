@@ -23,16 +23,8 @@ function buildUpstreamUrl(invoiceId: string, search: string): string {
 async function forward(req: Request, invoiceId: string, init: RequestInit): Promise<Response> {
   const url = new URL(req.url);
   const upstream = buildUpstreamUrl(invoiceId, url.search);
-  const res = await fetch(upstream, init);
-  // Re-emit the response with a permissive content-type passthrough.
-  const body = await res.text();
-  return new Response(body, {
-    status: res.status,
-    headers: {
-      "Content-Type": res.headers.get("content-type") ?? "application/json",
-      "Cache-Control": "no-store",
-    },
-  });
+  const { forwardJson } = await import("@/lib/security/json-proxy.server");
+  return forwardJson(upstream, init);
 }
 
 export const Route = createFileRoute("/api/nectar/pay/$invoiceId")({
@@ -44,7 +36,10 @@ export const Route = createFileRoute("/api/nectar/pay/$invoiceId")({
           headers: { Accept: "application/json" },
         }),
       POST: async ({ request, params }) => {
-        const body = await request.text();
+        const { readBoundedText } = await import("@/lib/security/json-proxy.server");
+        let body: string;
+        try { body = await readBoundedText(request); JSON.parse(body); }
+        catch { return Response.json({ error: "Invalid or oversized JSON" }, { status: 400 }); }
         return forward(request, params.invoiceId, {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },

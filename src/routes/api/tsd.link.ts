@@ -34,15 +34,8 @@ async function forward(request: Request, init: RequestInit): Promise<Response> {
       headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
     });
   }
-  const res = await fetch(target.toString(), init);
-  const body = await res.text();
-  return new Response(body, {
-    status: res.status,
-    headers: {
-      "Content-Type": res.headers.get("content-type") ?? "application/json",
-      "Cache-Control": "no-store",
-    },
-  });
+  const { forwardJson } = await import("@/lib/security/json-proxy.server");
+  return forwardJson(target.toString(), init);
 }
 
 export const Route = createFileRoute("/api/tsd/link")({
@@ -51,7 +44,10 @@ export const Route = createFileRoute("/api/tsd/link")({
       GET: async ({ request }) =>
         forward(request, { method: "GET", headers: { Accept: "application/json" } }),
       POST: async ({ request }) => {
-        const body = await request.text();
+        const { readBoundedText } = await import("@/lib/security/json-proxy.server");
+        let body: string;
+        try { body = await readBoundedText(request); JSON.parse(body); }
+        catch { return Response.json({ error: "Invalid or oversized JSON" }, { status: 400 }); }
         return forward(request, {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },

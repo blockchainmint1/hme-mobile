@@ -254,6 +254,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      card_check_pin: {
+        Args: { p_card_id: string; p_hash: string }
+        Returns: string
+      }
       purge_exchange_compliance_log: { Args: never; Returns: number }
     }
     Enums: {
