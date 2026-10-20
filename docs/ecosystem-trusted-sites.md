@@ -28,7 +28,7 @@ Response headers:
 - `x-hme-timestamp` — unix seconds when signed
 - `x-hme-signature` — hex HMAC-SHA256 of `${timestamp}.${rawBody}` with that site's dedicated API key
 
-The wallet rejects malformed/unsigned/mis-signed or >24h-old responses. Server
+The wallet rejects malformed/unsigned/mis-signed or >5-minute-old responses. Server
 cache lasts five minutes. Spending approval refreshes the registry and fails
 closed on unavailability/removal. Empty valid lists clear trust. Cached labels
 may still display offline, but cannot grant spending access.

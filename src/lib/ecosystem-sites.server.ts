@@ -1,6 +1,6 @@
 /**
  * Fetches the trusted-site registry published by the Honest.Money Ecosystem
- * site. The response is signed with the shared HME_ECOSYSTEM secret:
+ * site. The response is signed with the wallet's dedicated site API key:
  *   x-hme-timestamp: unix seconds
  *   x-hme-signature: hex HMAC-SHA256 of `${timestamp}.${rawBody}`
  * Unsigned or badly signed lists are rejected, so a hijacked response can't
@@ -30,7 +30,8 @@ export async function loadEcosystemSites(): Promise<EcosystemSite[]> {
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`registry ${res.status}`);
-  const body = await res.text();
+  const { readBoundedText } = await import("./security/json-proxy.server");
+  const body = await readBoundedText(res, 128 * 1024);
   const ts = res.headers.get("x-hme-timestamp") ?? "";
   const sig = res.headers.get("x-hme-signature") ?? "";
   if (!/^\d{10,13}$/.test(ts) || !/^[0-9a-f]{64}$/i.test(sig)) throw new Error("registry signature malformed");
@@ -38,8 +39,7 @@ export async function loadEcosystemSites(): Promise<EcosystemSite[]> {
   const a = Buffer.from(sig, "hex");
   const b = Buffer.from(expected, "hex");
   if (a.length !== b.length || !timingSafeEqual(a, b)) throw new Error("registry signature invalid");
-  // Signed lists are allowed to be served from a cache for up to a day.
-  if (Math.abs(Date.now() / 1000 - Number(ts)) > 86400) throw new Error("registry signature stale");
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) throw new Error("registry signature stale");
   const parsed = JSON.parse(body) as { sites?: { host?: unknown; label?: unknown; active?: unknown }[] };
   const sites = (parsed.sites ?? [])
     .filter((s) => typeof s.host === "string" && s.active !== false)

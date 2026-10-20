@@ -16,20 +16,26 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         const s = await import("@/lib/card/card.server");
         if (!s.safeEq(request.headers.get("X-Telegram-Bot-Api-Secret-Token") ?? "", s.telegramWebhookSecret()))
           return new Response("Unauthorized", { status: 401 });
-        const u = (await request.json()) as Update;
+        const { readBoundedText } = await import("@/lib/security/json-proxy.server");
+        let u: Update;
+        try { u = JSON.parse(await readBoundedText(request)) as Update; }
+        catch { return Response.json({ error: "Invalid update" }, { status: 400 }); }
         const db = await s.admin();
 
         if (u.message?.text) {
           const chat = u.message.chat.id;
           const m = u.message.text.trim().match(/^(?:\/start\s+)?([A-Z0-9]{6,12})$/i);
           if (!m) return Response.json({ ok: true });
-          const { data: card } = await db.from("nfc_cards").select("id, label, approver_chat_ids").eq("telegram_code", m[1]!.toUpperCase()).maybeSingle();
+          const code = m[1];
+          if (!code) return Response.json({ ok: true });
+          const { data: card } = await db.from("nfc_cards").select("id, label, approver_chat_ids").eq("telegram_code", code.toUpperCase()).maybeSingle();
           if (!card) {
             await s.tg("sendMessage", { chat_id: chat, text: "That code isn't valid any more. Get a fresh one in the wallet under Settings → Tap card." }).catch(() => null);
             return Response.json({ ok: true });
           }
           const ids = Array.from(new Set([...(card.approver_chat_ids ?? []).map(Number), chat])).slice(-3);
-          await db.from("nfc_cards").update({ approver_chat_ids: ids, telegram_code: null }).eq("id", card.id);
+          const { data: consumed } = await db.from("nfc_cards").update({ approver_chat_ids: ids, telegram_code: null }).eq("id", card.id).eq("telegram_code", code.toUpperCase()).select("id");
+          if (!consumed?.length) return Response.json({ ok: true });
           await s.tg("sendMessage", { chat_id: chat, text: `✅ You'll approve over-limit taps for "${card.label}" here.` }).catch(() => null);
           return Response.json({ ok: true });
         }
@@ -38,7 +44,9 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
         const m = cq?.data?.match(/^cp:([ad]):([0-9a-f-]{36})$/);
         if (!cq || !m || !cq.message) return Response.json({ ok: true });
         const chat = cq.message.chat.id;
-        const { data: p } = await db.from("nfc_card_payments").select("id, card_id, status, usd, merchant, created_at").eq("id", m[2]!).maybeSingle();
+        const paymentId = m[2];
+        if (!paymentId) return Response.json({ ok: true });
+        const { data: p } = await db.from("nfc_card_payments").select("id, card_id, status, usd, merchant, created_at").eq("id", paymentId).maybeSingle();
         const { data: card } = p ? await db.from("nfc_cards").select("approver_chat_ids, status").eq("id", p.card_id).single() : { data: null };
         const allowed = !!card && (card.approver_chat_ids ?? []).map(Number).includes(chat);
         let reply = "This request is no longer open.";
@@ -49,7 +57,7 @@ export const Route = createFileRoute("/api/public/telegram/webhook")({
           } else if (m[1] === "d") {
             await db.from("nfc_card_payments").update({ status: "declined", reason: "Declined on Telegram", decided_at: new Date().toISOString() }).eq("id", p.id).eq("status", "approval");
             reply = `❌ Declined ${s.fmtUsd(Number(p.usd))} at ${p.merchant}.`;
-          } else if (card!.status !== "active") {
+          } else if (card?.status !== "active") {
             reply = "The card is no longer active.";
           } else {
             const { data: claimed } = await db.from("nfc_card_payments").update({ status: "pending" }).eq("id", p.id).eq("status", "approval").select("id");
