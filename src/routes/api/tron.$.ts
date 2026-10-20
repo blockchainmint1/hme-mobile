@@ -88,7 +88,7 @@ async function forward(request: Request, path: string, search: string): Promise<
         ...(body === undefined ? {} : { "content-type": "application/json" }),
       },
       ...(body === undefined ? {} : { body }),
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(15_000),
     });
     const text = await upstream.text();

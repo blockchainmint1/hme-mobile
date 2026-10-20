@@ -236,7 +236,7 @@ export interface ResolvedInvoice {
 
 export async function resolveTsdInvoice(invoiceId: string, nonce: string): Promise<ResolvedInvoice> {
   const url = `${NECTAR}/${encodeURIComponent(invoiceId)}?t=${encodeURIComponent(nonce)}`;
-  const r = await fetch(url, { headers: { accept: "application/json" }, redirect: "error", signal: AbortSignal.timeout(10_000) });
+  const r = await fetch(url, { headers: { accept: "application/json" }, redirect: "manual", signal: AbortSignal.timeout(10_000) });
   if (!r.ok) throw new Error("Invoice not found");
   const inv = (await r.json()) as {
     status: string;
@@ -253,7 +253,7 @@ export async function resolveTsdInvoice(invoiceId: string, nonce: string): Promi
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({ option: opt.key }),
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(10_000),
   });
   if (!s.ok) throw new Error("Couldn't select TSD on the invoice");

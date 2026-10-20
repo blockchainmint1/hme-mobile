@@ -91,7 +91,7 @@ export const linkHmeProfile = createServerFn({ method: "POST" })
     const res = await fetch("https://honest.money/api/public/hub/events", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "X-HME-Site": site, "Content-Type": "application/json" },
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({
         service: site,

@@ -107,12 +107,13 @@ const RATE_MAX = 1200;
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
 function clientIp(request: Request): string {
-  return request.headers.get("cf-connecting-ip") ?? "unknown";
+  return request.headers.get("cf-connecting-ip") ?? "";
 }
 
 function rateLimited(request: Request): boolean {
   try {
     const ip = clientIp(request);
+    if (!ip) return false; // no trusted client IP: never pool everyone into one bucket
     const now = Date.now();
     const b = rateBuckets.get(ip);
     if (!b || now > b.resetAt) {
@@ -188,7 +189,7 @@ export const Route = createFileRoute("/api/evm/$chain")({
           method: "POST",
           headers: { "content-type": "application/json", ...authHeaders },
           body: JSON.stringify(body),
-          redirect: "error",
+          redirect: "manual",
           signal: AbortSignal.timeout(15_000),
         });
 

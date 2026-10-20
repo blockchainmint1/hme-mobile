@@ -108,7 +108,7 @@ async function forward(request: Request, coin: string, path: string, search: str
           ...(body === undefined ? {} : { "content-type": request.headers.get("content-type") ?? "text/plain" }),
         },
         ...(body === undefined ? {} : { body }),
-        redirect: "error",
+        redirect: "manual",
         signal: AbortSignal.timeout(15_000),
       });
       const text = await upstream.text();

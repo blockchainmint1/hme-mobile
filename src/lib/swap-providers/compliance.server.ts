@@ -74,7 +74,7 @@ export async function attachExchangeTxid(args: {
     const base = bases[order.from_coin.toUpperCase()];
     const key = process.env["NOWNODES_API_KEY"];
     if (!base || !key) return;
-    const response = await fetch(`${base}/tx/${args.txid}`, { headers: { "api-key": key, accept: "application/json" }, redirect: "error", signal: AbortSignal.timeout(10_000) });
+    const response = await fetch(`${base}/tx/${args.txid}`, { headers: { "api-key": key, accept: "application/json" }, redirect: "manual", signal: AbortSignal.timeout(10_000) });
     if (!response.ok) return;
     const tx = await response.json() as { txid?: string; vout?: { addresses?: string[]; value?: string }[] };
     if (tx.txid?.toLowerCase() !== args.txid.toLowerCase() || !tx.vout?.some((out) => out.addresses?.includes(order.deposit_address ?? "") && /^\d+$/.test(out.value ?? "") && BigInt(out.value ?? "0") >= BigInt(order.amount_sats))) return;

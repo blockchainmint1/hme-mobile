@@ -26,7 +26,7 @@ export async function loadEcosystemSites(): Promise<EcosystemSite[]> {
   if (!secret || !site) throw new Error("dedicated ecosystem site credential missing");
   const res = await fetch(process.env["ECOSYSTEM_SITES_URL"] || DEFAULT_URL, {
     headers: { accept: "application/json", Authorization: `Bearer ${secret}`, "X-HME-Site": site },
-    redirect: "error",
+    redirect: "manual",
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`registry ${res.status}`);
