@@ -15,11 +15,11 @@ import {
   ArrowDownUp,
   RotateCw,
   KeyRound,
-  Trash2,
   AlertTriangle,
   Link2,
   ScrollText,
   ArrowLeftRight,
+  Smartphone,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ChainsCard } from "@/components/wallet/ChainsCard";
@@ -71,8 +71,10 @@ export const Route = createFileRoute("/wallet/settings")({
 
 function SettingsPage() {
   const isExt = useIsExtension();
-  const { unlocked, forget } = useWallet();
+  const { unlocked, forget, profiles, activeProfileId } = useWallet();
   const keyOnly = unlocked?.mode === "keyonly";
+  const activeLabel =
+    profiles.find((p) => p.id === activeProfileId)?.label ?? "this wallet";
 
   // Trading pocket (Seeds) only appears once a trading link actually exists.
   const [sharedOn] = useFeature("sharedWallets");
@@ -94,7 +96,94 @@ function SettingsPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-bold">Settings</h1>
 
-      <Accordion type="multiple" className="mt-5 space-y-3">
+      {/* ---------- This device: app-wide settings, shared by every wallet ---------- */}
+      <GroupLabel
+        icon={Smartphone}
+        title="This device"
+        description="Applies to every wallet on this device."
+      />
+      <Accordion type="multiple" className="mt-3 space-y-3">
+        <SettingsSection
+          value="appearance"
+          icon={Palette}
+          title="Appearance"
+          description="Light, dark, or follow your system."
+        >
+          <ThemeToggle />
+        </SettingsSection>
+
+        {!keyOnly && (
+          <>
+            <SettingsSection
+              value="chains"
+              icon={Layers}
+              title="Chains"
+              description="Turn chains on or off — shared by all your wallets."
+            >
+              <ChainsCard compact />
+            </SettingsSection>
+
+            <SettingsSection
+              value="tokens"
+              icon={Coins}
+              title="Tokens"
+              description="Choose which EVM tokens to show — shared by all your wallets."
+            >
+              <TokensCard compact />
+            </SettingsSection>
+
+            <SettingsSection
+              value="txc-tokens"
+              icon={Coins}
+              title="TXC tokens (Omni)"
+              description="Toggle Omni Layer tokens under TXC."
+            >
+              <TxcTokensCard compact />
+            </SettingsSection>
+          </>
+        )}
+
+        <SettingsSection
+          value="updates"
+          icon={RotateCw}
+          title="Updates"
+          description="Check for new app versions."
+        >
+          {!isExt && <UpdateCheckCard compact />}
+        </SettingsSection>
+
+        <Link to="/wallet/contacts" className="block">
+          <Card className="hover:bg-accent/30 transition-colors">
+            <CardContent className="py-4 flex items-center gap-3">
+              <BookUser className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="text-base font-semibold">Address book</div>
+                <div className="text-xs text-muted-foreground">
+                  Save names for addresses you send to most.
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </Link>
+
+        <SettingsSection
+          value="hme-profile"
+          icon={Link2}
+          title="Honest Money profile"
+          description="Optional: link your member account so your referrer gets credit."
+        >
+          <HmeProfileCard />
+        </SettingsSection>
+      </Accordion>
+
+      {/* ---------- This wallet: settings tied to the active wallet's keys ---------- */}
+      <GroupLabel
+        icon={Wallet}
+        title={`This wallet — ${activeLabel}`}
+        description="Only affects the wallet you're currently using."
+      />
+      <Accordion type="multiple" className="mt-3 space-y-3">
         <SettingsSection
           value="security"
           icon={ShieldCheck}
@@ -129,15 +218,6 @@ function SettingsPage() {
           </Card>
         </Link>
 
-        <SettingsSection
-          value="appearance"
-          icon={Palette}
-          title="Appearance"
-          description="Light, dark, or follow your system."
-        >
-          <ThemeToggle />
-        </SettingsSection>
-
         {keyOnly ? (
           <>
             <SettingsSection
@@ -164,33 +244,6 @@ function SettingsPage() {
           </>
         ) : (
           <>
-            <SettingsSection
-              value="chains"
-              icon={Layers}
-              title="Chains"
-              description="Turn chains on or off."
-            >
-              <ChainsCard compact />
-            </SettingsSection>
-
-            <SettingsSection
-              value="tokens"
-              icon={Coins}
-              title="Tokens"
-              description="Choose which EVM tokens to show."
-            >
-              <TokensCard compact />
-            </SettingsSection>
-
-            <SettingsSection
-              value="txc-tokens"
-              icon={Coins}
-              title="TXC tokens (Omni)"
-              description="Toggle Omni Layer tokens under TXC."
-            >
-              <TxcTokensCard compact />
-            </SettingsSection>
-
             <SettingsSection
               value="rotation"
               icon={RefreshCw}
@@ -226,7 +279,7 @@ function SettingsPage() {
           title="Sign & verify message"
           description="Prove you control a TEXITcoin address."
         >
-          <SignMessageCard compact />
+          <SignMessageCard />
         </SettingsSection>
 
         <SettingsSection
@@ -256,15 +309,6 @@ function SettingsPage() {
         )}
 
         <SettingsSection
-          value="hme-profile"
-          icon={Link2}
-          title="Honest Money profile"
-          description="Optional: link your member account so your referrer gets credit."
-        >
-          <HmeProfileCard />
-        </SettingsSection>
-
-        <SettingsSection
           value="tsd-cashout"
           icon={ArrowDownUp}
           title="TSD settings"
@@ -275,30 +319,6 @@ function SettingsPage() {
             <TsdNudgeToggleCard compact />
           </div>
         </SettingsSection>
-
-        <SettingsSection
-          value="updates"
-          icon={RotateCw}
-          title="Updates"
-          description="Check for new app versions."
-        >
-          {!isExt && <UpdateCheckCard compact />}
-        </SettingsSection>
-
-        <Link to="/wallet/contacts" className="block">
-          <Card className="hover:bg-accent/30 transition-colors">
-            <CardContent className="py-4 flex items-center gap-3">
-              <BookUser className="h-5 w-5 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-base font-semibold">Address book</div>
-                <div className="text-xs text-muted-foreground">
-                  Save names for addresses you send to most.
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        </Link>
 
         <SettingsSection
           value="danger"
@@ -354,6 +374,26 @@ function SettingsPage() {
         </SettingsSection>
       </Accordion>
     </main>
+  );
+}
+
+function GroupLabel({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="mt-8 flex items-center gap-3 first:mt-6">
+      <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
+      <div className="min-w-0">
+        <h2 className="text-lg font-semibold leading-tight">{title}</h2>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+    </div>
   );
 }
 
