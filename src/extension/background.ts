@@ -23,7 +23,7 @@ const APPROVAL_METHODS = new Set(["eth_requestAccounts", "wallet_requestPermissi
 
 type Resp = { result?: unknown; error?: { code: number; message: string } };
 type Site = { address: string; chainId: string };
-type PendingReq = { id: string; origin: string; method: string; params: unknown; windowId?: number; reply: (r: Resp) => void };
+type PendingReq = { id: string; origin: string; method: string; params: unknown; chainId?: string; windowId?: number; reply: (r: Resp) => void };
 
 const pending = new Map<string, PendingReq>();
 const err = (code: number, message: string): Resp => ({ error: { code, message } });
@@ -40,7 +40,7 @@ async function setSite(origin: string, site: Site | null) {
 }
 
 async function broadcast(origin: string, event: string, data: unknown) {
-  const tabs = await chrome.tabs.query({});
+  const tabs = await chrome.tabs.query({ url: `${origin}/*` });
   for (const t of tabs) {
     try {
       if (t.id != null && t.url && new URL(t.url).origin === origin) chrome.tabs.sendMessage(t.id, { type: "hm:event", event, data });
@@ -58,7 +58,10 @@ function originOf(sender: { origin?: string; url?: string }): string | null {
 }
 
 async function openApproval(req: PendingReq) {
+  if (pending.size >= 5 || [...pending.values()].some((p) => p.origin === req.origin)) { req.reply(err(4001, "Finish the existing approval first.")); return; }
   pending.set(req.id, req);
+  req.chainId = (await getSites())[req.origin]?.chainId ?? "0x1";
+  try {
   const win = await chrome.windows.create({
     url: chrome.runtime.getURL(`approve.html?req=${encodeURIComponent(req.id)}`),
     type: "popup",
@@ -66,6 +69,7 @@ async function openApproval(req: PendingReq) {
     height: 640,
   });
   req.windowId = win?.id;
+  } catch { pending.delete(req.id); req.reply(err(4001, "Could not open approval.")); }
 }
 
 async function handleRpc(origin: string, method: string, params: unknown): Promise<Resp | "approval"> {
@@ -86,6 +90,7 @@ async function handleRpc(origin: string, method: string, params: unknown): Promi
       void broadcast(origin, "accountsChanged", []);
       return { result: null };
     case "wallet_switchEthereumChain": {
+      if ([...pending.values()].some((p) => p.origin === origin)) return err(4001, "Finish the pending approval before changing networks.");
       const target = String((Array.isArray(params) ? params[0]?.chainId : undefined) ?? "").toLowerCase();
       if (!CHAINS[target]) return err(4902, "honest.money doesn't support that network.");
       if (site) await setSite(origin, { ...site, chainId: target });
@@ -93,8 +98,9 @@ async function handleRpc(origin: string, method: string, params: unknown): Promi
       return { result: null };
     }
     case "personal_sign":
-    case "eth_signTypedData_v4":
       return site ? "approval" : err(4100, "Connect to honest.money first.");
+    case "eth_signTypedData_v4":
+      return err(4200, "Typed-data spending authorizations are disabled pending security review.");
     case "txc_signIn":
       return "approval";
     case "eth_sendTransaction":
@@ -132,10 +138,10 @@ chrome.runtime.onMessage.addListener((msg: any, sender: any, sendResponse: (r: u
   }
 
   // From the approval window (extension pages only)
-  if (sender.id !== chrome.runtime.id || sender.tab) return false;
+  if (sender.id !== chrome.runtime.id || !sender.url?.startsWith(chrome.runtime.getURL("approve.html"))) return false;
   if (msg?.type === "hm:get") {
     const p = pending.get(msg.id);
-    sendResponse(p ? { origin: p.origin, method: p.method, params: p.params } : null);
+    sendResponse(p ? { origin: p.origin, method: p.method, params: p.params, chainId: p.chainId } : null);
     return false;
   }
   if (msg?.type === "hm:resolve") {

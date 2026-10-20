@@ -16,6 +16,9 @@ import {
 } from "@/lib/xpub-link/delegate";
 import { activePocketAccount } from "@/lib/seeds/pocket";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { verifyWalletPassword } from "@/lib/txc/storage";
 
 const CHAIN_LABEL: Record<string, string> = {
   TXC: "TXC / TSD",
@@ -26,7 +29,7 @@ const CHAIN_LABEL: Record<string, string> = {
 };
 
 export function DelegateLinkCard({ manifestUrl, onDone }: { manifestUrl: string; onDone?: () => void }) {
-  const { unlocked } = useWallet();
+  const { unlocked, activeProfileId } = useWallet();
   const allowed = useExchangeFeaturesAllowed();
   const [manifest, setManifest] = useState<DelegateManifest | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +37,7 @@ export function DelegateLinkCard({ manifestUrl, onDone }: { manifestUrl: string;
   const [ack, setAck] = useState(false);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     let live = true;
@@ -63,6 +67,8 @@ export function DelegateLinkCard({ manifestUrl, onDone }: { manifestUrl: string;
     setBusy(true);
     setError(null);
     try {
+      if (mode === "access" && !await verifyWalletPassword(password, activeProfileId)) throw new Error("Wrong wallet password.");
+      setPassword("");
       const rec = await submitDelegate({ manifest, mode, mnemonic: unlocked.mnemonic, passphrase: unlocked.passphrase ?? "" });
       setDone(
         mode === "access"
@@ -137,7 +143,8 @@ export function DelegateLinkCard({ manifestUrl, onDone }: { manifestUrl: string;
       )}
 
       {error && <p className="text-xs text-destructive">{error}</p>}
-      <Button type="button" disabled={!mode || !ack || busy || !unlocked?.mnemonic} onClick={approve} className="w-full">
+      {mode === "access" && <div className="space-y-2"><Label htmlFor="delegate-password">Wallet password</Label><Input id="delegate-password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>}
+      <Button type="button" disabled={!mode || !ack || busy || !unlocked?.mnemonic || (mode === "access" && !password)} onClick={approve} className="w-full">
         {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         {mode === "access" ? "Give access" : mode === "approve" ? "Link (approve each trade)" : "Pick an option"}
       </Button>

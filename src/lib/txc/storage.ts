@@ -331,6 +331,18 @@ export async function unlockWallet(password: string): Promise<UnlockedWallet | n
   }
 }
 
+/** Read-only reauthentication: never migrates, changes active profile, or rewrites envelopes. */
+export async function verifyWalletPassword(password: string, profileId: string): Promise<boolean> {
+  const env = loadEnvelope(profileId);
+  if (!env) return false;
+  try {
+    const key = await deriveKey(password, b64decode(env.salt), env.iterations ?? LEGACY_ITERATIONS);
+    const plaintext = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: toAB(b64decode(env.iv)) }, key, toAB(b64decode(env.ciphertext))));
+    plaintext.fill(0);
+    return true;
+  } catch { return false; }
+}
+
 
 export function deleteWallet(): void {
   if (typeof window === "undefined") return;
