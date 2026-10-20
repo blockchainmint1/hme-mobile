@@ -45,13 +45,11 @@ function Rules({
       </div>
       <div className="min-w-0 space-y-2">
         <Label htmlFor="card-pin-rule" className="text-sm">Ask for PIN</Label>
-        <select id="card-pin-rule" className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-base" value={value.pinRule} onChange={set("pinRule")}>
+        <select id="card-pin-rule" className="h-11 w-full min-w-0 rounded-md border border-input bg-background px-3 text-base" value="always" disabled>
           <option value="always">Every tap</option>
-          <option value="above">Above an amount</option>
-          <option value="never">Never</option>
         </select>
       </div>
-      {value.pinRule === "above" ? (
+      {false ? (
         <div className="min-w-0 space-y-2">
           <Label htmlFor="card-pin-above" className="text-sm">PIN above ($)</Label>
           <Input id="card-pin-above" className="h-11 min-w-0 text-base md:text-base" inputMode="decimal" value={value.pinAboveUsd} onChange={set("pinAboveUsd")} />
@@ -59,7 +57,7 @@ function Rules({
       ) : (
         <div className="hidden sm:block" />
       )}
-      {value.pinRule !== "never" && (
+      {(
         <div className="min-w-0 space-y-2 sm:col-span-2">
           <Label htmlFor="card-pin" className="text-sm">{pinRequiredIfSet ? "New PIN (leave blank to keep)" : "PIN (4–8 digits)"}</Label>
           <Input id="card-pin" className="h-11 min-w-0 text-base md:text-base" type="password" inputMode="numeric" maxLength={8} value={value.pin} onChange={set("pin")} />
@@ -69,7 +67,7 @@ function Rules({
   );
 }
 
-const DEFAULT_RULES = { pinRule: "above" as PinRule, pin: "", pinAboveUsd: "25", perTapUsd: "100", dailyUsd: "500" };
+const DEFAULT_RULES = { pinRule: "always" as PinRule, pin: "", pinAboveUsd: "0", perTapUsd: "100", dailyUsd: "500" };
 
 export function TapCardCard() {
   const allowed = useExchangeFeaturesAllowed();
@@ -212,7 +210,7 @@ export function TapCardCard() {
       {adding ? (
         <div className="min-w-0 space-y-4 border-t border-border pt-5">
           <div className="min-w-0 space-y-2">
-            <Label htmlFor="card-number" className="text-sm">Card number (printed on the card)</Label>
+            <Label htmlFor="card-number" className="text-sm">Card identifier</Label>
             <Input id="card-number" className="h-11 min-w-0 text-base md:text-base" value={uid} onChange={(e) => setUid(e.target.value)} placeholder="04:A2:1B:…" autoCapitalize="characters" />
           </div>
           <div className="min-w-0 space-y-2">
@@ -233,8 +231,8 @@ export function TapCardCard() {
                     data: signEnvelope(seed, "link", {
                       uid,
                       label: label.trim() || "My card",
-                      pinRule: rules.pinRule,
-                      ...(rules.pinRule !== "never" ? { pin: rules.pin } : {}),
+                      pinRule: "always",
+                      pin: rules.pin,
                       pinAboveUsd: num(rules.pinAboveUsd),
                       perTapUsd: num(rules.perTapUsd),
                       dailyUsd: num(rules.dailyUsd),

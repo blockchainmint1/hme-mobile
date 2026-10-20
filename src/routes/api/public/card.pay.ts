@@ -6,6 +6,7 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { escapeTelegramHtml } from "@/lib/card/payment-policy";
 
 const body = z.object({
   card_uid: z.string().min(4).max(64),
@@ -34,7 +35,10 @@ export const Route = createFileRoute("/api/public/card/pay")({
       },
       POST: async ({ request }) => {
         const s = await import("@/lib/card/card.server");
-        const raw = await request.text();
+        const { readBoundedText } = await import("@/lib/security/json-proxy.server");
+        let raw: string;
+        try { raw = await readBoundedText(request, 4096); }
+        catch { return json({ error: "bad request" }, 400); }
         if (!s.verifyPartner(request.headers.get("x-hme-timestamp") ?? "", request.headers.get("x-hme-signature") ?? "", raw))
           return json({ error: "bad signature" }, 401);
         let b: z.infer<typeof body>;
@@ -55,20 +59,13 @@ export const Route = createFileRoute("/api/public/card/pay")({
           return json({ status: "declined", reason: (e as Error).message });
         }
 
-        const needsPin = card.pin_rule === "always" || (card.pin_rule === "above" && inv.usd > Number(card.pin_above_usd));
-        if (needsPin) {
-          if (!b.pin) return json({ status: "pin_required", usd: inv.usd });
-          const h = await s.hashPin(b.pin, card.pin_salt ?? undefined);
-          if (!card.pin_hash || !s.safeEq(h.hash, card.pin_hash)) {
-            const wrong = card.wrong_pins + 1;
-            await db.from("nfc_cards").update({ wrong_pins: wrong, status: wrong >= s.CARD_MAX_WRONG_PINS ? "locked" : card.status }).eq("id", card.id);
-            return json({ status: "declined", reason: wrong >= s.CARD_MAX_WRONG_PINS ? "Too many wrong PINs — card locked" : "Wrong PIN" });
-          }
-          if (card.wrong_pins) await db.from("nfc_cards").update({ wrong_pins: 0 }).eq("id", card.id);
-        }
+        if (!card.pin_hash || !card.pin_salt) return json({ status: "declined", reason: "Set a card PIN in the wallet before paying" });
+        if (!b.pin) return json({ status: "pin_required", usd: inv.usd });
+        const h = await s.hashPin(b.pin, card.pin_salt);
+        const { data: pinResult, error: pinError } = await db.rpc("card_check_pin", { p_card_id: card.id, p_hash: h.hash });
+        if (pinError || pinResult !== "ok") return json({ status: "declined", reason: pinResult === "locked" ? "Card locked — owner must unlock it" : "Wrong PIN or card unavailable" });
 
         const spent = await s.spentLast24h(card.id);
-        const over = inv.usd > Number(card.per_tap_usd) || spent + inv.usd > Number(card.daily_usd);
         const { data: pay, error } = await db
           .from("nfc_card_payments")
           .insert({
@@ -78,19 +75,19 @@ export const Route = createFileRoute("/api/public/card/pay")({
             pay_to: inv.address,
             amount_units: Number(inv.units),
             usd: inv.usd,
-            status: over ? "approval" : "pending",
+            status: "pending",
           })
-          .select("id")
+          .select("id, status")
           .single();
         if (error || !pay) return json({ status: "declined", reason: "This invoice is already being paid" });
 
-        if (over) {
+        if (pay.status === "approval") {
           const chats: number[] = (card.approver_chat_ids ?? []).map(Number);
           if (chats.length === 0) {
             await db.from("nfc_card_payments").update({ status: "declined", reason: "Over limit and no Telegram approver linked" }).eq("id", pay.id);
             return json({ status: "declined", reason: "Over the card's limit" });
           }
-          const text = `💳 <b>${card.label}</b>: approve <b>${s.fmtUsd(inv.usd)}</b> at <b>${inv.merchant}</b>?\nSpent today: ${s.fmtUsd(spent)} of ${s.fmtUsd(Number(card.daily_usd))}.`;
+          const text = `💳 <b>${escapeTelegramHtml(card.label)}</b>: approve <b>${s.fmtUsd(inv.usd)}</b> at <b>${escapeTelegramHtml(inv.merchant)}</b>?\nSpent today: ${s.fmtUsd(spent)} of ${s.fmtUsd(Number(card.daily_usd))}.`;
           await Promise.all(
             chats.map((chat_id) =>
               s.tg("sendMessage", {

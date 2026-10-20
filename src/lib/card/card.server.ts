@@ -11,6 +11,7 @@ import { TXC_NETWORK, MEMPOOL_API } from "@/lib/txc/network";
 import { buildSimpleSendPayload } from "@/lib/txc/tokens";
 import { verifyMessage } from "@/lib/txc/message-sign";
 import { TSD_PROPERTY_ID } from "@/lib/cashout/tsd";
+import { validateCardAmount } from "./payment-policy";
 
 export const CARD_MAX_WRONG_PINS = 5;
 export const CARD_APPROVAL_TTL_MS = 15 * 60 * 1000;
@@ -71,7 +72,7 @@ export function safeEq(a: string, b: string): boolean {
 /** Partner (NectarPay) request signature: hex HMAC-SHA256(HME_ECOSYSTEM, `${ts}.${body}`). */
 export function verifyPartner(ts: string, sig: string, body: string): boolean {
   const secret = process.env["HME_ECOSYSTEM"];
-  if (!secret || !ts || !sig) return false;
+  if (!secret || !/^\d{10,13}$/.test(ts) || !/^[0-9a-f]{64}$/i.test(sig)) return false;
   if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false;
   const expected = createHmac("sha256", secret).update(`${ts}.${body}`).digest("hex");
   return safeEq(sig.toLowerCase(), expected);
@@ -103,7 +104,9 @@ export function verifyOwner(env: OwnerEnvelope, action: string): string {
 export function p2pkhFromPriv(priv: Uint8Array): string {
   const pubkey = ecc.pointFromScalar(priv, true);
   if (!pubkey) throw new Error("bad key");
-  return payments.p2pkh({ pubkey, network: TXC_NETWORK }).address!;
+  const address = payments.p2pkh({ pubkey, network: TXC_NETWORK }).address;
+  if (!address) throw new Error("bad address");
+  return address;
 }
 
 interface Utxo {
@@ -161,7 +164,7 @@ export function decimalToUnits(s: string | number): bigint {
   if (!/^\d+(\.\d+)?$/.test(str)) throw new Error("bad amount");
   const [w, f = ""] = str.split(".");
   if (f.length > 8 && /[1-9]/.test(f.slice(8))) throw new Error("amount has too many decimals");
-  return BigInt(w!) * 100_000_000n + BigInt((f + "00000000").slice(0, 8));
+  return BigInt(w ?? "0") * 100_000_000n + BigInt((f + "00000000").slice(0, 8));
 }
 
 export async function tsdBalanceUnits(address: string): Promise<bigint> {
@@ -204,9 +207,12 @@ export async function sendFromPocket(encKey: string, to: string, units: bigint, 
       if (change >= DUST) psbt.addOutput({ address: from, value: BigInt(change) });
     }
     if (withToken) {
-      psbt.addOutput({ script: payments.embed({ data: [buildSimpleSendPayload(TSD_PROPERTY_ID, units)] }).output!, value: 0n });
+      const script = payments.embed({ data: [buildSimpleSendPayload(TSD_PROPERTY_ID, units)] }).output;
+      if (!script) throw new Error("bad token payload");
+      psbt.addOutput({ script, value: 0n });
     }
-    const pubkey = ecc.pointFromScalar(priv, true)!;
+    const pubkey = ecc.pointFromScalar(priv, true);
+    if (!pubkey) throw new Error("bad key");
     for (let i = 0; i < list.length; i++) {
       psbt.signInput(i, { publicKey: pubkey, sign: (h: Uint8Array) => ecc.sign(h, priv) } as never);
     }
@@ -230,7 +236,7 @@ export interface ResolvedInvoice {
 
 export async function resolveTsdInvoice(invoiceId: string, nonce: string): Promise<ResolvedInvoice> {
   const url = `${NECTAR}/${encodeURIComponent(invoiceId)}?t=${encodeURIComponent(nonce)}`;
-  const r = await fetch(url, { headers: { accept: "application/json" } });
+  const r = await fetch(url, { headers: { accept: "application/json" }, redirect: "error", signal: AbortSignal.timeout(10_000) });
   if (!r.ok) throw new Error("Invoice not found");
   const inv = (await r.json()) as {
     status: string;
@@ -247,12 +253,17 @@ export async function resolveTsdInvoice(invoiceId: string, nonce: string): Promi
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({ option: opt.key }),
+    redirect: "error",
+    signal: AbortSignal.timeout(10_000),
   });
   if (!s.ok) throw new Error("Couldn't select TSD on the invoice");
   const sel = (await s.json()) as { address: string; crypto_amount: string | number; fiat_amount: number };
   const units = decimalToUnits(sel.crypto_amount);
   if (units <= 0n) throw new Error("Bad invoice amount");
-  return { merchant: inv.merchant?.name ?? "a merchant", usd: Number(sel.fiat_amount ?? inv.fiat_amount), address: sel.address, units };
+  const usd = validateCardAmount(units, Number(sel.fiat_amount ?? inv.fiat_amount));
+  // Also compare the selected crypto amount to the original invoice total.
+  validateCardAmount(units, Number(inv.fiat_amount));
+  return { merchant: inv.merchant?.name ?? "a merchant", usd, address: sel.address, units };
 }
 
 /* ------------------------------- Telegram ------------------------------- */
@@ -287,6 +298,9 @@ export async function executePayment(paymentId: string): Promise<{ status: strin
   const db = await admin();
   const { data: p } = await db.from("nfc_card_payments").select("*").eq("id", paymentId).single();
   if (!p) return { status: "failed", reason: "payment missing" };
+  if (p.status !== "pending") return { status: "declined", reason: "payment not authorized" };
+  const { data: card } = await db.from("nfc_cards").select("status").eq("id", p.card_id).single();
+  if (card?.status !== "active") return { status: "declined", reason: "card not active" };
   const { data: k } = await db.from("nfc_card_keys").select("enc_key").eq("card_id", p.card_id).single();
   if (!k) {
     await db.from("nfc_card_payments").update({ status: "declined", reason: "card not active", decided_at: new Date().toISOString() }).eq("id", p.id);
@@ -306,6 +320,6 @@ export async function executePayment(paymentId: string): Promise<{ status: strin
 export async function spentLast24h(cardId: string): Promise<number> {
   const db = await admin();
   const since = new Date(Date.now() - 86_400_000).toISOString();
-  const { data } = await db.from("nfc_card_payments").select("usd").eq("card_id", cardId).in("status", ["paid", "pending"]).gte("created_at", since);
-  return (data ?? []).reduce((s, r) => s + Number(r.usd), 0);
+  const { data } = await db.from("nfc_card_payments").select("amount_units").eq("card_id", cardId).in("status", ["paid", "pending"]).gte("created_at", since);
+  return (data ?? []).reduce((s, r) => s + Number(r.amount_units) / 100_000_000, 0);
 }

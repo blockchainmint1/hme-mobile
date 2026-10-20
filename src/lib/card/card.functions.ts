@@ -42,7 +42,7 @@ export const linkCard = createServerFn({ method: "POST" })
     const owner = s.verifyOwner(data, "link");
     const b = linkBody.parse(data.body);
     if (s.p2pkhFromPriv(Buffer.from(b.pocketKeyHex, "hex")) !== b.pocketAddress) throw new Error("Pocket key doesn't match its address");
-    if (b.pinRule !== "never" && !b.pin) throw new Error("Choose a PIN");
+    if (!b.pin) throw new Error("A PIN is required for every tap");
     const pin = b.pin ? await s.hashPin(b.pin) : null;
     const db = await s.admin();
     const telegram_code = code();
@@ -57,7 +57,7 @@ export const linkCard = createServerFn({ method: "POST" })
         return_address: b.returnAddress,
         pin_hash: pin?.hash ?? null,
         pin_salt: pin?.salt ?? null,
-        pin_rule: b.pinRule,
+        pin_rule: "always",
         pin_above_usd: b.pinAboveUsd,
         per_tap_usd: b.perTapUsd,
         daily_usd: b.dailyUsd,
@@ -88,7 +88,7 @@ export const updateCard = createServerFn({ method: "POST" })
     if (!card || card.status === "killed") throw new Error("Card not found");
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (b.label) patch["label"] = b.label;
-    if (b.pinRule) patch["pin_rule"] = b.pinRule;
+    if (b.pinRule) patch["pin_rule"] = "always";
     if (b.pinAboveUsd != null) patch["pin_above_usd"] = b.pinAboveUsd;
     if (b.perTapUsd != null) patch["per_tap_usd"] = b.perTapUsd;
     if (b.dailyUsd != null) patch["daily_usd"] = b.dailyUsd;
@@ -97,7 +97,7 @@ export const updateCard = createServerFn({ method: "POST" })
       patch["pin_hash"] = h.hash;
       patch["pin_salt"] = h.salt;
     }
-    if (b.pinRule && b.pinRule !== "never" && !b.pin && !card.pin_hash) throw new Error("Choose a PIN");
+    if ((b.pinRule || b.unlock) && !b.pin && !card.pin_hash) throw new Error("Set a PIN before activating the card");
     if (b.unlock) {
       patch["status"] = "active";
       patch["wrong_pins"] = 0;
