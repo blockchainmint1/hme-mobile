@@ -9,6 +9,7 @@
  * make the proxy act as a signing service is allowed (Tron signs locally).
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { isSafeProxyPath } from "@/lib/security/proxy-policy";
 
 const UPSTREAM = "https://api.trongrid.io";
 
@@ -26,6 +27,7 @@ const ALLOWED_EXACT = [
 const ALLOWED_PREFIXES = ["v1/accounts/", "v1/contracts/"];
 
 function allowedPath(path: string): boolean {
+  if (!isSafeProxyPath(path)) return false;
   const p = path.replace(/^\/+/, "");
   if (ALLOWED_EXACT.includes(p)) return true;
   return ALLOWED_PREFIXES.some((prefix) => p.startsWith(prefix));
@@ -70,7 +72,12 @@ async function forward(request: Request, path: string, search: string): Promise<
 
   const key = process.env.TRON_API ?? process.env.TRON_PRO_API_KEY ?? process.env.TRONGRID_API_KEY;
   const method = request.method === "POST" ? "POST" : "GET";
-  const body = method === "POST" ? await request.text() : undefined;
+  let body: string | undefined;
+  if (method === "POST") {
+    const { readBoundedText } = await import("@/lib/security/json-proxy.server");
+    try { body = await readBoundedText(request, 128 * 1024); JSON.parse(body); }
+    catch { return new Response("Invalid or oversized JSON", { status: 400 }); }
+  }
 
   try {
     const upstream = await fetch(`${UPSTREAM}/${path.replace(/^\/+/, "")}${search}`, {
@@ -81,12 +88,15 @@ async function forward(request: Request, path: string, search: string): Promise<
         ...(body === undefined ? {} : { "content-type": "application/json" }),
       },
       ...(body === undefined ? {} : { body }),
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
     });
     const text = await upstream.text();
     return new Response(text, {
       status: upstream.status,
       headers: {
-        "content-type": upstream.headers.get("content-type") ?? "application/json",
+        "content-type": "application/json",
+        "x-content-type-options": "nosniff",
         "cache-control": "no-store",
       },
     });

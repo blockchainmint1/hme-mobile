@@ -5,6 +5,7 @@
  * Allowed chains: eth, bsc, base.
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { validRpcBatch } from "@/lib/security/proxy-policy";
 
 const UPSTREAM: Record<string, (key: string) => string> = {
   eth: (k) => `https://eth-mainnet.g.alchemy.com/v2/${k}`,
@@ -106,9 +107,7 @@ const RATE_MAX = 1200;
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
 function clientIp(request: Request): string {
-  const xff = request.headers.get("x-forwarded-for");
-  if (xff) return xff.split(",")[0]!.trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  return request.headers.get("cf-connecting-ip") ?? "unknown";
 }
 
 function rateLimited(request: Request): boolean {
@@ -171,12 +170,14 @@ export const Route = createFileRoute("/api/evm/$chain")({
 
         let body: unknown;
         try {
-          body = await request.json();
+          const { readBoundedText } = await import("@/lib/security/json-proxy.server");
+          body = JSON.parse(await readBoundedText(request, 128 * 1024));
         } catch {
           return new Response("Invalid JSON", { status: 400 });
         }
 
         const calls = Array.isArray(body) ? (body as RpcCall[]) : [body as RpcCall];
+        if (!validRpcBatch(body)) return new Response("Invalid or oversized RPC batch", { status: 400 });
         for (const c of calls) {
           if (!c || typeof c.method !== "string" || !ALLOWED.has(c.method)) {
             return new Response(`Method not allowed: ${c?.method ?? "?"}`, { status: 403 });
@@ -187,6 +188,8 @@ export const Route = createFileRoute("/api/evm/$chain")({
           method: "POST",
           headers: { "content-type": "application/json", ...authHeaders },
           body: JSON.stringify(body),
+          redirect: "error",
+          signal: AbortSignal.timeout(15_000),
         });
 
 

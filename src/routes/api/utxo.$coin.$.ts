@@ -13,6 +13,7 @@
  * through the server-fn bridge, so relative URLs work there too.
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { isSafeProxyPath } from "@/lib/security/proxy-policy";
 
 // Ordered upstream lists — first responder wins, the rest are failover.
 // NowNodes is a keyed, rate-limit-free Blockbook; it goes first where we
@@ -44,6 +45,7 @@ const ALLOWED_EXACT = ["tx", "sendtx", "blocks", "fee-estimates"];
 const ALLOWED_PREFIXES = ["address/", "utxo/", "tx/", "estimatefee/", "sendtx", "v1/fees", "blocks", "fee-estimates"];
 
 function allowedPath(path: string): boolean {
+  if (!isSafeProxyPath(path)) return false;
   if (ALLOWED_EXACT.includes(path)) return true;
   return ALLOWED_PREFIXES.some((p) => path === p || path.startsWith(p));
 }
@@ -85,7 +87,12 @@ async function forward(request: Request, coin: string, path: string, search: str
   if (!allowedPath(path)) return new Response("Forbidden path", { status: 403 });
 
   const method = request.method === "POST" ? "POST" : "GET";
-  const body = method === "POST" ? await request.text() : undefined;
+  let body: string | undefined;
+  if (method === "POST") {
+    const { readBoundedText } = await import("@/lib/security/json-proxy.server");
+    try { body = await readBoundedText(request, 512 * 1024); }
+    catch { return new Response("Payload too large", { status: 413 }); }
+  }
 
   let lastStatus = 502;
   let lastBody = "upstream unavailable";
@@ -101,6 +108,8 @@ async function forward(request: Request, coin: string, path: string, search: str
           ...(body === undefined ? {} : { "content-type": request.headers.get("content-type") ?? "text/plain" }),
         },
         ...(body === undefined ? {} : { body }),
+        redirect: "error",
+        signal: AbortSignal.timeout(15_000),
       });
       const text = await upstream.text();
       if (!upstream.ok) {
@@ -116,7 +125,8 @@ async function forward(request: Request, coin: string, path: string, search: str
       return new Response(text, {
         status: 200,
         headers: {
-          "content-type": upstream.headers.get("content-type") ?? "application/json",
+          "content-type": /^application\/(?:json|[\w.+-]+\+json)/i.test(upstream.headers.get("content-type") ?? "") ? "application/json" : "text/plain",
+          "x-content-type-options": "nosniff",
           "cache-control": "no-store",
         },
       });
