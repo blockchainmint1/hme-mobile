@@ -49,14 +49,7 @@ function Rules({
           <option value="always">Every tap</option>
         </select>
       </div>
-      {false ? (
-        <div className="min-w-0 space-y-2">
-          <Label htmlFor="card-pin-above" className="text-sm">PIN above ($)</Label>
-          <Input id="card-pin-above" className="h-11 min-w-0 text-base md:text-base" inputMode="decimal" value={value.pinAboveUsd} onChange={set("pinAboveUsd")} />
-        </div>
-      ) : (
-        <div className="hidden sm:block" />
-      )}
+      <div className="hidden sm:block" />
       {(
         <div className="min-w-0 space-y-2 sm:col-span-2">
           <Label htmlFor="card-pin" className="text-sm">{pinRequiredIfSet ? "New PIN (leave blank to keep)" : "PIN (4–8 digits)"}</Label>
@@ -152,7 +145,7 @@ export function TapCardCard() {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Instant up to ${c.perTapUsd} a tap, ${c.dailyUsd} a day. PIN: {c.pinRule === "always" ? "every tap" : c.pinRule === "above" ? `above $${c.pinAboveUsd}` : "never"}.
+            Instant up to ${c.perTapUsd} a tap, ${c.dailyUsd} a day. PIN required every tap.
           </p>
           <div className="rounded-md bg-muted/40 p-2 text-xs">
             {c.approvers > 0 ? `${c.approvers} Telegram approver${c.approvers > 1 ? "s" : ""} linked. ` : "No Telegram approver yet. Over-limit taps will be declined. "}
@@ -183,6 +176,12 @@ export function TapCardCard() {
             </ul>
           )}
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" disabled={!!busy} onClick={() => {
+              const pin = prompt("Set a card PIN (4–8 digits). Required on every tap.");
+              if (pin === null) return;
+              if (!/^\d{4,8}$/.test(pin)) { setMsg("Use a PIN with 4–8 digits."); return; }
+              void run(c.id + ":pin", async () => void (await update({ data: signEnvelope(seed, "update", { cardId: c.id, pin, pinRule: "always" }) })));
+            }}>Set / change PIN</Button>
             {c.status === "locked" && (
               <Button size="sm" variant="outline" disabled={!!busy} onClick={() => run(c.id + ":unlock", async () => void (await update({ data: signEnvelope(seed, "update", { cardId: c.id, unlock: true }) })))}>
                 Unlock card

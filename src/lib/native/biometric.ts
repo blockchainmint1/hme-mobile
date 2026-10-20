@@ -42,14 +42,10 @@ async function loadPlugins() {
 }
 
 export async function isBiometricAvailable(): Promise<boolean> {
-  const plugins = await loadPlugins();
-  if (!plugins) return false;
-  try {
-    const info = await plugins.BiometricAuth.checkBiometry();
-    return info.isAvailable === true;
-  } catch {
-    return false;
-  }
+  // Disabled until native key retrieval itself requires OS biometric authorization.
+  // Clearing only these keys does not touch wallet envelopes or profiles.
+  await disableBiometric();
+  return false;
 }
 
 // In-memory shadow so synchronous callers (e.g. unlockWithBiometric's early
@@ -107,19 +103,9 @@ export async function getBiometricStatus(): Promise<BiometricStatus> {
  * verified password (typically right after a successful password unlock).
  */
 export async function enableBiometric(password: string): Promise<void> {
-  const plugins = await loadPlugins();
-  if (!plugins) throw new Error("Biometric unlock is only available on the mobile app.");
-  await plugins.BiometricAuth.authenticate({
-    reason: "Enable Face ID / fingerprint unlock for your TXC wallet",
-    cancelTitle: "Cancel",
-    allowDeviceCredential: false,
-    iosFallbackTitle: "Use Passcode",
-    androidTitle: "Enable biometric unlock",
-    androidSubtitle: "Confirm your identity to enable biometric unlock",
-  });
-  await plugins.SecureStorage.set(SECURE_KEY, password, true, false);
-  await plugins.SecureStorage.set(FLAG_KEY, "1", true, false);
-  cachedFlag = true;
+  void password;
+  await disableBiometric();
+  throw new Error("Fingerprint unlock is temporarily unavailable. Use your wallet password.");
 }
 
 export async function disableBiometric(): Promise<void> {
@@ -149,24 +135,8 @@ export async function disableBiometric(): Promise<void> {
  * Returns null if the user cancels or biometrics is not enabled.
  */
 export async function unlockWithBiometric(): Promise<string | null> {
-  const plugins = await loadPlugins();
-  if (!plugins) return null;
-  const enabled = await readFlag();
-  if (!enabled) return null;
-  try {
-    await plugins.BiometricAuth.authenticate({
-      reason: "Unlock your TEXITcoin wallet",
-      cancelTitle: "Use password",
-      allowDeviceCredential: false,
-      iosFallbackTitle: "Use Passcode",
-      androidTitle: "Unlock wallet",
-      androidSubtitle: "Confirm your identity",
-    });
-    const pw = await plugins.SecureStorage.get(SECURE_KEY, true, false);
-    return typeof pw === "string" ? pw : null;
-  } catch {
-    return null;
-  }
+  await disableBiometric();
+  return null;
 }
 
 /**
