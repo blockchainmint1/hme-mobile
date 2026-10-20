@@ -87,6 +87,7 @@ import {
 } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/wallet/")({
+  head: () => ({ meta: [{ title: "Your wallets and balances — HME Wallet" }, { name: "description", content: "View your HME wallet balances, tokens and transaction history." }, { property: "og:title", content: "Your wallets and balances — HME Wallet" }, { property: "og:description", content: "Your coins, tokens and activity in HME Wallet." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }] }),
   component: WalletHome,
 });
 
