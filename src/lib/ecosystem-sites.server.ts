@@ -19,10 +19,14 @@ const TTL_MS = 5 * 60 * 1000;
 
 export async function loadEcosystemSites(): Promise<EcosystemSite[]> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.sites;
-  const secret = process.env["HME_ECOSYSTEM"];
-  if (!secret) throw new Error("ecosystem secret missing");
+  // New Honest Money API requires a dedicated per-site credential; never send
+  // the cross-partner HME_ECOSYSTEM signing secret as its API bearer token.
+  const secret = process.env["HME_SITE_API_KEY"];
+  const site = process.env["HME_SITE_CODE"];
+  if (!secret || !site) throw new Error("dedicated ecosystem site credential missing");
   const res = await fetch(process.env["ECOSYSTEM_SITES_URL"] || DEFAULT_URL, {
-    headers: { accept: "application/json" },
+    headers: { accept: "application/json", Authorization: `Bearer ${secret}`, "X-HME-Site": site },
+    redirect: "error",
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`registry ${res.status}`);

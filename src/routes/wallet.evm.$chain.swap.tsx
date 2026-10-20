@@ -46,6 +46,7 @@ import { getSwapQuote, NATIVE_TOKEN_ADDRESS, type SwapQuote } from "@/lib/chains
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { ExchangeUnavailable } from "@/components/wallet/ExchangeUnavailable";
 import { sendEvmTransaction } from "@/lib/chains/evm-send";
+import { assertReviewedExecution } from "@/lib/security/execution-policy";
 
 type AssetKind =
   | { kind: "native" }
@@ -187,6 +188,7 @@ function EvmSwap() {
     mutationFn: async () => {
       if (!account) throw new Error("Wallet locked");
       if (!rawAmount) throw new Error("Enter an amount");
+      assertReviewedExecution("lifi");
 
       const walletClient = createWalletClient({
         account,

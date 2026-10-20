@@ -51,6 +51,7 @@ import { getBridgeQuote, getBridgeStatus } from "@/lib/bridge/relay.functions";
 import { hapticError, hapticSuccess } from "@/lib/native/ui";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { ExchangeUnavailable } from "@/components/wallet/ExchangeUnavailable";
+import { assertReviewedExecution } from "@/lib/security/execution-policy";
 
 export const Route = createFileRoute("/wallet/tron/bridge")({
   head: () => ({
@@ -168,6 +169,7 @@ function TronBridge() {
     const q = quote.data;
     if (!tron || !q) return;
     try {
+      assertReviewedExecution("relay-tron");
       // Defense in depth: never sign an identical Relay contract call twice,
       // even if a stale/native client receives a malformed duplicate quote.
       const sentCalls = new Set<string>();
