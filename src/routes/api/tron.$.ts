@@ -88,9 +88,10 @@ async function forward(request: Request, path: string, search: string): Promise<
         ...(body === undefined ? {} : { "content-type": "application/json" }),
       },
       ...(body === undefined ? {} : { body }),
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(15_000),
     });
+        if (upstream.status >= 300 && upstream.status < 400) return new Response("Upstream redirect refused", { status: 502 });
     const text = await upstream.text();
     return new Response(text, {
       status: upstream.status,
