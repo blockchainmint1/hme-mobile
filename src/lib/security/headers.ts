@@ -4,9 +4,9 @@
  *
  * The Content-Security-Policy is the single most important control for a
  * wallet: even if a script is somehow injected (XSS, a compromised
- * dependency, an MITM without cert pinning), a strict `connect-src` prevents
- * it from exfiltrating the seed phrase or password to an attacker-controlled
- * server, and `object-src` / `base-uri` / `form-action` close common
+ * dependency, an MITM without cert pinning), restricted destinations reduce
+ * exfiltration paths; this is defense in depth, not a guarantee against script
+ * compromise. `object-src` / `base-uri` / `form-action` close common
  * escalation vectors.
  *
  * NOTE on `script-src`: this SSR React app relies on framework-generated
@@ -14,8 +14,7 @@
  * __root.tsx. Locking `script-src` to hashes/nonces requires threading a
  * per-request nonce through TanStack Start and is tracked as a follow-up
  * (see SECURITY-AUDIT.md, H2). Until then we keep `'unsafe-inline'` on
- * `script-src` ONLY. That does not weaken the exfiltration protection, which
- * comes from `connect-src`.
+ * `script-src` ONLY. Inline script permission remains a known gap.
  *
  * Client-side network destinations that must stay in `connect-src`:
  *   - 'self'                          same-origin API proxy + server functions
@@ -43,8 +42,8 @@ const CSP_DIRECTIVES: Record<string, string> = {
   "script-src": "'self' 'unsafe-inline'",
   // Tailwind + Radix/vaul inject inline styles.
   "style-src": "'self' 'unsafe-inline'",
-  // Token/tool logos and QR data URLs. https allowed, cleartext http is not.
-  "img-src": "'self' data: https:",
+  // All displayed icons are bundled; QR images use data URLs.
+  "img-src": "'self' data: blob:",
   "font-src": "'self' data:",
   "connect-src": CONNECT_SRC,
   "manifest-src": "'self'",
