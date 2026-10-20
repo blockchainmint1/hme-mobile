@@ -2,6 +2,11 @@ import { scopedKey } from "@/lib/profiles";
 /**
  * Chain preferences: which chains from the single HD seed to show tiles for.
  * Stored in localStorage so it persists across sessions on-device.
+ *
+ * APP-WIDE: chain on/off and tile order are device settings, shared by every
+ * wallet profile. They used to be namespaced per profile; on first read we
+ * copy the active profile's scoped values into the shared key (copy-only —
+ * the old scoped keys are left in place, never deleted).
  */
 import { EVM_CHAINS, type EvmChainId } from "@/lib/chains/evm";
 import { isKeyOnlyWallet } from "@/lib/txc/storage";
@@ -38,9 +43,26 @@ export const CHAIN_ORDER: ChainId[] = [
 ];
 
 const ORDER_KEY_BASE = "hme.chains.order.v1";
-/** Namespaced per wallet profile (default profile keeps the original key). */
+/** App-wide key (the default profile's historical unprefixed key). */
 function ORDER_KEY(): string {
-  return scopedKey(ORDER_KEY_BASE);
+  return ORDER_KEY_BASE;
+}
+
+/**
+ * One-time, copy-only migration: if the shared key has never been written but
+ * a profile-scoped copy exists, adopt it. The scoped copy is NOT removed.
+ */
+function adoptLegacy(base: string): string | null {
+  try {
+    const legacy = localStorage.getItem(scopedKey(base));
+    if (legacy != null) {
+      localStorage.setItem(base, legacy);
+      return legacy;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
 }
 
 function readOrder(): ChainId[] {
