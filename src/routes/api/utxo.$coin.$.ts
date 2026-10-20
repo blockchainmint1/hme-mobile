@@ -111,6 +111,7 @@ async function forward(request: Request, coin: string, path: string, search: str
         redirect: "manual",
         signal: AbortSignal.timeout(15_000),
       });
+        if (upstream.status >= 300 && upstream.status < 400) return new Response("Upstream redirect refused", { status: 502 });
       const text = await upstream.text();
       if (!upstream.ok) {
         lastStatus = upstream.status;
