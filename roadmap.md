@@ -1,4 +1,9 @@
 # Roadmap
+- [ ] Security: patched Android runtime, strict ecosystem trust, safe signing, JSON-only proxies, and wallet-preservation regression tests
+- [ ] Security: enforce tap-card PINs, actual TSD-based limits, atomic PIN lockout and payment reservation
+- [ ] Security: coordinate purpose-specific integration secrets and signed registry with Honest Money/NectarPay/TSD (needs partner rollout)
+- [ ] Security: harden swap/bridge approvals, CSP/relay, CI and extension update delivery
+- [ ] Security: verify native security changes on installed APK and replace JS-only biometric password retention (needs native device check)
 - [x] Fix Vault EVM token-send balances and route USDC through verified offline QR signing; 27 tests passed, paired-address balances and QR preparation verified with simulated network data at desktop and 390px
 - [ ] Verify a real-device USDC Vault send after installing the next APK (needs Bobby's Vault device; no funded transaction performed here)
 - [x] Remove native iOS build/review restrictions and let the homepage footer scroll with its content; verified at 393px and desktop, iPhone web installation retained
