@@ -4,6 +4,11 @@ import { scopedKey } from "@/lib/profiles";
  * user-added custom tokens. Persisted in localStorage; components subscribe
  * via `useTokensForChain`.
  *
+ * APP-WIDE: custom tokens and hidden flags are device settings, shared by
+ * every wallet profile. They used to be namespaced per profile; on first
+ * read we copy the active profile's scoped values into the shared key
+ * (copy-only — the old scoped keys are left in place, never deleted).
+ *
  * Hidden tokens are removed from the dashboard token list and the Send picker
  * but remain resolvable by URI (so a scanned payment link for a hidden token
  * still routes correctly — we just don't clutter the UI with it by default).
@@ -17,14 +22,31 @@ import {
 } from "@/lib/chains/erc20";
 
 const CUSTOM_KEY_BASE = "hme:tokens:custom:v1";
-/** Namespaced per wallet profile (default profile keeps the original key). */
+/** App-wide key (the default profile's historical unprefixed key). */
 function CUSTOM_KEY(): string {
-  return scopedKey(CUSTOM_KEY_BASE);
+  return CUSTOM_KEY_BASE;
 }
 const HIDDEN_KEY_BASE = "hme:tokens:hidden:v1";
-/** Namespaced per wallet profile (default profile keeps the original key). */
+/** App-wide key (the default profile's historical unprefixed key). */
 function HIDDEN_KEY(): string {
-  return scopedKey(HIDDEN_KEY_BASE);
+  return HIDDEN_KEY_BASE;
+}
+
+/**
+ * One-time, copy-only migration: if the shared key has never been written but
+ * a profile-scoped copy exists, adopt it. The scoped copy is NOT removed.
+ */
+function adoptLegacy(base: string): string | null {
+  try {
+    const legacy = localStorage.getItem(scopedKey(base));
+    if (legacy != null) {
+      localStorage.setItem(base, legacy);
+      return legacy;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
 }
 const EVT = "hme:tokens-changed";
 
@@ -34,7 +56,7 @@ type HiddenSet = string[];
 
 function readCustom(): CustomMap {
   try {
-    const raw = localStorage.getItem(CUSTOM_KEY());
+    const raw = localStorage.getItem(CUSTOM_KEY()) ?? adoptLegacy(CUSTOM_KEY_BASE);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
     return typeof parsed === "object" && parsed ? parsed : {};
@@ -47,7 +69,7 @@ function writeCustom(v: CustomMap) {
 }
 function readHidden(): Set<string> {
   try {
-    const raw = localStorage.getItem(HIDDEN_KEY());
+    const raw = localStorage.getItem(HIDDEN_KEY()) ?? adoptLegacy(HIDDEN_KEY_BASE);
     if (!raw) return new Set();
     const arr = JSON.parse(raw) as HiddenSet;
     return new Set(Array.isArray(arr) ? arr : []);
