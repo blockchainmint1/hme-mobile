@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Add default-on device-wide suspicious activity filtering with reveal controls and accurate tiny amounts; preserve wallets and token preferences.
+- [x] Add default-on device-wide suspicious activity filtering with reveal controls and accurate tiny amounts; 15 tests pass, device toggle and persistence verified in an unlocked throwaway wallet, saved wallets/token preferences untouched.
 - [x] Security: patched Android runtime, strict spending-site trust, SIWE-only EVM signing, JSON-only partner proxies, bounded relay schemas and wallet-preservation regression tests
 - [x] Security: enforce tap-card PINs and actual TSD-based limits; applied database row-lock guards for PIN lockout/payment reservation; runtime card concurrency checks still need funded partner test
 - [ ] Security: configure dedicated HME_SITE_API_KEY + HME_SITE_CODE with trusted-sites:read/activity:write permissions; restore registry/attribution (needs Honest Money credential). Coordinate directional NectarPay/card and TSD_NOTIFY_SIGNING_KEY credentials plus asymmetric signing (needs partner rollout)
