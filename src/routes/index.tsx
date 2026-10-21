@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Fingerprint } from "lucide-react";
 import { hasWallet } from "@/lib/txc/storage";
 import { downloadExtensionZip } from "@/lib/extension-download";
@@ -11,7 +11,26 @@ import {
   disableBiometric,
   getBiometricStatus,
   unlockWithBiometric,
+  BiometricInvalidatedError,
 } from "@/lib/native/biometric";
+
+/** Resolve once the app is visible and focused (Android drops prompts otherwise). */
+function waitForForeground(): Promise<void> {
+  const ready = () => document.visibilityState === "visible" && document.hasFocus();
+  if (ready()) return new Promise((r) => setTimeout(r, 250));
+  return new Promise((resolve) => {
+    const check = () => {
+      if (!ready()) return;
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+      clearInterval(timer);
+      setTimeout(resolve, 250);
+    };
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    const timer = setInterval(check, 300);
+  });
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -70,12 +89,22 @@ function Home() {
     if (unlocked) navigate({ to: "/wallet" });
   }, [unlocked, navigate]);
 
+  // Android only shows the fingerprint sheet when the app is truly in front.
+  // Asking while it is still resuming leaves a request that never answers, so
+  // we wait for the screen to be visible and focused, and a request left over
+  // from a trip to the background never blocks a fresh one.
+  const bioAttempt = useRef(0);
+  const [bioBusy, setBioBusy] = useState(false);
   const tryBiometric = useCallback(async () => {
+    const attempt = ++bioAttempt.current;
     setError(null);
-    setBusy(true);
+    setBioBusy(true);
     try {
+      await waitForForeground();
+      if (attempt !== bioAttempt.current) return;
       const pw = await unlockWithBiometric();
-      if (!pw) return;
+      if (attempt !== bioAttempt.current || !pw) return;
+      setBusy(true);
       const ok = await unlock(pw);
       if (!ok) {
         await disableBiometric();
@@ -83,20 +112,39 @@ function Home() {
         setError("Your password changed. Use your password, then turn fingerprint unlock on again in Settings.");
       } else navigate({ to: "/wallet" });
     } catch (e) {
-      setBio((s) => ({ ...s, enabled: false }));
+      if (attempt !== bioAttempt.current) return;
+      if (e instanceof BiometricInvalidatedError) setBio((s) => ({ ...s, enabled: false }));
       setError(e instanceof Error ? e.message : "Use your password.");
     } finally {
-      setBusy(false);
+      if (attempt === bioAttempt.current) {
+        setBioBusy(false);
+        setBusy(false);
+      }
     }
   }, [unlock, navigate]);
 
-  // Auto-prompt biometrics once on landing if it's enabled.
+  // Auto-prompt once on landing, and again whenever the app comes back to the
+  // front while still locked.
   useEffect(() => {
-    if (exists && bio.enabled && !unlocked) {
-      void tryBiometric();
-    }
+    if (!exists || !bio.enabled) return;
+    if (!unlocked) void tryBiometric();
+    let wasHidden = false;
+    const onVis = () => {
+      if (document.visibilityState === "hidden") {
+        wasHidden = true;
+        return;
+      }
+      if (wasHidden && !unlockedRef.current) {
+        wasHidden = false;
+        void tryBiometric();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exists, bio.enabled]);
+  const unlockedRef = useRef(unlocked);
+  unlockedRef.current = unlocked;
 
   async function onUnlock(e: React.FormEvent) {
     e.preventDefault();
