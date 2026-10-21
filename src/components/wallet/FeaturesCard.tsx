@@ -227,9 +227,10 @@ export function FeaturesCard({ compact }: { compact?: boolean }) {
                   Swap LTC / DOGE to stablecoins
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Adds a Swap button on the Litecoin and Dogecoin tiles. Swaps run natively
-                  over THORChain — your coins are signed on this device and the stablecoin is
-                  paid out to this wallet's EVM address. No bridge, no custodian.
+                  Adds Swap for Litecoin and Dogecoin wherever they appear. We compare every
+                  available route — THORChain and non-custodial instant exchanges — and take the
+                  one that pays out the most. Your coins are signed on this device and the
+                  stablecoin lands in this wallet's EVM address. No bridge, no custodian.
                 </p>
               </div>
               <Switch
