@@ -175,17 +175,30 @@ function Home() {
                 autoComplete="current-password"
               />
               {error && <p className="text-sm text-destructive">{error}</p>}
-              <div className="flex flex-wrap gap-3">
-                <Button type="submit" disabled={busy || !password}>
-                  {busy ? "Unlocking..." : "Unlock"}
+              <div className="grid grid-cols-3 gap-2">
+                <Button type="submit" disabled={busy || !password} className="w-full">
+                  {busy ? "Unlocking…" : "Unlock"}
                 </Button>
-                {bio.enabled && (
-                  <Button type="button" variant="secondary" onClick={tryBiometric} disabled={busy}>
-                    <Fingerprint className="h-4 w-4 mr-1.5" />
-                    Use biometrics
-                  </Button>
-                )}
-                <a href="/import" data-native-route="/import" onClick={goImport} className={buttonVariants({ variant: "ghost" })}>Import a different wallet</a>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={tryBiometric}
+                  disabled={busy || !bio.enabled}
+                  className="w-full px-0"
+                  aria-label="Unlock with fingerprint"
+                  title={bio.enabled ? "Unlock with fingerprint" : "Fingerprint unlock is off — turn it on in Settings"}
+                >
+                  <Fingerprint className="h-4 w-4" />
+                </Button>
+                <a
+                  href="/import"
+                  data-native-route="/import"
+                  onClick={goImport}
+                  className={buttonVariants({ variant: "outline", className: "w-full justify-center px-2" })}
+                  title="Import a different wallet"
+                >
+                  <span className="truncate">Import</span>
+                </a>
               </div>
             </form>
           </CardContent>
