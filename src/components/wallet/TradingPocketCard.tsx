@@ -1,7 +1,9 @@
 /**
- * Home-screen card for the Trading pocket (Seeds). Shows its own balances and
- * receive addresses, links to move coins in, pending trade approvals, and the
- * Revoke button. Renders nothing until a trading link exists.
+ * Trading pocket (shared wallet) UI. `TradingSitePanel` is the per-site block —
+ * balances, receive addresses, Move back and Revoke for one linked trading site —
+ * used both on the Shared wallets page and as a per-site tile in Settings.
+ * `TradingPocketCard` wraps every linked site in a home-style card and renders
+ * nothing until a trading link exists.
  */
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -126,23 +128,24 @@ function PocketRows({ link }: { link: DelegateLinkRecord }) {
   );
 }
 
-export function TradingPocketCard() {
-  const allowed = useExchangeFeaturesAllowed();
+function describe(rs: SweepResult[]): string {
+  const sent = rs.filter((r) => r.txid).map((r) => r.chain);
+  const skipped = rs.filter((r) => r.skipped && r.skipped !== "empty").map((r) => `${r.chain} (${r.skipped})`);
+  return [
+    sent.length ? `Moved back to your main wallet: ${sent.join(", ")}.` : "Nothing needed moving.",
+    skipped.length ? `Not moved: ${skipped.join("; ")}.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** One linked trading site: pocket addresses, balances, Move back and Revoke. */
+export function TradingSitePanel({ link }: { link: DelegateLinkRecord }) {
   const { unlocked } = useWallet();
-  const [links, setLinks] = useState<DelegateLinkRecord[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
 
-  useEffect(() => {
-    const h = () => setLinks(listDelegateLinks());
-    h();
-    window.addEventListener(DELEGATE_LINKS_EVENT, h);
-    return () => window.removeEventListener(DELEGATE_LINKS_EVENT, h);
-  }, [unlocked]);
-
-  if (!allowed || links.length === 0 || !unlocked?.mnemonic) return null;
-
-  async function moveBack(link: DelegateLinkRecord): Promise<SweepResult[]> {
+  async function moveBack(): Promise<SweepResult[]> {
     const seed = await seedFromMnemonic(unlocked!.mnemonic!, unlocked!.passphrase ?? "");
     try {
       return await sweepPocket(seed, link.account, link.chains);
@@ -151,18 +154,7 @@ export function TradingPocketCard() {
     }
   }
 
-  function describe(rs: SweepResult[]): string {
-    const sent = rs.filter((r) => r.txid).map((r) => r.chain);
-    const skipped = rs.filter((r) => r.skipped && r.skipped !== "empty").map((r) => `${r.chain} (${r.skipped})`);
-    return [
-      sent.length ? `Moved back to your main wallet: ${sent.join(", ")}.` : "Nothing needed moving.",
-      skipped.length ? `Not moved: ${skipped.join("; ")}.` : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-  }
-
-  async function revoke(link: DelegateLinkRecord) {
+  async function revoke() {
     if (!confirm(`Revoke ${link.appName}'s access? Coins in this shared wallet will be moved back to your main wallet.`)) return;
     setBusy(link.linkId);
     setResult(null);
@@ -174,7 +166,7 @@ export function TradingPocketCard() {
     }
     let sweepNote = "";
     if (link.mode === "access") {
-      sweepNote = describe(await moveBack(link).catch(() => []));
+      sweepNote = describe(await moveBack().catch(() => []));
       // An old spending key must never control new deposits.
       if (!listDelegateLinks().some((l) => l.linkId !== link.linkId && l.mode === "access" && l.account === link.account))
         retirePocketAccount();
@@ -183,6 +175,56 @@ export function TradingPocketCard() {
     setResult(`Revoked ${link.appName}. ${sweepNote}${serverNote} Tokens (TSD, USDC) stay put — send them from the shared wallet address manually if needed.`.trim());
     setBusy(null);
   }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm">
+          <span className="font-medium">{link.appName}</span>{" "}
+          <span className="text-xs text-muted-foreground">
+            · {link.mode === "access" ? "has access (instant trades)" : "you approve each trade"} · branch {link.account}
+          </span>
+        </p>
+        <div className="flex gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!!busy}
+            onClick={async () => {
+              setBusy(link.linkId + ":move");
+              setResult(describe(await moveBack().catch(() => [])));
+              setBusy(null);
+            }}
+          >
+            {busy === link.linkId + ":move" && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+            Move back
+          </Button>
+          <Button size="sm" variant="destructive" disabled={!!busy} onClick={() => revoke()}>
+            {busy === link.linkId && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+            Revoke
+          </Button>
+        </div>
+      </div>
+      <PocketRows link={link} />
+      {link.mode === "approve" && <SeedsTradesList link={link} />}
+      {result && <p className="text-xs text-muted-foreground">{result}</p>}
+    </div>
+  );
+}
+
+export function TradingPocketCard() {
+  const allowed = useExchangeFeaturesAllowed();
+  const { unlocked } = useWallet();
+  const [links, setLinks] = useState<DelegateLinkRecord[]>([]);
+
+  useEffect(() => {
+    const h = () => setLinks(listDelegateLinks());
+    h();
+    window.addEventListener(DELEGATE_LINKS_EVENT, h);
+    return () => window.removeEventListener(DELEGATE_LINKS_EVENT, h);
+  }, [unlocked]);
+
+  if (!allowed || links.length === 0 || !unlocked?.mnemonic) return null;
 
   return (
     <Card className="mx-4 my-3">
@@ -194,39 +236,8 @@ export function TradingPocketCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         {links.map((link) => (
-          <div key={link.linkId} className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm">
-                <span className="font-medium">{link.appName}</span>{" "}
-                <span className="text-xs text-muted-foreground">
-                  · {link.mode === "access" ? "has access (instant trades)" : "you approve each trade"} · branch {link.account}
-                </span>
-              </p>
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={!!busy}
-                  onClick={async () => {
-                    setBusy(link.linkId + ":move");
-                    setResult(describe(await moveBack(link).catch(() => [])));
-                    setBusy(null);
-                  }}
-                >
-                  {busy === link.linkId + ":move" && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                  Move back
-                </Button>
-                <Button size="sm" variant="destructive" disabled={!!busy} onClick={() => revoke(link)}>
-                  {busy === link.linkId && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-                  Revoke
-                </Button>
-              </div>
-            </div>
-            <PocketRows link={link} />
-            {link.mode === "approve" && <SeedsTradesList link={link} />}
-          </div>
+          <TradingSitePanel key={link.linkId} link={link} />
         ))}
-        {result && <p className="text-xs text-muted-foreground">{result}</p>}
       </CardContent>
     </Card>
   );
