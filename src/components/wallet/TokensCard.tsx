@@ -35,10 +35,12 @@ import {
   useAllTokensForChain,
 } from "@/lib/token-prefs";
 import type { Address } from "viem";
+import { useFeature } from "@/lib/feature-prefs";
 
 const CHAINS: EvmChainId[] = ["eth", "base", "bsc"];
 
 export function TokensCard({ compact }: { compact?: boolean }) {
+  const [hideSpam, setHideSpam] = useFeature("hideSpamTokens");
   return (
     <Card className={compact ? "rounded-none border-0 bg-transparent shadow-none" : undefined}>
       {!compact && (
@@ -53,6 +55,13 @@ export function TokensCard({ compact }: { compact?: boolean }) {
         </CardHeader>
       )}
       <CardContent className={compact ? "space-y-5 p-0" : "space-y-5"}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <Label htmlFor="device-hide-spam-tokens">Hide suspicious tokens</Label>
+            <p className="text-xs text-muted-foreground mt-1">Counterfeit symbols and phishing tokens. Genuine zero-balance tokens stay visible.</p>
+          </div>
+          <Switch id="device-hide-spam-tokens" checked={hideSpam} onCheckedChange={setHideSpam} />
+        </div>
         {CHAINS.map((c) => (
           <ChainTokens key={c} chain={c} />
         ))}

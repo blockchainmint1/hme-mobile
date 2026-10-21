@@ -53,6 +53,39 @@ export type Database = {
         }
         Relationships: []
       }
+      evm_history_cache: {
+        Row: {
+          address: string
+          attempted_at: string | null
+          chain: string
+          fingerprint: string
+          lease_token: string | null
+          lease_until: string | null
+          payload: Json
+          synced_at: string | null
+        }
+        Insert: {
+          address: string
+          attempted_at?: string | null
+          chain: string
+          fingerprint?: string
+          lease_token?: string | null
+          lease_until?: string | null
+          payload?: Json
+          synced_at?: string | null
+        }
+        Update: {
+          address?: string
+          attempted_at?: string | null
+          chain?: string
+          fingerprint?: string
+          lease_token?: string | null
+          lease_until?: string | null
+          payload?: Json
+          synced_at?: string | null
+        }
+        Relationships: []
+      }
       exchange_compliance_log: {
         Row: {
           amount_sats: number
@@ -257,6 +290,26 @@ export type Database = {
       card_check_pin: {
         Args: { p_card_id: string; p_hash: string }
         Returns: string
+      }
+      claim_evm_history_refresh: {
+        Args: {
+          p_address: string
+          p_chain: string
+          p_fingerprint: string
+          p_force: boolean
+          p_token: string
+        }
+        Returns: boolean
+      }
+      commit_evm_history_refresh: {
+        Args: {
+          p_address: string
+          p_chain: string
+          p_fingerprint: string
+          p_payload: Json
+          p_token: string
+        }
+        Returns: boolean
       }
       purge_exchange_compliance_log: { Args: never; Returns: number }
     }
