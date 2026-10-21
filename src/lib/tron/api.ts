@@ -13,6 +13,7 @@ import {
   toHexAddress,
 } from "./address";
 import { signTxId } from "./sign";
+import { verifyUnsignedTronTx } from "./verify-unsigned";
 
 async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${TRON_API}/${path}`, {
@@ -259,6 +260,8 @@ export async function sendTrx(
   amountSun: number,
 ): Promise<string> {
   const tx = await buildTrxTransfer(from, to, amountSun);
+  // The node built this; prove it is the transfer we asked for before signing.
+  verifyUnsignedTronTx(tx, { type: "TransferContract", owner: from, to, amountSun: BigInt(amountSun) });
   return broadcast(tx, signTxId(tx.txID, privateKey));
 }
 
@@ -271,6 +274,14 @@ export async function sendTrc20(
   amount: bigint,
 ): Promise<string> {
   const tx = await buildTrc20Transfer(token, from, to, amount);
+  verifyUnsignedTronTx(tx, {
+    type: "TriggerSmartContract",
+    owner: from,
+    contract: token.contract,
+    data: `a9059cbb${padAddressParam(to)}${padUintParam(amount)}`,
+    callValue: 0n,
+    feeLimitSun: BigInt(TRC20_FEE_LIMIT_SUN),
+  });
   return broadcast(tx, signTxId(tx.txID, privateKey));
 }
 
@@ -322,6 +333,14 @@ export async function sendRawContractCall(
   if (!tx?.txID) {
     throw new Error(decodeNodeMessage(res.result?.message) ?? "Tron node rejected the call");
   }
+  verifyUnsignedTronTx(tx, {
+    type: "TriggerSmartContract",
+    owner: from,
+    contract: contractBase58,
+    data: data.startsWith("0x") ? data.slice(2) : data,
+    callValue: BigInt(opts.callValue ?? 0),
+    feeLimitSun: BigInt(opts.feeLimitSun ?? TRC20_FEE_LIMIT_SUN),
+  });
   return broadcast(tx, signTxId(tx.txID, privateKey));
 }
 

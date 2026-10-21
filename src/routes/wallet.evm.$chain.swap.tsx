@@ -47,6 +47,21 @@ import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { ExchangeUnavailable } from "@/components/wallet/ExchangeUnavailable";
 import { sendEvmTransaction } from "@/lib/chains/evm-send";
 import { assertReviewedExecution } from "@/lib/security/execution-policy";
+import {
+  LIFI_NATIVE,
+  requiredSpender,
+  verifyLifiDeployment,
+  verifyLifiQuote,
+  type LifiChain,
+} from "@/lib/security/lifi-policy";
+
+/**
+ * A refreshed route may guarantee a little less than the one the user saw
+ * (prices move between the tap and the signature). Anything below this
+ * fraction of the accepted minimum is a material change and is refused so the
+ * user can re-confirm, instead of being signed silently.
+ */
+const ACCEPTED_MIN_DRIFT_BPS = 50n; // 0.5%
 
 type AssetKind =
   | { kind: "native" }
@@ -188,6 +203,8 @@ function EvmSwap() {
     mutationFn: async () => {
       if (!account) throw new Error("Wallet locked");
       if (!rawAmount) throw new Error("Enter an amount");
+      if (!quote.data) throw new Error("No quote to confirm");
+      if (chainId === "zcu") throw new Error("Swaps aren't available on this network");
       assertReviewedExecution("lifi");
 
       const walletClient = createWalletClient({
@@ -196,13 +213,31 @@ function EvmSwap() {
         transport: http(`/api/evm/${chainId}`),
       });
       const pub = evmClient(chainId);
+      const lifiChain = chainId as LifiChain;
+
+      // The intent is what the user saw when they pressed the button. Every
+      // quote used from here on — for the approval spender and for the
+      // signed transaction — must bind to it; a quote is not an authority.
+      const shown = quote.data;
+      const intent = {
+        chain: lifiChain,
+        user: account.address,
+        fromToken: from.kind === "native" ? LIFI_NATIVE : from.token.address,
+        toToken: to.kind === "native" ? LIFI_NATIVE : to.token.address,
+        fromAmount: rawAmount,
+        minAmountOutFloor:
+          (BigInt(shown.estimate.toAmountMin) * (10_000n - ACCEPTED_MIN_DRIFT_BPS)) / 10_000n,
+      };
+      verifyLifiQuote(shown, intent);
+      setStage("Checking LI.FI contract…");
+      await verifyLifiDeployment(lifiChain, pub);
 
       // ERC-20 approval, if needed. Done BEFORE the final quote so the
-      // route we sign is as fresh as possible.
+      // route we sign is as fresh as possible. The spender is the pinned
+      // Diamond, never a quote field; the amount is exactly the intent.
       if (from.kind === "erc20") {
         setStage("Checking approval…");
-        const approvalTo = (quote.data?.estimate.approvalAddress ??
-          (await fetchQuote({ data: quoteArgs })).estimate.approvalAddress) as Address;
+        const approvalTo: Address = requiredSpender(lifiChain, shown);
         const current = await pub.readContract({
           address: from.token.address,
           abi: erc20Abi,
@@ -246,31 +281,30 @@ function EvmSwap() {
       // screen for a minute will revert on slippage.
       setStage("Refreshing route…");
       const q = await fetchQuote({ data: quoteArgs });
+      // The refreshed route must still be the swap the user confirmed: same
+      // Diamond, same tokens and amount, output to this wallet, and a minimum
+      // no more than ACCEPTED_MIN_DRIFT_BPS below what they accepted.
+      const verified = verifyLifiQuote(q, intent);
 
       setStage("Swapping…");
       const tx = {
         to: q.transactionRequest.to,
         data: q.transactionRequest.data,
-        value: BigInt(q.transactionRequest.value ?? "0x0"),
+        value: verified.value,
       };
-      // Simulate first so a revert surfaces as a readable error instead of a
-      // failed on-chain transaction that burns gas.
-      let gas: bigint | undefined;
+      // Simulate first. A revert means the router would reject this route,
+      // and a quote-supplied gasLimit is attacker-controlled, so estimation
+      // failure blocks signing rather than falling back to the quoted limit.
+      let gas: bigint;
       try {
         gas = await pub.estimateGas({ account, ...tx });
         gas = (gas * 130n) / 100n;
       } catch (e) {
-        const quoted = q.transactionRequest.gasLimit
-          ? BigInt(q.transactionRequest.gasLimit)
-          : undefined;
-        if (!quoted) {
-          throw new Error(
-            `The router rejected this swap (likely price moved). Try again, or raise slippage. Details: ${
-              (e as Error).message.split("\n")[0]
-            }`,
-          );
-        }
-        gas = (quoted * 130n) / 100n;
+        throw new Error(
+          `The router rejected this swap (likely price moved). Try again, or raise slippage. Details: ${
+            (e as Error).message.split("\n")[0]
+          }`,
+        );
       }
 
       return await sendEvmTransaction(chainId, walletClient, { ...tx, gas });
