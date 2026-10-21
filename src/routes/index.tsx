@@ -231,7 +231,7 @@ function Home() {
                   type="button"
                   variant="secondary"
                   onClick={tryBiometric}
-                  disabled={busy || bioBusy || !bio.enabled}
+                  disabled={busy || !bio.enabled}
                   className="w-full px-0"
                   aria-label="Unlock with fingerprint"
                   title={bio.enabled ? "Unlock with fingerprint" : "Fingerprint unlock is off — turn it on in Settings"}
