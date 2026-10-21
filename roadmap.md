@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Filter counterfeit outgoing token events using contract identity without hiding genuine sends; verify Bobby's fake 110,000 USDC example and reveal controls.
 - [x] Add default-on device-wide suspicious activity filtering with reveal controls and accurate tiny amounts; 15 tests pass, device toggle and persistence verified in an unlocked throwaway wallet, saved wallets/token preferences untouched.
 - [x] Security: patched Android runtime, strict spending-site trust, SIWE-only EVM signing, JSON-only partner proxies, bounded relay schemas and wallet-preservation regression tests
 - [x] Security: enforce tap-card PINs and actual TSD-based limits; applied database row-lock guards for PIN lockout/payment reservation; runtime card concurrency checks still need funded partner test
