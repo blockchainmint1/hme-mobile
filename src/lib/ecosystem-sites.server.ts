@@ -7,6 +7,7 @@
  * mark a phishing site as trusted. Spec: docs/ecosystem-trusted-sites.md
  */
 import { createHmac, timingSafeEqual } from "crypto";
+import { ecosystemCredential } from "./ecosystem-credential.server";
 
 export interface EcosystemSite {
   host: string;
@@ -19,11 +20,8 @@ const TTL_MS = 5 * 60 * 1000;
 
 export async function loadEcosystemSites(): Promise<EcosystemSite[]> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.sites;
-  // New Honest Money API requires a dedicated per-site credential; never send
-  // the cross-partner HME_ECOSYSTEM signing secret as its API bearer token.
-  const secret = process.env["HME_SITE_API_KEY"];
-  const site = process.env["HME_SITE_CODE"];
-  if (!secret || !site) throw new Error("dedicated ecosystem site credential missing");
+  // HME_ECOSYSTEM now contains the newly issued wallet-only site key.
+  const { apiKey: secret, site } = ecosystemCredential();
   const res = await fetch(process.env["ECOSYSTEM_SITES_URL"] || DEFAULT_URL, {
     headers: { accept: "application/json", Authorization: `Bearer ${secret}`, "X-HME-Site": site },
     redirect: "manual",

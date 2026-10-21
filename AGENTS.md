@@ -32,7 +32,7 @@ The extension packages the full web app: `bun scripts/build-extension.mjs` runs 
 - Popup theme follows system by default with a light/dark override saved only in extension localStorage. Why: appearance should not change web/mobile settings or wallet data.
 
 ## Trusted ecosystem sites come from honest.money
-Registry uses a dedicated site credential (docs/ecosystem-trusted-sites.md). Spending requires fresh exact membership; offline labels never authorize it. Why: names and caches cannot grant spending access.
+Registry/Hub use ecosystem-credential.server (current per-site HME convention); do not migrate partner signing implicitly. Spending requires fresh exact registry membership. Why: site recognition cannot authenticate payments.
 
 ## Trading links (hm-link-delegate)
 - Spending access is only ever for the Trading pocket account (1106'+, rotated on revoke) and only for sites on the honest.money trusted list; look-only links stay xpub-only. Why: a shared spending key can't be taken back, so the blast radius must be one separate, retirable pocket.
