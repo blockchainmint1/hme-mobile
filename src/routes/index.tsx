@@ -8,6 +8,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
+  disableBiometric,
   getBiometricStatus,
   unlockWithBiometric,
 } from "@/lib/native/biometric";
@@ -74,13 +75,16 @@ function Home() {
     setBusy(true);
     try {
       const pw = await unlockWithBiometric();
-      if (!pw) {
-        setBusy(false);
-        return;
-      }
+      if (!pw) return;
       const ok = await unlock(pw);
-      if (!ok) setError("Stored biometric password no longer matches. Use your password.");
-      else navigate({ to: "/wallet" });
+      if (!ok) {
+        await disableBiometric();
+        setBio((s) => ({ ...s, enabled: false }));
+        setError("Your password changed. Use your password, then turn fingerprint unlock on again in Settings.");
+      } else navigate({ to: "/wallet" });
+    } catch (e) {
+      setBio((s) => ({ ...s, enabled: false }));
+      setError(e instanceof Error ? e.message : "Use your password.");
     } finally {
       setBusy(false);
     }
