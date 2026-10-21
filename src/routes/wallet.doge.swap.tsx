@@ -8,12 +8,12 @@ export const Route = createFileRoute("/wallet/doge/swap")({
       {
         name: "description",
         content:
-          "Swap Dogecoin for USDC or USDT natively through THORChain, signed on your device inside HME Wallet.",
+          "Swap Dogecoin for USDC or USDT through the best-paying route — THORChain or a non-custodial instant exchange — signed on your device inside HME Wallet.",
       },
       { property: "og:title", content: "Swap DOGE to stablecoins — HME Wallet" },
       {
         property: "og:description",
-        content: "Native DOGE to USDC/USDT swaps with no bridge and no custodian.",
+        content: "DOGE to USDC/USDT swaps with no bridge and no custodian.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
