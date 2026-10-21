@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Fingerprint } from "lucide-react";
 import { hasWallet } from "@/lib/txc/storage";
 import { downloadExtensionZip } from "@/lib/extension-download";
@@ -11,7 +11,26 @@ import {
   disableBiometric,
   getBiometricStatus,
   unlockWithBiometric,
+  BiometricInvalidatedError,
 } from "@/lib/native/biometric";
+
+/** Resolve once the app is visible and focused (Android drops prompts otherwise). */
+function waitForForeground(): Promise<void> {
+  const ready = () => document.visibilityState === "visible" && document.hasFocus();
+  if (ready()) return new Promise((r) => setTimeout(r, 250));
+  return new Promise((resolve) => {
+    const check = () => {
+      if (!ready()) return;
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+      clearInterval(timer);
+      setTimeout(resolve, 250);
+    };
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    const timer = setInterval(check, 300);
+  });
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -212,7 +231,7 @@ function Home() {
                   type="button"
                   variant="secondary"
                   onClick={tryBiometric}
-                  disabled={busy || !bio.enabled}
+                  disabled={busy || bioBusy || !bio.enabled}
                   className="w-full px-0"
                   aria-label="Unlock with fingerprint"
                   title={bio.enabled ? "Unlock with fingerprint" : "Fingerprint unlock is off — turn it on in Settings"}
