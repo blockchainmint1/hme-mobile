@@ -45,6 +45,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowDown, ArrowUp, ArrowLeftRight, ChevronLeft, ChevronRight, RefreshCw, Send, QrCode, Eye, Trash2, Lock, Key, Loader2 } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
+import { useHideSuspiciousActivity } from "@/lib/activity-prefs";
+import { filterSuspiciousActivity, suspiciousActivityReason, formatActivityAmount } from "@/lib/suspicious-activity";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { usePendingTxs, removePendingTx } from "@/lib/pending-tx";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
@@ -2164,10 +2166,13 @@ function EvmActivity({
   }, [tokens, tokenBalances, hideSpam]);
   const hiddenTokenCount = tokens.length - visibleTokens.length;
   const transfersList = history.data?.transfers ?? [];
+  const [hideSuspicious] = useHideSuspiciousActivity();
+  const [showSuspicious, setShowSuspicious] = useState(false);
+  useEffect(() => setShowSuspicious(false), [chainId, address, hideSuspicious]);
   const visibleTransfers = useMemo(() => {
-    return hideSpam ? transfersList.filter((t) => !t.spam) : transfersList;
-  }, [transfersList, hideSpam]);
-  const spamCount = transfersList.length - visibleTransfers.length;
+    return filterSuspiciousActivity(transfersList, hideSuspicious && !showSuspicious);
+  }, [transfersList, hideSuspicious, showSuspicious]);
+  const suspiciousCount = transfersList.filter((t) => suspiciousActivityReason(t, transfersList)).length;
 
   // Locally-tracked sends: shown at the top until the indexer catches up.
   const indexedHashes = useMemo(
@@ -2354,8 +2359,8 @@ function EvmActivity({
                     </a>
                   )}
                 </>
-              ) : spamCount > 0
-                ? `${spamCount} spam / imposter ${spamCount === 1 ? "transfer" : "transfers"} hidden. Toggle "Hide worthless / spam tokens" in Settings to view.`
+              ) : suspiciousCount > 0
+                ? "Hidden suspicious activity"
                 : `No transactions on ${meta.name} yet.`}
             </CardContent>
           </Card>
@@ -2378,8 +2383,8 @@ function EvmActivity({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">
                       {t.outgoing ? "Sent" : "Received"}
-                      {t.spam && (
-                        <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-400/80">
+                      {suspiciousActivityReason(t, transfersList) && (
+                        <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground" title={suspiciousActivityReason(t, transfersList) ?? undefined}>
                           suspicious
                         </span>
                       )}
@@ -2387,23 +2392,34 @@ function EvmActivity({
                     <p className="text-xs text-muted-foreground truncate">
                       {t.timestamp ? new Date(t.timestamp).toLocaleString() : `Block ${t.blockNum}`}
                     </p>
+                    {suspiciousActivityReason(t, transfersList) && (
+                      <p className="text-xs text-muted-foreground break-words">
+                        {suspiciousActivityReason(t, transfersList)}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-semibold ${t.outgoing ? "" : "text-emerald-400"}`}>
                       {t.outgoing ? "−" : "+"}
-                      {Number(t.value).toLocaleString(undefined, { maximumFractionDigits: 6 })} {t.asset}
+                      {formatActivityAmount(t.value)} {t.asset}
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </button>
               </li>
             ))}
-            {hideSpam && spamCount > 0 && (
-              <li className="pt-1 text-center text-xs text-muted-foreground">
-                {spamCount} spam / imposter {spamCount === 1 ? "transfer" : "transfers"} hidden
-              </li>
-            )}
           </ul>
+        )}
+        {hideSuspicious && suspiciousCount > 0 && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+            <span className="text-xs text-muted-foreground">
+              {showSuspicious ? "Suspicious activity" : "Hidden suspicious activity"} ({suspiciousCount})
+            </span>
+            <Button variant="ghost" size="sm" onClick={() => setShowSuspicious((show) => !show)}>
+              <Eye className="mr-2 h-4 w-4" />
+              {showSuspicious ? "Hide suspicious" : "Show all"}
+            </Button>
+          </div>
         )}
       </section>
     </>
