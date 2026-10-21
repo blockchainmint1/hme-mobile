@@ -7,12 +7,12 @@
  * silent while the session is alive; after an auto-lock we ask for it once.
  */
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowLeftRight, Check, ChevronDown, Download, Eye, Key, Loader2, Nfc, Pencil, Plus, ShieldCheck, Sparkles, Wallet } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeftRight, Check, ChevronDown, Download, Eye, Key, Loader2, Nfc, Pencil, Plus, ShieldCheck, Sparkles, Trash2, Wallet } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
 import { DELEGATE_LINKS_EVENT, listDelegateLinks, type DelegateLinkRecord } from "@/lib/xpub-link/delegate";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -23,17 +23,33 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useWallet } from "@/lib/txc/wallet-context";
-import { renameStoredWallet } from "@/lib/txc/storage";
+import { deleteProfileWallet, renameStoredWallet } from "@/lib/txc/storage";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { disableBiometric } from "@/lib/native/biometric";
 
 export function ProfileSwitcher() {
-  const { profiles, activeProfileId, switchProfile, refreshProfiles, rename, unlocked } =
+  const { profiles, activeProfileId, switchProfile, refreshProfiles, rename, unlocked, forget } =
     useWallet();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [needPassword, setNeedPassword] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftLabel, setDraftLabel] = useState("");
+  const [pendingRemove, setPendingRemove] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
 
   useEffect(() => {
     if (open) refreshProfiles();
@@ -94,6 +110,25 @@ export function ProfileSwitcher() {
       refreshProfiles();
     }
     toast.success("Wallet renamed");
+  }
+
+  /** Forget another wallet on this device. Its seed phrase remains the backup. */
+  function remove(id: string) {
+    const label = profiles.find((p) => p.id === id)?.label ?? "Wallet";
+    setPendingRemove(null);
+    deleteProfileWallet(id);
+    refreshProfiles();
+    toast.success(`${label} removed from this device`);
+  }
+
+  /** Wipe the wallet you're using now: keys, biometrics, contacts, caches. */
+  async function deleteActive() {
+    setDeleteOpen(false);
+    setConfirmText("");
+    setOpen(false);
+    await disableBiometric();
+    forget();
+    navigate({ to: "/" });
   }
 
   // A single profile is the common case — still show the name, but there's
@@ -176,6 +211,22 @@ export function ProfileSwitcher() {
                   aria-label={`Rename ${p.label}`}
                 >
                   <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => (p.isActive ? setDeleteOpen(true) : setPendingRemove(p.id))}
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                  title={
+                    p.isActive
+                      ? `Delete ${p.label} and all data from this device`
+                      : `Remove ${p.label} from this device`
+                  }
+                  aria-label={
+                    p.isActive
+                      ? `Delete ${p.label} and all data from this device`
+                      : `Remove ${p.label} from this device`
+                  }
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
                 {busyId === p.id ? (
                   <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
@@ -281,7 +332,75 @@ export function ProfileSwitcher() {
         <p className="mt-2 text-xs text-muted-foreground">
           Private keys and watch-only addresses are added to{" "}
           <span className="font-medium text-foreground">{activeLabel}</span> as their own tiles.
+          Removing a wallet here only forgets it on this device — your seed phrase is still the
+          backup.
         </p>
+
+        {/* ---------- Remove a wallet you're not using ---------- */}
+        <AlertDialog open={!!pendingRemove} onOpenChange={(o) => !o && setPendingRemove(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove wallet from this device?</AlertDialogTitle>
+              <AlertDialogDescription>
+                <span className="font-medium text-foreground">
+                  {profiles.find((p) => p.id === pendingRemove)?.label ?? "This wallet"}
+                </span>{" "}
+                will be removed from this device. Your funds stay on the blockchain and you can
+                re-add it any time with its seed phrase.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className={buttonVariants({ variant: "destructive" })}
+                onClick={() => pendingRemove && remove(pendingRemove)}
+              >
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* ---------- Delete the wallet you're using, with all its data ---------- */}
+        <AlertDialog
+          open={deleteOpen}
+          onOpenChange={(o) => {
+            setDeleteOpen(o);
+            if (!o) setConfirmText("");
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete wallet and all data?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently deletes the encrypted wallet, biometric unlock, address book and
+                all cached data from this device. Your funds stay on the blockchain and can only be
+                restored on any device using your seed phrase. Type <strong>DELETE</strong> to
+                confirm.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div>
+              <Label htmlFor="confirm-delete">Confirmation</Label>
+              <Input
+                id="confirm-delete"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="Type DELETE"
+                className="mt-1"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setConfirmText("")}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={confirmText !== "DELETE"}
+                className={buttonVariants({ variant: "destructive" })}
+                onClick={() => void deleteActive()}
+              >
+                Delete wallet and all data
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
       </SheetContent>
     </Sheet>

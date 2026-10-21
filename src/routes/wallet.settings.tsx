@@ -1,5 +1,5 @@
 import { useIsExtension } from "@/lib/native/use-is-extension";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   BookUser,
@@ -37,7 +37,6 @@ import { UpdateCheckCard } from "@/components/wallet/UpdateCheckCard";
 import { TsdCashoutKeyCard } from "@/components/wallet/TsdCashoutKeyCard";
 import { TsdNudgeToggleCard } from "@/components/wallet/TsdNudgeToggleCard";
 import { AddSeedCard } from "@/components/wallet/AddSeedCard";
-import { ProfilesCard } from "@/components/wallet/ProfilesCard";
 import { useFeature } from "@/lib/feature-prefs";
 import {
   DELEGATE_LINKS_EVENT,
@@ -45,27 +44,13 @@ import {
   type DelegateLinkRecord,
 } from "@/lib/xpub-link/delegate";
 import { useWallet } from "@/lib/txc/wallet-context";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { disableBiometric } from "@/lib/native/biometric";
 
 export const Route = createFileRoute("/wallet/settings")({
   head: () => ({ meta: [
@@ -81,7 +66,7 @@ export const Route = createFileRoute("/wallet/settings")({
 
 function SettingsPage() {
   const isExt = useIsExtension();
-  const { unlocked, forget, profiles, activeProfileId } = useWallet();
+  const { unlocked, profiles, activeProfileId } = useWallet();
   const keyOnly = unlocked?.mode === "keyonly";
   const activeLabel =
     profiles.find((p) => p.id === activeProfileId)?.label ?? "this wallet";
@@ -96,10 +81,6 @@ function SettingsPage() {
     return () => window.removeEventListener(DELEGATE_LINKS_EVENT, h);
   }, []);
 
-  const navigate = useNavigate();
-  const [confirmText, setConfirmText] = useState("");
-  const [deleteOpen, setDeleteOpen] = useState(false);
-
   return (
     <main className="mx-auto max-w-xl px-4 py-8">
       <Link to="/wallet" className="text-sm text-muted-foreground hover:text-foreground">
@@ -107,47 +88,6 @@ function SettingsPage() {
       </Link>
       <h1 className="mt-3 text-2xl font-bold">Settings</h1>
 
-      {/* ---------- Wallet management: switch, rename, add, delete ---------- */}
-      <div className="mt-4">
-        <ProfilesCard compact onDeleteActive={() => setDeleteOpen(true)} />
-      </div>
-
-      <AlertDialog open={deleteOpen} onOpenChange={(o) => { setDeleteOpen(o); if (!o) setConfirmText(""); }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete wallet and all data?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently deletes the encrypted wallet, biometric unlock, address book,
-              and all cached data from this device. Your funds stay on the blockchain and can
-              only be restored on any device using your seed phrase. Type{" "}
-              <strong>DELETE</strong> to confirm.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div>
-            <Label htmlFor="confirm">Confirmation</Label>
-            <Input
-              id="confirm"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="Type DELETE"
-              className="mt-1"
-            />
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setConfirmText("")}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={confirmText !== "DELETE"}
-              onClick={async () => {
-                await disableBiometric();
-                forget();
-                navigate({ to: "/" });
-              }}
-            >
-              Delete wallet and all data
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* ---------- Wallet settings: tied to the active wallet's keys ---------- */}
       <GroupLabel
