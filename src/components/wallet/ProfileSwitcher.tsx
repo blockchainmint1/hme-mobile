@@ -112,6 +112,25 @@ export function ProfileSwitcher() {
     toast.success("Wallet renamed");
   }
 
+  /** Forget another wallet on this device. Its seed phrase remains the backup. */
+  function remove(id: string) {
+    const label = profiles.find((p) => p.id === id)?.label ?? "Wallet";
+    setPendingRemove(null);
+    deleteProfileWallet(id);
+    refreshProfiles();
+    toast.success(`${label} removed from this device`);
+  }
+
+  /** Wipe the wallet you're using now: keys, biometrics, contacts, caches. */
+  async function deleteActive() {
+    setDeleteOpen(false);
+    setConfirmText("");
+    setOpen(false);
+    await disableBiometric();
+    forget();
+    navigate({ to: "/" });
+  }
+
   // A single profile is the common case — still show the name, but there's
   // nothing to switch between until a second seed is added.
   return (
@@ -313,7 +332,75 @@ export function ProfileSwitcher() {
         <p className="mt-2 text-xs text-muted-foreground">
           Private keys and watch-only addresses are added to{" "}
           <span className="font-medium text-foreground">{activeLabel}</span> as their own tiles.
+          Removing a wallet here only forgets it on this device — your seed phrase is still the
+          backup.
         </p>
+
+        {/* ---------- Remove a wallet you're not using ---------- */}
+        <AlertDialog open={!!pendingRemove} onOpenChange={(o) => !o && setPendingRemove(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove wallet from this device?</AlertDialogTitle>
+              <AlertDialogDescription>
+                <span className="font-medium text-foreground">
+                  {profiles.find((p) => p.id === pendingRemove)?.label ?? "This wallet"}
+                </span>{" "}
+                will be removed from this device. Your funds stay on the blockchain and you can
+                re-add it any time with its seed phrase.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className={buttonVariants({ variant: "destructive" })}
+                onClick={() => pendingRemove && remove(pendingRemove)}
+              >
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* ---------- Delete the wallet you're using, with all its data ---------- */}
+        <AlertDialog
+          open={deleteOpen}
+          onOpenChange={(o) => {
+            setDeleteOpen(o);
+            if (!o) setConfirmText("");
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete wallet and all data?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently deletes the encrypted wallet, biometric unlock, address book and
+                all cached data from this device. Your funds stay on the blockchain and can only be
+                restored on any device using your seed phrase. Type <strong>DELETE</strong> to
+                confirm.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div>
+              <Label htmlFor="confirm-delete">Confirmation</Label>
+              <Input
+                id="confirm-delete"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder="Type DELETE"
+                className="mt-1"
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setConfirmText("")}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                disabled={confirmText !== "DELETE"}
+                className={buttonVariants({ variant: "destructive" })}
+                onClick={() => void deleteActive()}
+              >
+                Delete wallet and all data
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
       </SheetContent>
     </Sheet>
