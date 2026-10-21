@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Fix Vault LTC/DOGE swap payout/balances/offline signing and refresh/isolate saved exchange status without altering wallet storage.
 - [x] Fixed Seeds bare-HTTPS top-camera routing to ecosystem approval; 26 tests pass, unlocked 393px camera flow reaches both Seeds choices using a test manifest, wallet/profile storage unchanged. Real Seeds submission not performed; website publish and packaged rebuilds still needed for delivery.
 - [ ] Bobby will upload the new APK for verification/pinning; extension packaging/distribution follows his pushed changes. NFC plugin explicitly deferred until current release/security work is locked down.
 - [x] Prepared independent LI.FI/Relay review handoff for Bobby in Files; execution remains paused pending review.
