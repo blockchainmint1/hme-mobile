@@ -49,7 +49,10 @@ Registry uses a dedicated site credential (docs/ecosystem-trusted-sites.md). Spe
 - Card PIN verification and payment reservation run atomically in the database; why: concurrent taps cannot race limits or lockout.
 
 ## Settings scope (app-wide vs per-wallet)
-- Chain prefs (`chain-prefs.ts`) and EVM token prefs (`token-prefs.ts`) are APP-WIDE: they use the unprefixed historical keys and adopt a profile's legacy scoped values copy-only on first read (never delete the scoped copy, never touch the profile list or envelopes). Why: users expect chains/tokens to follow them across wallets, and copy-only migration can never strand a wallet's data.
-- Key-tied settings stay profile-scoped via `scopedKey`: feature-prefs, address-prefs, watch-only, WIF, delegate/Seeds, card, vault pairing, labels. Why: they belong to a specific wallet's keys and must never leak across profiles.
+- Chains, EVM token catalog and token-spam visibility are device-wide; migrate copy-only, never touching profiles/envelopes. Why: choices follow wallets safely.
+- Key-tied features, address prefs, watch-only, WIF, delegate/Seeds, card, Vault and labels remain profile-scoped. Why: key-bound settings cannot leak across wallets.
 - Settings page is grouped "This device" (app-wide) vs "This wallet — <label>" (per-wallet). Why: users must see which scope they're editing.
-- Transaction filtering uses a separate unscoped activity preference and client-side advisory classification shared by web/APK/extension; contract-classified suspicious ERC-20 logs take precedence over their claimed outgoing direction, while token visibility, raw history and pending-send tracking remain independent. Why: forged Transfer logs cannot prove a wallet signed a payment, and filtering must never modify saved wallets or confirmation tracking.
+- Activity filtering is independent, device-wide and recoverable; counterfeit contracts override claimed direction; pending tracking uses raw history. Why: logs cannot prove signatures.
+
+## EVM history
+- Shared web/APK/extension history rules live in src/lib/chains/AGENTS.md; read before edits. Why: durable caching and pagination protect costs and real payments.

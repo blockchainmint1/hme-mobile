@@ -1,0 +1,6 @@
+# EVM history
+- ETH/Base public history uses service-only durable caching, atomic refresh leases, a 60-second minimum gap and ten-minute maximum age; client history polls at five minutes, balance changes/confirmed sends request refresh. Why: repeat opens must reuse provider work across web/APK/extension.
+- General and verified-token directions have independent fixed-block pagination; partial pages never advance completed blocks, failed saves never advance any cursor, and genuine/suspicious rows have separate budgets. Why: spam floods and save failures must not skip or evict genuine payments.
+- Keep verified-token queries with zero-value exclusion independent of general history queries. Why: both counterfeit floods and poisoning on genuine contracts must not bury real token payments.
+- Never use current allowance, signer mismatch or named routers as historical authorization proof; suspicion is advisory and recoverable. Why: approved services legitimately move funds even after allowance exhaustion/revocation.
+- Token classification is browser-safe and shared with token visibility; zero balances alone are never spam. Why: genuine empty tokens and explicit custom tokens must stay visible.
