@@ -86,3 +86,28 @@ if (existsSync(stringsPath)) {
     console.log("Set Android app name to honest.money.");
   }
 }
+
+// OS-gated fingerprint unlock plugin (Android Keystore + BiometricPrompt).
+// Copies our Java sources into the app module, registers the plugin in
+// MainActivity, and adds androidx.biometric. Idempotent.
+const javaDir = resolve(process.cwd(), "android/app/src/main/java/money/honest/txcwallet");
+const srcDir = resolve(process.cwd(), "scripts/android");
+if (existsSync(javaDir)) {
+  for (const f of ["HmeBiometricVaultPlugin.java", "MainActivity.java"]) {
+    writeFileSync(resolve(javaDir, f), readFileSync(resolve(srcDir, f), "utf8"));
+  }
+  console.log("Installed HmeBiometricVault plugin.");
+} else {
+  console.error(`Java package dir not found: ${javaDir}`);
+  process.exit(1);
+}
+const gradlePath = resolve(process.cwd(), "android/app/build.gradle");
+let gradle = readFileSync(gradlePath, "utf8");
+if (!gradle.includes("androidx.biometric:biometric")) {
+  gradle = gradle.replace(
+    /\ndependencies\s*\{/,
+    (m) => `${m}\n    implementation "androidx.biometric:biometric:1.1.0"`,
+  );
+  writeFileSync(gradlePath, gradle);
+  console.log("Added androidx.biometric dependency.");
+}
