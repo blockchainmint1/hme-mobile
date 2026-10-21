@@ -54,7 +54,6 @@ import { Route as WalletLtcSendRouteImport } from './routes/wallet.ltc.send'
 import { Route as WalletLtcSwapRouteImport } from './routes/wallet.ltc.swap'
 import { Route as WalletSolanaReceiveRouteImport } from './routes/wallet.solana.receive'
 import { Route as WalletSolanaSendRouteImport } from './routes/wallet.solana.send'
-import { Route as WalletTronBridgeRouteImport } from './routes/wallet.tron.bridge'
 import { Route as WalletTronReceiveRouteImport } from './routes/wallet.tron.receive'
 import { Route as WalletTronSendRouteImport } from './routes/wallet.tron.send'
 import { Route as WalletTxcConsolidateRouteImport } from './routes/wallet.txc.consolidate'
@@ -295,11 +294,6 @@ const WalletSolanaSendRoute = WalletSolanaSendRouteImport.update({
   path: '/solana/send',
   getParentRoute: () => WalletRoute,
 } as any)
-const WalletTronBridgeRoute = WalletTronBridgeRouteImport.update({
-  id: '/tron/bridge',
-  path: '/tron/bridge',
-  getParentRoute: () => WalletRoute,
-} as any)
 const WalletTronReceiveRoute = WalletTronReceiveRouteImport.update({
   id: '/tron/receive',
   path: '/tron/receive',
@@ -418,7 +412,6 @@ export interface FileRoutesByFullPath {
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
   '/wallet/solana/receive': typeof WalletSolanaReceiveRoute
   '/wallet/solana/send': typeof WalletSolanaSendRoute
-  '/wallet/tron/bridge': typeof WalletTronBridgeRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
   '/wallet/tron/send': typeof WalletTronSendRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
@@ -479,7 +472,6 @@ export interface FileRoutesByTo {
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
   '/wallet/solana/receive': typeof WalletSolanaReceiveRoute
   '/wallet/solana/send': typeof WalletSolanaSendRoute
-  '/wallet/tron/bridge': typeof WalletTronBridgeRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
   '/wallet/tron/send': typeof WalletTronSendRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
@@ -542,7 +534,6 @@ export interface FileRoutesById {
   '/wallet/ltc/swap': typeof WalletLtcSwapRoute
   '/wallet/solana/receive': typeof WalletSolanaReceiveRoute
   '/wallet/solana/send': typeof WalletSolanaSendRoute
-  '/wallet/tron/bridge': typeof WalletTronBridgeRoute
   '/wallet/tron/receive': typeof WalletTronReceiveRoute
   '/wallet/tron/send': typeof WalletTronSendRoute
   '/wallet/txc/consolidate': typeof WalletTxcConsolidateRoute
@@ -606,7 +597,6 @@ export interface FileRouteTypes {
     | '/wallet/ltc/swap'
     | '/wallet/solana/receive'
     | '/wallet/solana/send'
-    | '/wallet/tron/bridge'
     | '/wallet/tron/receive'
     | '/wallet/tron/send'
     | '/wallet/txc/consolidate'
@@ -667,7 +657,6 @@ export interface FileRouteTypes {
     | '/wallet/ltc/swap'
     | '/wallet/solana/receive'
     | '/wallet/solana/send'
-    | '/wallet/tron/bridge'
     | '/wallet/tron/receive'
     | '/wallet/tron/send'
     | '/wallet/txc/consolidate'
@@ -729,7 +718,6 @@ export interface FileRouteTypes {
     | '/wallet/ltc/swap'
     | '/wallet/solana/receive'
     | '/wallet/solana/send'
-    | '/wallet/tron/bridge'
     | '/wallet/tron/receive'
     | '/wallet/tron/send'
     | '/wallet/txc/consolidate'
@@ -1091,13 +1079,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalletSolanaSendRouteImport
       parentRoute: typeof WalletRoute
     }
-    '/wallet/tron/bridge': {
-      id: '/wallet/tron/bridge'
-      path: '/tron/bridge'
-      fullPath: '/wallet/tron/bridge'
-      preLoaderRoute: typeof WalletTronBridgeRouteImport
-      parentRoute: typeof WalletRoute
-    }
     '/wallet/tron/receive': {
       id: '/wallet/tron/receive'
       path: '/tron/receive'
@@ -1240,7 +1221,6 @@ interface WalletRouteChildren {
   WalletLtcSwapRoute: typeof WalletLtcSwapRoute
   WalletSolanaReceiveRoute: typeof WalletSolanaReceiveRoute
   WalletSolanaSendRoute: typeof WalletSolanaSendRoute
-  WalletTronBridgeRoute: typeof WalletTronBridgeRoute
   WalletTronReceiveRoute: typeof WalletTronReceiveRoute
   WalletTronSendRoute: typeof WalletTronSendRoute
   WalletTxcConsolidateRoute: typeof WalletTxcConsolidateRoute
@@ -1275,7 +1255,6 @@ const WalletRouteChildren: WalletRouteChildren = {
   WalletLtcSwapRoute: WalletLtcSwapRoute,
   WalletSolanaReceiveRoute: WalletSolanaReceiveRoute,
   WalletSolanaSendRoute: WalletSolanaSendRoute,
-  WalletTronBridgeRoute: WalletTronBridgeRoute,
   WalletTronReceiveRoute: WalletTronReceiveRoute,
   WalletTronSendRoute: WalletTronSendRoute,
   WalletTxcConsolidateRoute: WalletTxcConsolidateRoute,
