@@ -28,6 +28,7 @@ import { TxcTokensCard } from "@/components/wallet/TxcTokensCard";
 import { RotationPolicyCard } from "@/components/wallet/RotationPolicyCard";
 import { DeepRescanCard } from "@/components/wallet/DeepRescanCard";
 import { FeaturesCard } from "@/components/wallet/FeaturesCard";
+import { ActivityFilterSettings } from "@/components/wallet/ActivityFilterSettings";
 import { SecurityCheckupCard } from "@/components/wallet/SecurityCheckupCard";
 import { SignMessageCard } from "@/components/wallet/SignMessageCard";
 import { EcosystemLinksCard } from "@/components/wallet/EcosystemLinksCard";
@@ -65,7 +66,14 @@ import {
 import { disableBiometric } from "@/lib/native/biometric";
 
 export const Route = createFileRoute("/wallet/settings")({
-  head: () => ({ meta: [{ title: "Settings — HME Wallet" }] }),
+  head: () => ({ meta: [
+    { title: "Settings — HME Wallet" },
+    { name: "description", content: "Manage device preferences and individual wallet settings in HME Wallet." },
+    { property: "og:title", content: "Settings — HME Wallet" },
+    { property: "og:description", content: "Device preferences, wallet security and ecosystem links in HME Wallet." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: SettingsPage,
 });
 
@@ -142,6 +150,14 @@ function SettingsPage() {
             </SettingsSection>
           </>
         )}
+
+        <SettingsSection
+          value="activity-filter"
+          icon={ShieldCheck}
+          title="Transaction activity"
+        >
+          <ActivityFilterSettings />
+        </SettingsSection>
 
         <SettingsSection
           value="updates"
