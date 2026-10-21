@@ -2,7 +2,16 @@ import type { EvmTransfer } from "@/lib/chains/history.functions";
 
 /** Advisory only: never changes balances, stored history, or spending permissions. */
 export function suspiciousActivityReason(t: EvmTransfer, history: EvmTransfer[]): string | null {
-  // Keep sends visible, including failed/zero-value interactions.
+  // A Transfer log's `from` is not a signature: counterfeit contracts can
+  // claim any wallet sent their token. Contract-based token classification
+  // therefore takes precedence over the outgoing display flag.
+  if (t.category === "erc20" && t.spam) {
+    const impersonated = t.spamReason?.match(/^imposter (.+)$/i)?.[1];
+    return impersonated
+      ? `Counterfeit ${impersonated} token — unverified contract`
+      : t.spamReason ?? "Suspicious token transfer";
+  }
+  // Genuine sends (including zero-value interactions) remain visible.
   if (t.outgoing) return null;
   if (t.spam) return t.spamReason ?? "Suspicious token transfer";
   const amount = Number(t.value);
