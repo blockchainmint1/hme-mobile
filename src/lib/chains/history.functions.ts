@@ -166,16 +166,18 @@ async function fetchTransfers(
   url: string,
   address: string,
   direction: "from" | "to",
+  contracts?: string[],
 ): Promise<AlchemyTransfer[]> {
   const params = [
     {
       fromBlock: "0x0",
       toBlock: "latest",
       [direction === "from" ? "fromAddress" : "toAddress"]: address,
-      category: ["external", "erc20", "internal"],
+      category: contracts ? ["erc20"] : ["external", "erc20", "internal"],
+      ...(contracts ? { contractAddresses: contracts } : {}),
       withMetadata: true,
       excludeZeroValue: true,
-      maxCount: "0x19", // 25
+      maxCount: "0x64", // 100 — spam floods must not push real activity out
       order: "desc",
     },
   ];
@@ -375,11 +377,15 @@ export const getEvmHistory = createServerFn({ method: "POST" })
 
     try {
       const addrLower = data.address.toLowerCase();
-      const [outgoing, incoming] = await Promise.all([
+      // Dedicated verified-token queries so counterfeit "Sent" floods can
+      // never crowd genuine USDC/USDT/etc. out of the result window.
+      const verified = [...VERIFIED_CONTRACTS[data.chain]];
+      const [outgoing, incoming, verifiedOut, verifiedIn] = await Promise.all([
         fetchTransfers(url, data.address, "from"),
         fetchTransfers(url, data.address, "to"),
+        verified.length ? fetchTransfers(url, data.address, "from", verified).catch(() => []) : [],
+        verified.length ? fetchTransfers(url, data.address, "to", verified).catch(() => []) : [],
       ]);
-
       const map = new Map<string, EvmTransfer>();
       const push = (t: AlchemyTransfer, out: boolean) => {
         const key = `${t.hash}:${t.category}:${t.asset ?? ""}:${out ? "o" : "i"}`;
@@ -408,10 +414,15 @@ export const getEvmHistory = createServerFn({ method: "POST" })
           spamReason: reason,
         });
       };
-      for (const t of outgoing) push(t, t.from.toLowerCase() === addrLower);
-      for (const t of incoming) push(t, t.from.toLowerCase() === addrLower);
+      for (const t of [...outgoing, ...verifiedOut, ...incoming, ...verifiedIn]) {
+        push(t, t.from.toLowerCase() === addrLower);
+      }
 
-      const list = [...map.values()].sort((a, b) => b.blockNum - a.blockNum).slice(0, 50);
+      // Cap genuine and spam rows separately so spam can't displace real ones.
+      const all = [...map.values()].sort((a, b) => b.blockNum - a.blockNum);
+      const real = all.filter((t) => !t.spam).slice(0, 50);
+      const spamRows = all.filter((t) => t.spam).slice(0, 25);
+      const list = [...real, ...spamRows].sort((a, b) => b.blockNum - a.blockNum);
       return { transfers: list, supported: true };
     } catch {
       return { transfers: [], supported: true };
