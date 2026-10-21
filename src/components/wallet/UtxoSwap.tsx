@@ -8,7 +8,7 @@
  * transaction signed on this device. Nothing custodial, no external site, and
  * the stablecoin is paid out to this wallet's own EVM address.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -23,7 +23,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useWallet } from "@/lib/txc/wallet-context";
 import { rootFingerprintHex } from "@/lib/txc/fingerprint";
-import { deriveEvmAccount, EVM_CHAINS } from "@/lib/chains/evm";
+import { EVM_CHAINS } from "@/lib/chains/evm";
+import { evmSourceAddress } from "@/lib/vault-link/evm-send";
+import { loadPairing, type VaultPairing } from "@/lib/vault-link/pairing";
+import { scanVaultChainAll } from "@/lib/vault-link/snapshot";
+import { vaultSwapAccount, vaultSwapVsize, prepareVaultSwap, verifySignedVaultSwap } from "@/lib/vault-link/swap";
+import { VaultAnimatedQr } from "./VaultAnimatedQr";
+import { QrScanButton } from "./QrScanButton";
+import { PartCollector } from "@/lib/vault-link/qr-parts";
 import { hapticError, hapticSuccess } from "@/lib/native/ui";
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { ExchangeUnavailable } from "@/components/wallet/ExchangeUnavailable";
@@ -44,37 +51,57 @@ import {
   getSwapQuotes,
 } from "@/lib/swap-providers/swap.functions";
 import { UTXO_SWAP_COINS } from "./utxo-swap-config";
-import { recordSwap, updateSwap, useSwapHistory, type SavedSwap } from "@/lib/swap-history";
+import { canTrackSwap, recordSwap, updateSwap, useSwapHistory, type SavedSwap } from "@/lib/swap-history";
 
 type PlacedOrder = SwapOrder & { ref?: Record<string, string> };
 
 type Stage =
   | { kind: "form" }
   | { kind: "review"; order: PlacedOrder; feeSats: number; vsize: number; selected: number }
+  | { kind: "vault-sign"; order: PlacedOrder; dest: StableDestination; payload: string; destination: string }
   | { kind: "sent"; txid: string; order: PlacedOrder; dest: StableDestination };
 
 export function UtxoSwap({ coin }: { coin: UtxoSwapCoin }) {
   const exchangeAllowed = useExchangeFeaturesAllowed();
+  const { activeProfileId } = useWallet();
   if (!exchangeAllowed) return <ExchangeUnavailable title="Swap" />;
-  return <UtxoSwapInner coin={coin} />;
+  return <UtxoSwapInner key={`${activeProfileId}:${coin}`} coin={coin} />;
 }
 
 function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
   const cfg = UTXO_SWAP_COINS[coin];
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { root, unlocked } = useWallet();
+  const { root, unlocked, activeProfileId } = useWallet();
+  const isVault = unlocked?.mode === "vault";
+  const [pairing, setPairing] = useState<VaultPairing | null>(null);
+  useEffect(() => { setPairing(isVault ? loadPairing(activeProfileId) : null); }, [isVault, activeProfileId]);
+  const collector = useRef(new PartCollector());
 
   const fetchDestinations = useServerFn(getThorDestinations);
   const fetchQuotes = useServerFn(getSwapQuotes);
   const placeOrder = useServerFn(createSwapOrder);
 
-  const evmAddress = useMemo(() => (root ? deriveEvmAccount(root).address : null), [root]);
+  const evmAddress = useMemo(() => evmSourceAddress(unlocked?.mode, root, pairing), [unlocked?.mode, root, pairing]);
+
+  const vaultScans = useQuery({
+    queryKey: ["vault-swap-account", activeProfileId, coin, pairing],
+    enabled: isVault && !!pairing?.chains[coin],
+    queryFn: () => {
+      if (!pairing) throw new Error("Pair this Vault before swapping.");
+      return scanVaultChainAll(pairing, coin);
+    },
+    staleTime: 30_000,
+  });
+  const vaultAccount = useMemo(() => vaultSwapAccount(vaultScans.data ?? []), [vaultScans.data]);
 
   const account = useQuery({
     queryKey: [cfg.accountQueryKey, cfg.kind, root ? rootFingerprintHex(root) : null],
-    enabled: !!root && !!unlocked,
-    queryFn: () => cfg.scan(root!),
+    enabled: !!root && !!unlocked && !isVault && unlocked.mode !== "keyonly",
+    queryFn: () => {
+      if (!root || isVault || unlocked?.mode === "keyonly") throw new Error("This wallet cannot sign on this device.");
+      return cfg.scan(root);
+    },
     staleTime: 30_000,
   });
 
@@ -108,16 +135,17 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
     return () => clearTimeout(t);
   }, [amount]);
 
-  const utxos = account.data?.utxos ?? [];
+  const utxos = isVault ? vaultAccount.utxos : account.data?.utxos ?? [];
+  const accountLoading = isVault ? vaultScans.isFetching : account.isLoading;
   const totalAvailable = utxos.reduce((s: number, u: { value: number }) => s + u.value, 0);
   const feeRate = fees.data?.halfHourFee ?? cfg.fallbackFeeRate;
   const amountSats = useMemo(() => cfg.toSats(debounced || "0"), [debounced, cfg]);
-  const refundAddress = account.data?.nextReceiveAddress ?? null;
+  const refundAddress = (isVault ? vaultAccount.nextReceiveAddress : account.data?.nextReceiveAddress) || null;
 
   // Network fee for the inbound tx: all inputs + deposit output + memo + change.
   const inboundFeeEstimate = useMemo(
-    () => Math.ceil(cfg.estimateVsize(Math.max(1, utxos.length), 2, true) * feeRate),
-    [cfg, utxos.length, feeRate],
+    () => Math.ceil((isVault ? vaultSwapVsize(vaultAccount.utxos, true) : cfg.estimateVsize(Math.max(1, utxos.length), 2, true)) * feeRate),
+    [cfg, utxos.length, feeRate, isVault, vaultAccount],
   );
 
   const quotes = useQuery({
@@ -128,16 +156,18 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
       !!refundAddress &&
       amountSats > 0 &&
       amountSats + inboundFeeEstimate <= totalAvailable,
-    queryFn: () =>
-      fetchQuotes({
+    queryFn: () => {
+      if (!dest || !evmAddress || !refundAddress) throw new Error("Missing swap addresses.");
+      return fetchQuotes({
         data: {
           coin,
-          dest: dest!,
+          dest,
           amountSats,
-          destination: evmAddress!,
-          refundAddress: refundAddress!,
+          destination: evmAddress,
+          refundAddress,
         },
-      }),
+      });
+    },
     staleTime: 30_000,
     retry: 0,
   });
@@ -188,7 +218,8 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
     for (const u of sorted) {
       picked.push(u);
       acc += u.value;
-      vsize = cfg.estimateVsize(picked.length, 2, true);
+      const vaultPicked = [...vaultAccount.utxos].sort((a, b) => b.value - a.value).slice(0, picked.length);
+      vsize = isVault ? vaultSwapVsize(vaultPicked, true) : cfg.estimateVsize(picked.length, 2, true);
       feeSats = Math.ceil(vsize * feeRate);
       if (acc >= amountSats + feeSats) break;
     }
@@ -234,7 +265,7 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
   }
 
   async function send() {
-    if (stage.kind !== "review" || !root || !unlocked || !account.data || !dest) return;
+    if (stage.kind !== "review" || !root || !unlocked || !dest || !evmAddress) return;
     const { order } = stage;
     if (order.expiry && order.expiry * 1000 < Date.now()) {
       setError("This quote expired. Refresh it and try again.");
@@ -242,6 +273,21 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
       void quotes.refetch();
       return;
     }
+    if (isVault) {
+      if (!pairing || !vaultScans.data) return;
+      setBusy(true);
+      setError(null);
+      try {
+        const inputs = [...vaultAccount.utxos].sort((a, b) => b.value - a.value).slice(0, stage.selected);
+        const built = await prepareVaultSwap({ pairing, coin, scans: vaultScans.data, inputs,
+          depositAddress: order.depositAddress, amountSats: order.amountSats, feeSats: stage.feeSats, memo: order.memo });
+        collector.current = new PartCollector();
+        setStage({ kind: "vault-sign", order, dest, payload: built.psbtBase64, destination: evmAddress });
+      } catch (err) { setError(friendlyBroadcastError(err)); }
+      finally { setBusy(false); }
+      return;
+    }
+    if (!account.data || unlocked.mode === "keyonly") return;
     const ok = await confirmWithBiometric(`Confirm swapping ${cfg.ticker}`);
     if (!ok) return;
     setBusy(true);
@@ -271,7 +317,8 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
         amountSats: order.amountSats,
         amountOut: order.amountOut,
         dest,
-        destination: evmAddress!,
+        destination: evmAddress,
+        profileId: activeProfileId,
       });
       void qc.invalidateQueries({ queryKey: [cfg.accountQueryKey] });
       void qc.invalidateQueries({ queryKey: [cfg.txsQueryKey] });
@@ -284,6 +331,27 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
     }
   }
 
+  async function scanSignedSwap(raw: string) {
+    if (stage.kind !== "vault-sign" || busy) return;
+    try {
+      const hex = collector.current.add(raw);
+      if (!hex) return;
+      collector.current = new PartCollector();
+      if (stage.order.expiry && stage.order.expiry * 1000 < Date.now()) throw new Error("This swap order expired. Start again; nothing was broadcast.");
+      verifySignedVaultSwap(hex, stage.payload);
+      setBusy(true);
+      const txid = await cfg.broadcast(hex.trim());
+      recordSwap({ txid, coin, provider: stage.order.provider, orderId: stage.order.orderId,
+        token: stage.order.ref?.["token"] ?? null, amountSats: stage.order.amountSats,
+        amountOut: stage.order.amountOut, dest: stage.dest, destination: stage.destination, profileId: activeProfileId });
+      void qc.invalidateQueries({ queryKey: ["vault-swap-account"] });
+      void qc.invalidateQueries({ queryKey: ["vault-account"] });
+      setStage({ kind: "sent", txid, order: stage.order, dest: stage.dest });
+      hapticSuccess();
+    } catch (err) { collector.current = new PartCollector(); setError(friendlyBroadcastError(err)); }
+    finally { setBusy(false); }
+  }
+
   if (stage.kind === "sent") {
     return (
       <SwapProgress
@@ -291,6 +359,7 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
         txid={stage.txid}
         order={stage.order}
         dest={stage.dest}
+        profileId={activeProfileId}
         onDone={() => navigate({ to: "/wallet" })}
       />
     );
@@ -303,8 +372,25 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
       </Link>
       <h1 className="mt-3 text-2xl font-bold">Swap {cfg.ticker}</h1>
       <p className="text-sm text-muted-foreground">
-        Available: {account.isLoading ? "…" : cfg.format(totalAvailable)}
+        Available: {accountLoading ? "…" : cfg.format(totalAvailable)}
       </p>
+      {(isVault ? vaultScans.error : account.error) && <p className="mt-2 text-sm text-destructive">Could not load {cfg.ticker} funds. Try again before swapping.</p>}
+      {isVault && !evmAddress && <p className="mt-2 text-sm text-destructive">Pair this Vault's Ethereum address before swapping.</p>}
+      {isVault && pairing && !pairing.chains[coin] && <p className="mt-2 text-sm text-destructive">Pair this Vault's {cfg.ticker} account before swapping.</p>}
+
+      {stage.kind === "vault-sign" && (
+        <Card className="mt-5"><CardHeader><CardTitle>Sign swap with Vault</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm">{cfg.format(stage.order.amountSats)} → {stage.order.amountOut.toLocaleString()} {stage.dest.label}</p>
+            <p className="break-all text-xs">Payout address: {stage.destination}</p>
+            <VaultAnimatedQr text={stage.payload} />
+            <QrScanButton continuous onScan={(raw) => void scanSignedSwap(raw)} />
+            <p className="text-sm text-muted-foreground">{busy ? "Broadcasting…" : "Scan the signed transaction from Vault"}</p>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button variant="ghost" disabled={busy} onClick={() => setStage({ kind: "form" })}>Cancel</Button>
+          </CardContent>
+        </Card>
+      )}
 
       {stage.kind === "form" && (
         <Card className="mt-5">
@@ -312,7 +398,7 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
             <CardTitle>Swap to a stablecoin</CardTitle>
             <CardDescription>
               We compare every available route and show the one that pays out the most. Your{" "}
-              {cfg.ticker} is signed on this device and the stablecoin lands in this wallet's EVM
+              {cfg.ticker} is signed {isVault ? "on your Vault device" : "on this device"} and the stablecoin lands in this wallet's EVM
               address.
             </CardDescription>
           </CardHeader>
@@ -452,7 +538,7 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
                 </div>
               ) : (
                 <div className="rounded-md bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                  Enter an amount to compare routes
+                  {accountLoading ? "Loading wallet funds…" : !evmAddress || !refundAddress ? "Pair or load this wallet's addresses before comparing routes" : amountSats > 0 && amountSats + inboundFeeEstimate > totalAvailable ? "Not enough funds for this amount and its network fee" : "Enter an amount to compare routes"}
                 </div>
               )}
 
@@ -490,12 +576,12 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
 
             {belowMin && (
               <p className="text-xs text-amber-500">
-                Too small for this route. Minimum is about {cfg.format(minIn!)}.
+                Too small for this route. Minimum is about {cfg.format(minIn ?? 0)}.
               </p>
             )}
             {aboveMax && (
               <p className="text-xs text-amber-500">
-                Too large for this route. Maximum is about {cfg.format(maxIn!)} — pick another route
+                Too large for this route. Maximum is about {cfg.format(maxIn ?? 0)} — pick another route
                 or split the swap.
               </p>
             )}
@@ -518,7 +604,7 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
                 belowMin ||
                 aboveMax ||
                 busy ||
-                account.isLoading
+                accountLoading || !evmAddress || !refundAddress
               }
             >
               {busy ? "Setting up…" : "Review swap"}
@@ -606,7 +692,7 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
         </Card>
       )}
 
-      {stage.kind === "form" && <RecentSwaps coin={coin} onOpen={resumeSwap} />}
+      {stage.kind === "form" && <RecentSwaps coin={coin} onOpen={resumeSwap} profileId={activeProfileId} destination={evmAddress} />}
     </main>
   );
 }
@@ -615,23 +701,38 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
 function RecentSwaps({
   coin,
   onOpen,
+  profileId,
+  destination,
 }: {
   coin: UtxoSwapCoin;
   onOpen: (s: SavedSwap) => void;
+  profileId: string;
+  destination: string | null;
 }) {
-  const swaps = useSwapHistory().filter((s) => s.coin === coin);
+  const swaps = useSwapHistory(profileId, destination).filter((s) => s.coin === coin);
   if (!swaps.length) return null;
   const cfg = UTXO_SWAP_COINS[coin];
   return (
     <div className="mt-6">
       <h2 className="text-sm font-semibold">Your swaps</h2>
       <div className="mt-2 space-y-2">
-        {swaps.map((s) => (
-          <button
-            key={s.txid}
-            type="button"
+        {swaps.map((s) => <SavedSwapRow key={s.txid} swap={s} profileId={profileId} onOpen={onOpen} />)}
+      </div>
+    </div>
+  );
+}
+
+function SavedSwapRow({ swap: s, profileId, onOpen }: { swap: SavedSwap; profileId: string; onOpen: (s: SavedSwap) => void }) {
+  const cfg = UTXO_SWAP_COINS[s.coin];
+  const status = useSavedSwapStatus(s, profileId, !s.done && !s.failed);
+  const current = status.data;
+  const done = s.done || !!current?.outboundSent;
+  const failed = s.failed || !!current?.failed;
+  return (
+          <Button
+            variant="ghost"
             onClick={() => onOpen(s)}
-            className="w-full rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-left hover:border-border"
+            className="h-auto w-full rounded-lg border border-border/60 bg-card/40 px-3 py-2 text-left whitespace-normal block"
           >
             <div className="flex items-center justify-between gap-3">
               <span className="text-sm font-medium">
@@ -641,14 +742,14 @@ function RecentSwaps({
               </span>
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  s.done
+                  done
                     ? "bg-emerald-500/15 text-emerald-400"
-                    : s.failed
+                    : failed
                       ? "bg-destructive/15 text-destructive"
                       : "bg-amber-500/15 text-amber-500"
                 }`}
               >
-                {s.done ? "Complete" : s.failed ? "Attention" : "In progress"}
+                {done ? "Complete" : failed ? "Attention" : !canTrackSwap(s) || status.error || !current ? "Status unconfirmed" : "In progress"}
               </span>
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
@@ -660,11 +761,26 @@ function RecentSwaps({
                 minute: "2-digit",
               })}
             </p>
-          </button>
-        ))}
-      </div>
-    </div>
+          </Button>
   );
+}
+
+function useSavedSwapStatus(swap: Pick<SavedSwap, "txid" | "provider" | "orderId" | "token">, profileId: string, enabled = true) {
+  const fetchStatus = useServerFn(getSwapOrderStatus);
+  const status = useQuery({
+    queryKey: ["swap-status", profileId, swap.provider, swap.orderId, swap.txid],
+    enabled: enabled && canTrackSwap(swap),
+    queryFn: () => fetchStatus({ data: { provider: swap.provider, orderId: swap.orderId, txid: swap.txid, token: swap.token } }),
+    refetchInterval: (q) => q.state.data?.outboundSent || q.state.data?.failed ? false : 60_000,
+    staleTime: 30_000,
+    retry: 1,
+  });
+  useEffect(() => {
+    const d = status.data;
+    if (!d) return;
+    updateSwap(swap.txid, { done: d.outboundSent, failed: !!d.failed, outboundTxid: d.outboundTxid, checkedAt: Date.now() });
+  }, [status.data, swap.txid]);
+  return status;
 }
 
 function SwapProgress({
@@ -673,40 +789,18 @@ function SwapProgress({
   order,
   dest,
   onDone,
+  profileId,
 }: {
   coin: UtxoSwapCoin;
   txid: string;
   order: PlacedOrder;
   dest: StableDestination;
   onDone: () => void;
+  profileId: string;
 }) {
   const cfg = UTXO_SWAP_COINS[coin];
-  const fetchStatus = useServerFn(getSwapOrderStatus);
-  const status = useQuery({
-    queryKey: ["swap-status", order.provider, order.orderId, txid],
-    queryFn: () =>
-      fetchStatus({
-        data: {
-          provider: order.provider,
-          orderId: order.orderId,
-          txid,
-          token: order.ref?.["token"] ?? null,
-        },
-      }),
-    refetchInterval: (q) => (q.state.data?.outboundSent ? false : 15_000),
-    retry: 3,
-  });
-
-  // Keep the saved record in sync so the list shows live progress.
-  useEffect(() => {
-    const d = status.data;
-    if (!d) return;
-    updateSwap(txid, {
-      done: d.outboundSent,
-      failed: !!d.failed,
-      outboundTxid: d.outboundTxid ?? null,
-    });
-  }, [status.data, txid]);
+  const tracking = { txid, provider: order.provider, orderId: order.orderId, token: order.ref?.["token"] ?? null };
+  const status = useSavedSwapStatus(tracking, profileId);
 
   const label = SWAP_PROVIDERS[order.provider].label;
   const steps = [
@@ -722,15 +816,16 @@ function SwapProgress({
         <div className="w-16 h-16 rounded-full bg-emerald-500/15 text-emerald-400 mx-auto flex items-center justify-center text-2xl">
           ✓
         </div>
-        <h1 className="mt-4 text-2xl font-bold">Swap started</h1>
+        <h1 className="mt-4 text-2xl font-bold">{status.data?.outboundSent ? "Swap complete" : status.data?.failed ? "Swap needs attention" : "Swap status"}</h1>
         <p className="mt-2 text-muted-foreground">
-          About {order.amountOut.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
-          {dest.label} is on the way. You can close this — it keeps going without the app open.
+          {status.data?.outboundSent ? `${dest.label} payout sent.` : status.data?.failed ? "Check the provider's order for next steps." : "Your deposit was broadcast. Payout status is checked with the provider."}
         </p>
       </div>
 
       <Card className="mt-6">
         <CardContent className="pt-6 space-y-3 text-sm">
+          {(!canTrackSwap(tracking) || status.error) && <p className="text-sm text-destructive">{!canTrackSwap(tracking) ? "The saved provider reference is missing; automatic status tracking is unavailable." : `Could not confirm the provider status: ${status.error?.message ?? "Please retry."}`}</p>}
+          {order.provider === "fixedfloat" && order.orderId && <a className="text-sm underline" href={`https://ff.io/order/${encodeURIComponent(order.orderId)}${tracking.token ? `#${encodeURIComponent(tracking.token)}` : ""}`} target="_blank" rel="noreferrer">Open FixedFloat order</a>}
           {steps.map((s) => (
             <div key={s.label} className="flex items-center gap-3">
               <span
