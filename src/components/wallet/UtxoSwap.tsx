@@ -473,7 +473,7 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Route</Label>
-                {list.length > 0 && (
+                {(list.length > 0 || quotes.isError) && (
                   <button
                     type="button"
                     onClick={() => quotes.refetch()}
@@ -538,7 +538,7 @@ function UtxoSwapInner({ coin }: { coin: UtxoSwapCoin }) {
                 </div>
               ) : (
                 <div className="rounded-md bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                  {accountLoading ? "Loading wallet funds…" : !evmAddress || !refundAddress ? "Pair or load this wallet's addresses before comparing routes" : amountSats > 0 && amountSats + inboundFeeEstimate > totalAvailable ? "Not enough funds for this amount and its network fee" : "Enter an amount to compare routes"}
+                  {accountLoading ? "Loading wallet funds…" : !evmAddress || !refundAddress ? "Pair or load this wallet's addresses before comparing routes" : amountSats > 0 && amountSats + inboundFeeEstimate > totalAvailable ? "Not enough funds for this amount and its network fee" : quotes.isError ? "No quote available—refresh or try another amount or destination" : "Enter an amount to compare routes"}
                 </div>
               )}
 

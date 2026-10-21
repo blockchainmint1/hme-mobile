@@ -7,7 +7,7 @@ export const thorQuoteInput = z.object({
   amountSats: z.string().regex(/^\d+$/),
   /** Destination EVM address (0x…). */
   destination: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
-  /** Price-protection tolerance in basis points. */
+  /** Price-protection tolerance relative to expected output after fees, in basis points. */
   toleranceBps: z.number().int().min(50).max(2000).optional(),
   /** 0 = no streaming, 1 = stream in one-block chunks (cheapest). */
   streamingInterval: z.number().int().min(0).max(10).optional(),
