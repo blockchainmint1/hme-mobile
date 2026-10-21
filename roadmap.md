@@ -11,7 +11,7 @@
 - [ ] Security: optional activity:write/SSO still need separate verification; directional NectarPay/card and TSD_NOTIFY_SIGNING_KEY plus asymmetric signing need partner rollout. Replaced HME_ECOSYSTEM means NectarPay's prior card signer must be coordinated before live taps.
 - [x] Security containment: pause unverified LI.FI/Relay spending, restrict image destinations, remove unsafe keystore generator, pin CI actions and separate publish permissions
 - [ ] Security: restore swaps/bridge after independently verified per-chain deployment/calldata specs; nonce-based CSP for server AND packaged shells (needs reviewed contracts and validated native shell signing-policy design)
-- [ ] Security: privately test new APK/extension, PIN card concurrency and full Vault sends; biometric password storage disabled until OS-gated retrieval passes device tests (needs release builds/devices)
+- [ ] Security: privately test new APK/extension, PIN card concurrency and full Vault sends; test OS-gated fingerprint unlock on device (turn on, unlock, add new fingerprint → must ask for password) (needs release builds/devices)
 - [x] Fix Vault EVM token-send balances and route USDC through verified offline QR signing; 27 tests passed, paired-address balances and QR preparation verified with simulated network data at desktop and 390px
 - [ ] Verify a real-device USDC Vault send after installing the next APK (needs Bobby's Vault device; no funded transaction performed here)
 - [x] Remove native iOS build/review restrictions and let the homepage footer scroll with its content; verified at 393px and desktop, iPhone web installation retained
