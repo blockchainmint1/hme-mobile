@@ -7,12 +7,12 @@
  * silent while the session is alive; after an auto-lock we ask for it once.
  */
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { ArrowLeftRight, Check, ChevronDown, Download, Eye, Key, Loader2, Nfc, Pencil, Plus, ShieldCheck, Sparkles, Wallet } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeftRight, Check, ChevronDown, Download, Eye, Key, Loader2, Nfc, Pencil, Plus, ShieldCheck, Sparkles, Trash2, Wallet } from "lucide-react";
 import { useFeature } from "@/lib/feature-prefs";
 import { DELEGATE_LINKS_EVENT, listDelegateLinks, type DelegateLinkRecord } from "@/lib/xpub-link/delegate";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -23,17 +23,33 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useWallet } from "@/lib/txc/wallet-context";
-import { renameStoredWallet } from "@/lib/txc/storage";
+import { deleteProfileWallet, renameStoredWallet } from "@/lib/txc/storage";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { disableBiometric } from "@/lib/native/biometric";
 
 export function ProfileSwitcher() {
-  const { profiles, activeProfileId, switchProfile, refreshProfiles, rename, unlocked } =
+  const { profiles, activeProfileId, switchProfile, refreshProfiles, rename, unlocked, forget } =
     useWallet();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [needPassword, setNeedPassword] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftLabel, setDraftLabel] = useState("");
+  const [pendingRemove, setPendingRemove] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
 
   useEffect(() => {
     if (open) refreshProfiles();
@@ -176,6 +192,22 @@ export function ProfileSwitcher() {
                   aria-label={`Rename ${p.label}`}
                 >
                   <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => (p.isActive ? setDeleteOpen(true) : setPendingRemove(p.id))}
+                  className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                  title={
+                    p.isActive
+                      ? `Delete ${p.label} and all data from this device`
+                      : `Remove ${p.label} from this device`
+                  }
+                  aria-label={
+                    p.isActive
+                      ? `Delete ${p.label} and all data from this device`
+                      : `Remove ${p.label} from this device`
+                  }
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
                 {busyId === p.id ? (
                   <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
