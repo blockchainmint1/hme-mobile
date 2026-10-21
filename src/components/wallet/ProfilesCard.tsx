@@ -38,7 +38,14 @@ import {
 import { useWallet } from "@/lib/txc/wallet-context";
 import { deleteProfileWallet, renameStoredWallet } from "@/lib/txc/storage";
 
-export function ProfilesCard({ compact }: { compact?: boolean }) {
+export function ProfilesCard({
+  compact,
+  onDeleteActive,
+}: {
+  compact?: boolean;
+  /** When set, the active wallet row gets a trash button that asks the parent to confirm a full delete. */
+  onDeleteActive?: () => void;
+}) {
   const { profiles, activeProfileId, switchProfile, refreshProfiles, rename, unlocked } =
     useWallet();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -175,6 +182,16 @@ export function ProfilesCard({ compact }: { compact?: boolean }) {
                     className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
                     title={`Remove ${p.label} from this device`}
                     aria-label={`Remove ${p.label} from this device`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {isActive && onDeleteActive && (
+                  <button
+                    onClick={onDeleteActive}
+                    className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
+                    title={`Delete ${p.label} and all data from this device`}
+                    aria-label={`Delete ${p.label} and all data from this device`}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
