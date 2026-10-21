@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Reduce EVM history lookups with durable caching, protected genuine-token history, safe pagination/refresh locking; correct token spam visibility and verify genuine versus counterfeit USDC without touching wallets.
+- [x] Reduce EVM history lookups with durable service-only caching, atomic refresh leases, protected token streams and resumable pagination; device-wide token spam visibility retains genuine zero balances. 29 tests passed; live real/fake 110,000 USDC hashes verified, repeated/forced calls served cache, unlocked throwaway-wallet reveal/re-hide and setting persistence verified. Not published or packaged.
 - [x] Remove the "Moving from the old TXC Wallet app?" blurb card from the homepage; verified the section is gone, the browser-extension section and footer still render, and the build is clean.
 - [x] Filter contract-classified counterfeit outgoing token events without hiding genuine sends; 15 tests passed and unlocked throwaway-wallet UI verified with simulated fake 110,000 USDC and genuine 506 USDC history, including reveal/re-hide. Not published or packaged.
 - [x] Add default-on device-wide suspicious activity filtering with reveal controls and accurate tiny amounts; 15 tests pass, device toggle and persistence verified in an unlocked throwaway wallet, saved wallets/token preferences untouched.
