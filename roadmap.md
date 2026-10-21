@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Diagnose and verify Mati's Seeds top-camera scan failure without touching saved wallets or consuming his pairing code.
 - [ ] Bobby will upload the new APK for verification/pinning; extension packaging/distribution follows his pushed changes. NFC plugin explicitly deferred until current release/security work is locked down.
 - [x] Prepared independent LI.FI/Relay review handoff for Bobby in Files; execution remains paused pending review.
 - [x] Reduce EVM history lookups with durable service-only caching, atomic refresh leases, protected token streams and resumable pagination; device-wide token spam visibility retains genuine zero balances. 29 tests passed; live real/fake 110,000 USDC hashes verified, repeated/forced calls served cache, unlocked throwaway-wallet reveal/re-hide and setting persistence verified. Not published or packaged.

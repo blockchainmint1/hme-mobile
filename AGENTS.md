@@ -36,6 +36,7 @@ Registry/Hub use ecosystem-credential.server (current per-site HME convention); 
 
 ## Trading links (hm-link-delegate)
 - Spending access is only ever for the Trading pocket account (1106'+, rotated on revoke) and only for sites on the honest.money trusted list; look-only links stay xpub-only. Why: a shared spending key can't be taken back, so the blast radius must be one separate, retirable pocket.
+- The top camera routes safe bare HTTPS ecosystem manifests through the same link approval page as Settings, after payment and sign-in recognition; recognition never grants trust or shares keys. Why: Seeds uses bare manifest URLs and must not require a different scanner.
 
 ## Tap card (NFC) service
 - We are the card service: card pockets live on HME-reserved branch 1107' (card N = `m/44'/696969'/1107'/0/N`, owner signing key `/1/0`); only that pocket key is sent to the backend, AES-GCM encrypted with `CARD_KEY_ENC` (`src/lib/card/*`). Why: a tapped card must pay while the phone is offline, and the blast radius must stay one small pocket. Trading pocket rotation skips reserved branches.
