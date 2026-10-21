@@ -15,6 +15,13 @@
       "when": 1792496629281,
       "tag": "0001_atomic_card_payment_security",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792581457920,
+      "tag": "0002_protected_evm_history_cache",
+      "breakpoints": true
     }
   ]
 }
