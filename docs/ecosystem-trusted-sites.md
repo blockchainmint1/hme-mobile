@@ -21,8 +21,11 @@ Request headers (current Honest Money API):
 - `Authorization: Bearer <dedicated site API key>`
 - `X-HME-Site: <stable site code>`
 - Site permission: `trusted-sites:read`.
-- Configure `HME_SITE_API_KEY` and `HME_SITE_CODE` in the wallet secret store;
-  do not reuse the cross-partner `HME_ECOSYSTEM` bearer key.
+- Configure the newly issued **wallet-only** site key as `HME_ECOSYSTEM`;
+  this wallet sends the stable site code `wallet`. This is the current Honest
+  Money API convention, not a fallback to the retired cross-partner key.
+- `activity:write` is separately needed for optional Hub attribution. Registry
+  read permission does not imply that permission or partner payment authority.
 
 Response headers:
 - `x-hme-timestamp` — unix seconds when signed
