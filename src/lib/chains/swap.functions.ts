@@ -18,8 +18,8 @@ const CHAIN_IDS: Record<string, number> = { eth: 1, base: 8453, bsc: 56 };
 
 const quoteInput = z.object({
   chain: z.enum(["eth", "base", "bsc"]),
-  fromToken: z.string().min(1),
-  toToken: z.string().min(1),
+  fromToken: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  toToken: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
   fromAmount: z.string().regex(/^\d+$/, "fromAmount must be raw integer units"),
   fromAddress: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
   slippage: z.number().min(0).max(0.5).optional(),
