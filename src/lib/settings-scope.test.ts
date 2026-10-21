@@ -94,4 +94,21 @@ describe("app-wide settings migration", () => {
     expect(map.get(PROFILE_LIST_KEY)).toBe(before);
     expect(map.get(ACTIVE_KEY)).toBe("pr_abc");
   });
+
+  it("token spam choice follows the device without rewriting either wallet", async () => {
+    useSecondProfile(map);
+    map.set("p:pr_abc:hme:features", JSON.stringify({ hideSpamTokens: false, sharedWallets: true }));
+    map.set("p:pr_abc:txc.wallet.v1", "encrypted-second-wallet");
+    map.set("txc.wallet.v1", "encrypted-main-wallet");
+    const before = new Map(map);
+    const { isFeatureEnabled, setFeatureEnabled } = await import("./feature-prefs");
+    expect(isFeatureEnabled("hideSpamTokens")).toBe(false);
+    setFeatureEnabled("hideSpamTokens", true);
+    map.set(ACTIVE_KEY, "default");
+    expect(isFeatureEnabled("hideSpamTokens")).toBe(true);
+    expect(map.get("p:pr_abc:hme:features")).toBe(before.get("p:pr_abc:hme:features"));
+    expect(map.get(PROFILE_LIST_KEY)).toBe(before.get(PROFILE_LIST_KEY));
+    expect(map.get("p:pr_abc:txc.wallet.v1")).toBe("encrypted-second-wallet");
+    expect(map.get("txc.wallet.v1")).toBe("encrypted-main-wallet");
+  });
 });

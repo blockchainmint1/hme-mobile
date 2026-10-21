@@ -37,6 +37,7 @@ import { getEvmHistory } from "@/lib/chains/history.functions";
 import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { useTokensForChain } from "@/lib/token-prefs";
 import { classifyToken } from "@/lib/chains/token-classification";
+import { transferIdentity } from "@/lib/chains/history-cache";
 import { useEnabledTxcTokens, formatTokenAmount } from "@/lib/txc/tokens";
 import { TSD_PROPERTY_ID } from "@/lib/cashout/tsd";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
@@ -2374,7 +2375,7 @@ function EvmActivity({
         ) : (
           <ul className="space-y-2">
             {visibleTransfers.map((t) => (
-              <li key={`${t.hash}-${t.category}-${t.outgoing ? "o" : "i"}`}>
+              <li key={transferIdentity(t)}>
                 <button
                   type="button"
                   onClick={() => onOpen(t)}
