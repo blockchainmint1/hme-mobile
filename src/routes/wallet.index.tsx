@@ -36,6 +36,7 @@ import { getAllPricesUsd } from "@/lib/chains/prices.functions";
 import { getEvmHistory } from "@/lib/chains/history.functions";
 import { readErc20Balance, tokenAmountFromRaw, USDC_BY_CHAIN } from "@/lib/chains/erc20";
 import { useTokensForChain } from "@/lib/token-prefs";
+import { classifyToken } from "@/lib/chains/token-classification";
 import { useEnabledTxcTokens, formatTokenAmount } from "@/lib/txc/tokens";
 import { TSD_PROPERTY_ID } from "@/lib/cashout/tsd";
 import { useTxcTokenProps } from "@/lib/txc/token-props";
@@ -539,10 +540,12 @@ function WalletHome() {
     queries: evmEnabled.map((id) => ({
       queryKey: ["evm-balance", id, evmAddress],
       enabled: !!evmAddress,
-      queryFn: () => evmClient(id).getBalance({ address: evmAddress! }),
-      // Keep tiles live: poll every 30s and retry transient RPC hiccups.
-      staleTime: 15_000,
-      refetchInterval: 30_000,
+      queryFn: () => {
+        if (!evmAddress) throw new Error("Wallet address unavailable");
+        return evmClient(id).getBalance({ address: evmAddress });
+      },
+      staleTime: 60_000,
+      refetchInterval: 60_000,
       retry: 3,
       retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 8000),
     })),
@@ -1571,8 +1574,6 @@ function TxcTokens({
   const localTokens = useEnabledTxcTokens();
   const { resolved: tokens } = useTxcTokenProps(localTokens);
   const fetchBalances = useServerFn(getTxcTokenBalancesForAddresses);
-  const [hideSpam] = useFeature("hideSpamTokens");
-
   const [hidden] = useHideBalances();
   const enabled = addresses.length > 0 && tokens.length > 0;
   const pendingKey = pendingIn
@@ -1609,19 +1610,8 @@ function TxcTokens({
     const units = BigInt(raw);
     return { token: t, units, pending: pendingIn?.get(t.id) ?? 0n };
   });
-  // TSD is the ecosystem dollar — it stays in the list even at zero so people
-  // can see it exists and tap straight into Receive/Send. The spam filter only
-  // ever applies to other tokens.
-  const visible = hideSpam
-    ? rows.filter(
-        (r) =>
-          r.token.id === TSD_PROPERTY_ID ||
-          balances.isLoading ||
-          r.units > 0n ||
-          r.pending > 0n,
-      )
-    : rows;
-  const hiddenCount = rows.length - visible.length;
+  // Enabled Omni tokens are explicit user choices, not spam just because empty.
+  const visible = rows;
 
 
   return (
@@ -1729,11 +1719,7 @@ function TxcTokens({
             its private key.
           </li>
         )}
-        {hideSpam && hiddenCount > 0 && (
-          <li className="text-xs text-muted-foreground text-center pt-1">
-            {hiddenCount} zero-balance {hiddenCount === 1 ? "token" : "tokens"} hidden
-          </li>
-        )}
+
       </ul>
     </section>
   );
@@ -2138,32 +2124,52 @@ function EvmActivity({
     queries: tokens.map((t) => ({
       queryKey: ["erc20-balance", chainId, t.address, address],
       enabled: !!address,
-      queryFn: () => readErc20Balance(chainId, t, address as `0x${string}`),
-      staleTime: 30_000,
+      queryFn: () => {
+        if (!address) throw new Error("Wallet address unavailable");
+        return readErc20Balance(chainId, t, address as `0x${string}`);
+      },
+      staleTime: 60_000,
+      refetchInterval: 60_000,
       retry: 3,
       retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 8000),
     })),
   });
-
+  const nativeBalance = useQuery({
+    queryKey: ["evm-balance", chainId, address],
+    enabled: !!address,
+    queryFn: () => {
+      if (!address) throw new Error("Wallet address unavailable");
+      return evmClient(chainId).getBalance({ address: address as `0x${string}` });
+    },
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+  const fingerprint = nativeBalance.data != null && tokenBalances.every((q) => q.data != null)
+    ? [String(nativeBalance.data), ...tokens.map((t, i) => `${t.address.toLowerCase()}:${String(tokenBalances[i]?.data)}`).sort()].join("|")
+    : "";
+  const forceHistory = useRef(false);
+  const fingerprintRef = useRef(fingerprint);
+  fingerprintRef.current = fingerprint;
   const history = useQuery({
     queryKey: ["evm-history", chainId, address],
     enabled: !!address,
-    queryFn: () => fetchHistory({ data: { chain: chainId, address: address! } }),
-    staleTime: 20_000,
-    refetchInterval: 45_000,
+    queryFn: () => {
+      if (!address) throw new Error("Wallet address unavailable");
+      const force = forceHistory.current;
+      forceHistory.current = false;
+      return fetchHistory({ data: { chain: chainId, address, fingerprint: fingerprintRef.current, force } });
+    },
+    staleTime: 300_000,
+    refetchInterval: 300_000,
   });
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (fingerprint) void qc.invalidateQueries({ queryKey: ["evm-history", chainId, address] });
+  }, [fingerprint, qc, chainId, address]);
   const [hideSpam] = useFeature("hideSpamTokens");
-  const visibleTokens = useMemo(() => {
-    if (!hideSpam) return tokens.map((t, i) => ({ token: t, index: i }));
-    return tokens
-      .map((t, i) => ({ token: t, index: i }))
-      .filter(({ index }) => {
-        const q = tokenBalances[index];
-        // Hide zero balances only after the query settles — avoid flicker while loading.
-        if (q?.isLoading || q?.isError) return true;
-        return (q?.data ?? 0n) > 0n;
-      });
-  }, [tokens, tokenBalances, hideSpam]);
+  const visibleTokens = useMemo(() => tokens.map((token, index) => ({ token, index }))
+    .filter(({ token }) => !hideSpam || !classifyToken(chainId, "erc20", token.symbol, token.address, true, null).spam),
+    [tokens, hideSpam, chainId]);
   const hiddenTokenCount = tokens.length - visibleTokens.length;
   const transfersList = history.data?.transfers ?? [];
   const [hideSuspicious] = useHideSuspiciousActivity();
@@ -2181,12 +2187,13 @@ function EvmActivity({
   );
   const pending = usePendingTxs(chainId, address, indexedHashes);
   // Once a tx confirms, refresh indexed history so the real row replaces ours.
-  const qc = useQueryClient();
-  const confirmedCount = pending.filter((p) => p.status).length;
+  const confirmedCount = pending.filter((p) => p.status === "success" || p.status === "reverted").length;
   useEffect(() => {
     if (confirmedCount > 0) {
-      qc.invalidateQueries({ queryKey: ["evm-history", chainId, address] });
-      qc.invalidateQueries({ queryKey: ["evm-balance", chainId, address] });
+      forceHistory.current = true;
+      void qc.invalidateQueries({ queryKey: ["evm-history", chainId, address] });
+      void qc.invalidateQueries({ queryKey: ["evm-balance", chainId, address] });
+      for (const token of tokens) void qc.invalidateQueries({ queryKey: ["erc20-balance", chainId, token.address, address] });
     }
   }, [confirmedCount, qc, chainId, address]);
 
@@ -2236,7 +2243,7 @@ function EvmActivity({
           })}
           {hideSpam && hiddenTokenCount > 0 && (
             <li className="text-xs text-muted-foreground text-center pt-1">
-              {hiddenTokenCount} zero-balance {hiddenTokenCount === 1 ? "token" : "tokens"} hidden
+              {hiddenTokenCount} suspicious {hiddenTokenCount === 1 ? "token" : "tokens"} hidden
             </li>
           )}
         </ul>
@@ -2246,12 +2253,12 @@ function EvmActivity({
       <section className="mt-6 px-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">Recent activity</h2>
-          <button
-            className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-            onClick={() => history.refetch()}
+          <Button variant="ghost" size="sm"
+            className="text-xs text-muted-foreground inline-flex items-center gap-1"
+            onClick={() => { forceHistory.current = true; void history.refetch(); }}
           >
             <RefreshCw className={`h-3 w-3 ${history.isFetching ? "animate-spin" : ""}`} /> Refresh
-          </button>
+          </Button>
         </div>
         {pending.length > 0 && (
           <ul className="space-y-2 mb-2">
