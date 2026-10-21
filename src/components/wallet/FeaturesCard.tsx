@@ -17,7 +17,6 @@ export function FeaturesCard({ compact }: { compact?: boolean }) {
   const [evmSwap, setEvmSwap] = useFeature("evmSwap");
   const [utxoSwap, setUtxoSwap] = useFeature("utxoSwap");
   const [confirmLast4, setConfirmLast4] = useFeature("confirmLast4");
-  const [hideSpam, setHideSpam] = useFeature("hideSpamTokens");
   const [hiddenBalances, setHiddenBalances] = useHideBalances();
   const [sharedOn, setSharedOn] = useFeature("sharedWallets");
   const [sharedActive, setSharedActive] = useState(0);
@@ -101,23 +100,6 @@ export function FeaturesCard({ compact }: { compact?: boolean }) {
             id="feat-confirm-last4"
             checked={confirmLast4}
             onCheckedChange={setConfirmLast4}
-          />
-        </div>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <Label htmlFor="feat-hide-spam" className="text-sm font-medium">
-              Hide worthless / spam tokens
-            </Label>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Filters imposter tokens from the Ethereum, Base, and BSC activity list —
-              airdropped coins that mimic USDC/USDT, phishing symbols with URLs, and
-              unknown contracts you never sent to. On by default.
-            </p>
-          </div>
-          <Switch
-            id="feat-hide-spam"
-            checked={hideSpam}
-            onCheckedChange={setHideSpam}
           />
         </div>
 

@@ -30,6 +30,7 @@ function STORAGE_KEY(): string {
   return scopedKey(STORAGE_KEY_BASE);
 }
 const EVENT = "hme:features-changed";
+const TOKEN_SPAM_KEY = "hme:tokens:hide-spam:v1";
 
 type FeatureMap = Partial<Record<FeatureId, boolean>>;
 
@@ -53,11 +54,28 @@ function write(m: FeatureMap) {
 }
 
 export function isFeatureEnabled(id: FeatureId): boolean {
+  if (id === "hideSpamTokens" && typeof window !== "undefined") {
+    try {
+      const saved = window.localStorage.getItem(TOKEN_SPAM_KEY);
+      if (saved != null) return saved !== "false";
+      // Copy only this preference, never mutate a profile's feature map.
+      const legacy = read().hideSpamTokens;
+      if (legacy !== undefined) window.localStorage.setItem(TOKEN_SPAM_KEY, String(legacy));
+      return legacy ?? true;
+    } catch { return true; }
+  }
   const v = read()[id];
   return v === undefined ? DEFAULTS[id] : v;
 }
 
 export function setFeatureEnabled(id: FeatureId, enabled: boolean) {
+  if (id === "hideSpamTokens") {
+    try {
+      window.localStorage.setItem(TOKEN_SPAM_KEY, String(enabled));
+      window.dispatchEvent(new Event(EVENT));
+    } catch { /* Storage unavailable. */ }
+    return;
+  }
   const m = read();
   m[id] = enabled;
   write(m);
@@ -67,8 +85,10 @@ export function useFeature(id: FeatureId): [boolean, (v: boolean) => void] {
   const [on, setOn] = useState<boolean>(() => isFeatureEnabled(id));
   useEffect(() => {
     const h = () => setOn(isFeatureEnabled(id));
+    h();
     window.addEventListener(EVENT, h);
-    return () => window.removeEventListener(EVENT, h);
+    window.addEventListener("storage", h);
+    return () => { window.removeEventListener(EVENT, h); window.removeEventListener("storage", h); };
   }, [id]);
   return [
     on,

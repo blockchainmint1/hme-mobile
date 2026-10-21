@@ -1,4 +1,5 @@
 import type { EvmTransfer } from "@/lib/chains/history.functions";
+import { zeroValueTokenReason } from "./chains/history-cache";
 
 /** Advisory only: never changes balances, stored history, or spending permissions. */
 export function suspiciousActivityReason(t: EvmTransfer, history: EvmTransfer[]): string | null {
@@ -11,7 +12,9 @@ export function suspiciousActivityReason(t: EvmTransfer, history: EvmTransfer[])
       ? `Counterfeit ${impersonated} token — unverified contract`
       : t.spamReason ?? "Suspicious token transfer";
   }
-  // Genuine sends (including zero-value interactions) remain visible.
+  const poisoning = zeroValueTokenReason(t);
+  if (poisoning) return poisoning;
+  // Native sends and nonzero genuine ERC-20 movements stay visible.
   if (t.outgoing) return null;
   if (t.spam) return t.spamReason ?? "Suspicious token transfer";
   const amount = Number(t.value);
