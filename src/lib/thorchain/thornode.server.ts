@@ -115,7 +115,10 @@ export async function fetchQuote(input: ThorQuoteInput): Promise<ThorQuote> {
     to_asset: input.toAsset,
     amount: input.amountSats,
     destination: input.destination,
-    tolerance_bps: String(input.toleranceBps ?? 300),
+    // Protect the actual after-fee quote, not the theoretical feeless spot
+    // price. tolerance_bps rejects larger trades before streaming simulation
+    // can account for liquidity fees, even when their quoted payout is valid.
+    liquidity_tolerance_bps: String(input.toleranceBps ?? 300),
   });
   // Streaming swaps split the trade into per-block chunks, which cuts the
   // slip fee dramatically on anything but the smallest amounts.
