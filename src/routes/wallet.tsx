@@ -1,4 +1,4 @@
-import { parseTsdLinkInput } from "@/lib/rewards/tsd-link";
+import { ecosystemLinkScanPayload } from "@/lib/xpub-link/scan";
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
@@ -42,7 +42,14 @@ import {
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
-    meta: [{ title: "Wallet — HME Wallet" }],
+    meta: [
+      { title: "Wallet — HME Wallet" },
+      { name: "description", content: "Manage your Honest Money wallets, balances, payments and ecosystem links." },
+      { property: "og:title", content: "Wallet — HME Wallet" },
+      { property: "og:description", content: "Manage your Honest Money wallets, balances, payments and ecosystem links." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
   }),
   component: WalletLayout,
 });
@@ -166,11 +173,6 @@ function WalletLayout() {
       navigate({ to: "/wallet/signin", search: { payload: raw } });
       return;
     }
-    // Ecosystem link (Bonfire, File Fingerprint, NectarPay, TSD Swap, …).
-    if (/^hm-link:/i.test(raw.trim()) || parseTsdLinkInput(raw)) {
-      navigate({ to: "/wallet/xpub-link", search: { payload: raw.trim() } });
-      return;
-    }
     const intent = parsePaymentUri(raw);
     if (intent.kind === "txc") {
       navigate({
@@ -241,6 +243,13 @@ function WalletLayout() {
         }
         window.open(intent.url, "_blank", "noopener,noreferrer");
       })();
+      return;
+    }
+    // Bare HTTPS manifests (including Seeds) belong to the same approval
+    // flow as Settings → Ecosystem links. Payment/check-out URIs take priority.
+    const linkPayload = ecosystemLinkScanPayload(raw);
+    if (linkPayload) {
+      navigate({ to: "/wallet/xpub-link", search: { payload: linkPayload } });
       return;
     }
     toast.error("Couldn't recognize that QR code");
