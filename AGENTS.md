@@ -16,13 +16,7 @@
 
 ## Release delivery is database-driven
 
-`/api/public/apk` resolves what to serve from the newest `app_releases` row
-(`ipfs_cid` + version, or `?v=<version>` for an older build) and only falls back
-to the build baked into the file when the lookup fails. Why: cutting a release
-must never require a website redeploy — pin the file, insert the row with
-`download_url` pointing at the endpoint, and installed apps get the prompt and
-the correct bytes. Keep it that way: never move the pinned CID/filename back
-into a hardcoded constant that the release row has to be kept in sync with.
+`/api/public/apk` serves the newest `app_releases` row's CID/version (or `?v=`), falling back to baked-in bytes only if lookup fails. Pin then record its endpoint download URL; never hardcode the live CID. Why: releases need no website redeploy.
 
 ## Chrome extension
 
@@ -44,6 +38,7 @@ Registry/Hub use ecosystem-credential.server (current per-site HME convention); 
 
 ## Vault wallets (offline signing via HME Vault)
 - Rules live in `src/lib/vault-link/AGENTS.md` — read it before changing files there. Why: subdirectories carry their own scoped rules.
+- Swap history keeps its original key; new rows carry profile IDs, legacy rows match payout addresses, and opening refreshes provider status. Why: preserve records without cross-wallet display or invented completion.
 
 ## Security boundaries
 - Read src/lib/security/AGENTS.md before changing security controls; why: shared guardrails cover web, Android and extension.

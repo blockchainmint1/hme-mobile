@@ -824,7 +824,7 @@ function SwapProgress({
 
       <Card className="mt-6">
         <CardContent className="pt-6 space-y-3 text-sm">
-          {(!canTrackSwap(tracking) || status.error) && <p className="text-sm text-destructive">{!canTrackSwap(tracking) ? "The saved provider reference is missing; automatic status tracking is unavailable." : `Could not confirm the provider status: ${status.error.message}`}</p>}
+          {(!canTrackSwap(tracking) || status.error) && <p className="text-sm text-destructive">{!canTrackSwap(tracking) ? "The saved provider reference is missing; automatic status tracking is unavailable." : `Could not confirm the provider status: ${status.error?.message ?? "Please retry."}`}</p>}
           {order.provider === "fixedfloat" && order.orderId && <a className="text-sm underline" href={`https://ff.io/order/${encodeURIComponent(order.orderId)}${tracking.token ? `#${encodeURIComponent(tracking.token)}` : ""}`} target="_blank" rel="noreferrer">Open FixedFloat order</a>}
           {steps.map((s) => (
             <div key={s.label} className="flex items-center gap-3">
