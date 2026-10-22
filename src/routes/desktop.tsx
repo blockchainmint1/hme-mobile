@@ -185,7 +185,7 @@ function DesktopWorkspace() {
         </form>
         <div className="mt-4 flex justify-between gap-3">
           <Button asChild variant="outline"><Link to="/import">Import wallet</Link></Button>
-          <Button asChild variant="ghost"><Link to="/">Phone view</Link></Button>
+          <Button asChild variant="ghost"><Link to="/" onClick={() => setPreferPhone(true)}>Phone view</Link></Button>
         </div>
       </div>
     </main>
@@ -218,6 +218,7 @@ function DesktopWorkspace() {
             <Link
               key={to}
               to={to}
+              onClick={to === "/wallet" ? () => setPreferPhone(true) : undefined}
               className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               <Icon className="h-4 w-4" /> {label}
