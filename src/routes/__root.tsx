@@ -403,8 +403,20 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <WalletProvider>
-          {/* Mobile-only frame: on phones it fills the screen; on larger screens
-              we center a phone-width column so the app always feels like a mobile app. */}
+          {isDesktop ? (
+            // Desktop workspace has its own full-width shell; the phone frame
+            // below stays untouched for every other page.
+            <div className="flex h-[100dvh] w-full flex-col bg-background">
+              {offline && (
+                <div className="bg-amber-500/15 text-amber-300 text-xs text-center py-1.5 px-3 border-b border-amber-500/30">
+                  You&apos;re offline — balances and prices may be out of date.
+                </div>
+              )}
+              <Outlet />
+            </div>
+          ) : (
+          /* Mobile-only frame: on phones it fills the screen; on larger screens
+              we center a phone-width column so the app always feels like a mobile app. */
           <div data-wallet-frame className="min-h-[100dvh] w-full bg-muted/40 sm:py-6">
             <div
               data-wallet-frame
@@ -426,6 +438,9 @@ function RootComponent() {
 
             </div>
           </div>
+          )}
+
+
 
           <Toaster richColors closeButton position="top-center" />
         </WalletProvider>
