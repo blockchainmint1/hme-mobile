@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Shared platform capabilities and layout
+- Wide fine-pointer web browsers land on /desktop from /wallet unless "Phone view" was chosen (src/lib/desktop-pref.ts); APK and extension never redirect. Why: desktop default must never alter phone/APK/extension behavior.
 - Desktop's locked state stays at /desktop and unlocks inline through the shared WalletProvider; why: hard navigation intentionally loses the ephemeral session key and must not bounce users into the mobile workspace.
 - Keep the capability compatibility helpers unrestricted across supported builds; why: existing callers share one feature set without store-specific switches.
 - Render the public footer inside the frame's content scroller; why: legal links must not pin over or reduce the readable homepage content.

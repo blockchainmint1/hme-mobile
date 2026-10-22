@@ -1,4 +1,5 @@
 import { ecosystemLinkScanPayload } from "@/lib/xpub-link/scan";
+import { setPreferPhone, shouldDefaultToDesktop } from "@/lib/desktop-pref";
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
@@ -62,6 +63,9 @@ function WalletLayout() {
 
   useEffect(() => {
     if (!unlocked) navigate({ to: "/" });
+    else if (window.location.pathname.replace(/\/$/, "") === "/wallet" && shouldDefaultToDesktop()) {
+      navigate({ to: "/desktop", replace: true });
+    }
   }, [unlocked, navigate]);
 
   const fetchPrice = useServerFn(getTxcPriceUsd);
@@ -329,7 +333,7 @@ function WalletLayout() {
           </DropdownMenu>
 
           <Button asChild variant="ghost" size="icon" title="Desktop view">
-            <Link to="/desktop">
+            <Link to="/desktop" onClick={() => setPreferPhone(false)}>
               <Monitor className="h-5 w-5" />
               <span className="sr-only">Desktop view</span>
             </Link>
