@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ChromeRouteImport } from './routes/chrome'
 import { Route as CreateRouteImport } from './routes/create'
+import { Route as DesktopRouteImport } from './routes/desktop'
 import { Route as ImportRouteImport } from './routes/import'
 import { Route as ImportKeyRouteImport } from './routes/import-key'
 import { Route as ManifestoRouteImport } from './routes/manifesto'
@@ -82,6 +83,11 @@ const ChromeRoute = ChromeRouteImport.update({
 const CreateRoute = CreateRouteImport.update({
   id: '/create',
   path: '/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DesktopRoute = DesktopRouteImport.update({
+  id: '/desktop',
+  path: '/desktop',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ImportRoute = ImportRouteImport.update({
@@ -370,6 +376,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/chrome': typeof ChromeRoute
   '/create': typeof CreateRoute
+  '/desktop': typeof DesktopRoute
   '/import': typeof ImportRoute
   '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
@@ -431,6 +438,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/chrome': typeof ChromeRoute
   '/create': typeof CreateRoute
+  '/desktop': typeof DesktopRoute
   '/import': typeof ImportRoute
   '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
@@ -492,6 +500,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/chrome': typeof ChromeRoute
   '/create': typeof CreateRoute
+  '/desktop': typeof DesktopRoute
   '/import': typeof ImportRoute
   '/import-key': typeof ImportKeyRoute
   '/manifesto': typeof ManifestoRoute
@@ -555,6 +564,7 @@ export interface FileRouteTypes {
     | '/'
     | '/chrome'
     | '/create'
+    | '/desktop'
     | '/import'
     | '/import-key'
     | '/manifesto'
@@ -616,6 +626,7 @@ export interface FileRouteTypes {
     | '/'
     | '/chrome'
     | '/create'
+    | '/desktop'
     | '/import'
     | '/import-key'
     | '/manifesto'
@@ -676,6 +687,7 @@ export interface FileRouteTypes {
     | '/'
     | '/chrome'
     | '/create'
+    | '/desktop'
     | '/import'
     | '/import-key'
     | '/manifesto'
@@ -738,6 +750,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ChromeRoute: typeof ChromeRoute
   CreateRoute: typeof CreateRoute
+  DesktopRoute: typeof DesktopRoute
   ImportRoute: typeof ImportRoute
   ImportKeyRoute: typeof ImportKeyRoute
   ManifestoRoute: typeof ManifestoRoute
@@ -783,6 +796,13 @@ declare module '@tanstack/react-router' {
       path: '/create'
       fullPath: '/create'
       preLoaderRoute: typeof CreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/desktop': {
+      id: '/desktop'
+      path: '/desktop'
+      fullPath: '/desktop'
+      preLoaderRoute: typeof DesktopRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/import': {
@@ -1271,6 +1291,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ChromeRoute: ChromeRoute,
   CreateRoute: CreateRoute,
+  DesktopRoute: DesktopRoute,
   ImportRoute: ImportRoute,
   ImportKeyRoute: ImportKeyRoute,
   ManifestoRoute: ManifestoRoute,
