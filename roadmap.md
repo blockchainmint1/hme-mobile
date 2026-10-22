@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Review Bobby's failed 100,000 DOGE Vault swap against HME Vault and official THORChain requirements; identify wallet-side construction, offline approval, fee, freshness and refund-tracking improvements before another signing attempt.
 - [x] Reproduced FixedFloat live-only HTTP 403 on the exact 500,000 DOGE quote; local request succeeds with the same configured integration, published request refuses access. Added explicit access/rate-limit errors and regression tests without changing wallet storage.
 - [x] Deep-check security audit history: FixedFloat outbound requests unchanged across Oct20; CSP/CORS/compliance do not transform quotes. Three published request variants reproduce 403 while local succeeds. Added credential-free refusal classification diagnostics and preserved JSON API rejection messages.
 - [x] FixedFloat live-service access restored (verified 2026-10-22 ~10:15 UTC): published quote request now returns HTTP 200 with a FixedFloat quote under app/browser/phone identities — the 403 cleared on their side without code changes. Refusal diagnostics and tests kept for future gateway blocks. No order was created.
