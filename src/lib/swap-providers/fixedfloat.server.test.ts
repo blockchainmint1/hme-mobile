@@ -15,13 +15,24 @@ describe("FixedFloat response handling", () => {
     vi.stubEnv("FIXEDFLOAT_API_SECRET", "test-only-secret");
   });
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });
 
   it("classifies an HTML 403 as access refusal without exposing its body", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>private gateway details</html>", { status: 403 })));
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>private gateway details</html>", { status: 403, headers: { "cf-mitigated": "challenge" } })));
     await expect(fixedfloatQuote(request)).rejects.toThrow("FixedFloat is refusing access from our swap service (403)");
+    expect(warning).toHaveBeenCalledWith("[fixedfloat] upstream refusal", {
+      operation: "quote", status: 403, responseKind: "non-json", challenge: true, redirected: false,
+    });
+  });
+
+  it("preserves a JSON API rejection instead of blaming the gateway", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ code: 403, msg: "API access denied" }, { status: 403 })));
+    await expect(fixedfloatQuote(request)).rejects.toThrow("FixedFloat: API access denied");
   });
 
   it("classifies rate limiting separately from malformed responses", async () => {
