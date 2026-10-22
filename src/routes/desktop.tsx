@@ -1,3 +1,4 @@
+import { setPreferPhone } from "@/lib/desktop-pref";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
