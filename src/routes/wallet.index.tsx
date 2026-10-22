@@ -414,14 +414,11 @@ function WalletHome() {
     queryKey: ["btc-txs", btcAccount.data?.external.map((a) => a.address).join(",")],
     enabled: !!btcAccount.data && activeChain === "btc",
     queryFn: async () => {
-      const all = await Promise.all(
-        [...(btcAccount.data?.external ?? []), ...(btcAccount.data?.internal ?? [])].map((a) =>
-          getBtcAddressTxs(a.address).catch(() => [] as BtcMempoolTx[]),
-        ),
+      const merged = await fetchMergedAddressTxs(
+        [...(btcAccount.data?.external ?? []), ...(btcAccount.data?.internal ?? [])].map((a) => a.address),
+        getBtcAddressTxs,
       );
-      const map = new Map<string, BtcMempoolTx>();
-      for (const list of all) for (const tx of list) map.set(tx.txid, tx);
-      return [...map.values()].sort(
+      return merged.sort(
         (a, b) => (b.status.block_time ?? 0) - (a.status.block_time ?? 0),
       );
     },
@@ -449,14 +446,11 @@ function WalletHome() {
     queryKey: ["ltc-txs", ltcAccount.data?.external.map((a) => a.address).join(",")],
     enabled: !!ltcAccount.data && activeChain === "ltc",
     queryFn: async () => {
-      const all = await Promise.all(
-        [...(ltcAccount.data?.external ?? []), ...(ltcAccount.data?.internal ?? [])].map((a) =>
-          getLtcAddressTxs(a.address).catch(() => [] as LtcMempoolTx[]),
-        ),
+      const merged = await fetchMergedAddressTxs(
+        [...(ltcAccount.data?.external ?? []), ...(ltcAccount.data?.internal ?? [])].map((a) => a.address),
+        getLtcAddressTxs,
       );
-      const map = new Map<string, LtcMempoolTx>();
-      for (const list of all) for (const tx of list) map.set(tx.txid, tx);
-      return [...map.values()].sort(
+      return merged.sort(
         (a, b) => (b.status.block_time ?? 0) - (a.status.block_time ?? 0),
       );
     },
@@ -484,14 +478,11 @@ function WalletHome() {
     queryKey: ["doge-txs", dogeAccount.data?.external.map((a) => a.address).join(",")],
     enabled: !!dogeAccount.data && activeChain === "doge",
     queryFn: async () => {
-      const all = await Promise.all(
-        [...(dogeAccount.data?.external ?? []), ...(dogeAccount.data?.internal ?? [])].map((a) =>
-          getDogeAddressTxs(a.address).catch(() => [] as DogeMempoolTx[]),
-        ),
+      const merged = await fetchMergedAddressTxs(
+        [...(dogeAccount.data?.external ?? []), ...(dogeAccount.data?.internal ?? [])].map((a) => a.address),
+        getDogeAddressTxs,
       );
-      const map = new Map<string, DogeMempoolTx>();
-      for (const list of all) for (const tx of list) map.set(tx.txid, tx);
-      return [...map.values()].sort(
+      return merged.sort(
         (a, b) => (b.status.block_time ?? 0) - (a.status.block_time ?? 0),
       );
     },
