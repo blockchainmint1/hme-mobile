@@ -206,7 +206,7 @@ function DesktopWorkspace() {
         <div className="mx-auto max-w-6xl p-8">
           <div className="text-sm text-muted-foreground">Total portfolio</div>
           <div className="mt-1 text-4xl font-semibold tracking-tight">
-            {maskAmount(formatFiat(total), hidden)}
+            {(hidden ? maskAmount(formatFiat(total)) : formatFiat(total))}
           </div>
           {unlocked.mode === "vault" && (
             <p className="mt-2 text-sm text-muted-foreground">
@@ -235,10 +235,10 @@ function DesktopWorkspace() {
                     <td className="px-4 py-3 text-right tabular-nums">
                       {r.amount == null
                         ? "…"
-                        : maskAmount(r.amount.toLocaleString(undefined, { maximumFractionDigits: 8 }), hidden)}
+                        : (hidden ? maskAmount(r.amount.toLocaleString(undefined, { maximumFractionDigits: 8 })) : r.amount.toLocaleString(undefined, { maximumFractionDigits: 8 }))}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      {r.usd == null ? "—" : maskAmount(formatFiat(r.usd), hidden)}
+                      {r.usd == null ? "—" : (hidden ? maskAmount(formatFiat(r.usd)) : formatFiat(r.usd))}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
                       {r.usd && total ? `${((r.usd / total) * 100).toFixed(1)}%` : "—"}
