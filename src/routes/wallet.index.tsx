@@ -52,6 +52,7 @@ import { filterSuspiciousActivity, suspiciousActivityReason, formatActivityAmoun
 import { useExchangeFeaturesAllowed } from "@/lib/native/capabilities";
 import { usePendingTxs, removePendingTx } from "@/lib/pending-tx";
 import { getAddressStats, getAddressTxs, type MempoolTx } from "@/lib/txc/mempool";
+import { fetchMergedAddressTxs } from "@/lib/address-txs";
 import { decodeOmniSend, omniAmountFor } from "@/lib/txc/omni-decode";
 
 import { getEnabledChains, CHAIN_META, type ChainId } from "@/lib/chain-prefs";
