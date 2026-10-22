@@ -49,9 +49,22 @@ async function call<T>(path: string, body: unknown): Promise<T> {
     body: payload,
     signal: AbortSignal.timeout(15_000),
   });
+  const contentType = res.headers.get("content-type") ?? "";
+  const isJson = /^application\/(?:json|[\w.+-]+\+json)(?:\s*;|$)/i.test(contentType);
+  if (!res.ok) {
+    // Only fixed classifications: no response bodies, credentials, signatures,
+    // addresses, order tokens, or arbitrary upstream header values in logs.
+    console.warn("[fixedfloat] upstream refusal", {
+      operation: path === "/price" ? "quote" : path === "/create" ? "create" : "status",
+      status: res.status,
+      responseKind: isJson ? "json" : "non-json",
+      challenge: res.headers.get("cf-mitigated") === "challenge",
+      redirected: res.redirected,
+    });
+  }
   // Access refusals may be HTML from the provider's gateway, not API JSON.
   // Never surface that body or retry order creation against another hostname.
-  if (res.status === 403) {
+  if (res.status === 403 && !isJson) {
     throw new Error("FixedFloat is refusing access from our swap service (403). Other available routes can still be used.");
   }
   if (res.status === 429) {
