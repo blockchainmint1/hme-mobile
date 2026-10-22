@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -28,6 +28,7 @@ import { vaultAccountSnapshot } from "@/lib/vault-link/snapshot";
 import { ProfileSwitcher } from "@/components/wallet/ProfileSwitcher";
 import { useHideBalances, maskAmount } from "@/lib/hide-balances";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/desktop")({
   head: () => ({
@@ -54,17 +55,15 @@ type Row = {
 };
 
 function DesktopWorkspace() {
-  const { unlocked, root, seed, activeProfileId } = useWallet();
-  const navigate = useNavigate();
+  const { unlocked, root, seed, activeProfileId, unlock } = useWallet();
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [hidden] = useHideBalances();
   const pairing = useMemo(
     () => (unlocked?.mode === "vault" ? loadPairing(activeProfileId) : null),
     [unlocked?.mode, activeProfileId],
   );
-
-  useEffect(() => {
-    if (!unlocked) navigate({ to: "/" });
-  }, [unlocked, navigate]);
 
   // Same query keys as the phone wallet so both share cached results.
   const fetchPrice = useServerFn(getTxcPriceUsd);
@@ -110,7 +109,10 @@ function DesktopWorkspace() {
     queries: EVM_CHAIN_LIST.map((c) => ({
       queryKey: ["evm-balance", c.id, evmAddress],
       enabled: !!evmAddress,
-      queryFn: () => evmClient(c.id).getBalance({ address: evmAddress! }),
+      queryFn: () => {
+        if (!evmAddress) throw new Error("Wallet locked.");
+        return evmClient(c.id).getBalance({ address: evmAddress });
+      },
       staleTime: 30_000,
     })),
   });
@@ -159,7 +161,35 @@ function DesktopWorkspace() {
 
   const total = rows.reduce((s, r) => s + (r.usd ?? 0), 0);
 
-  if (!unlocked) return null;
+  if (!unlocked) return (
+    <main className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-12">
+      <div className="w-full max-w-sm">
+        <h1 className="text-2xl font-semibold">Desktop Workspace</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Unlock your wallet</p>
+        <form className="mt-6 space-y-4" onSubmit={async (event) => {
+          event.preventDefault();
+          setBusy(true);
+          setError(null);
+          try {
+            if (!await unlock(password)) setError("Wrong password, or no wallet saved in this browser.");
+            else setPassword("");
+          } catch {
+            setError("Could not unlock your wallet. Please try again.");
+          } finally {
+            setBusy(false);
+          }
+        }}>
+          <Input type="password" aria-label="Wallet password" placeholder="Wallet password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} disabled={busy} />
+          {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          <Button type="submit" className="w-full" disabled={busy || !password}>{busy ? "Unlocking…" : "Unlock"}</Button>
+        </form>
+        <div className="mt-4 flex justify-between gap-3">
+          <Button asChild variant="outline"><Link to="/import">Import wallet</Link></Button>
+          <Button asChild variant="ghost"><Link to="/">Phone view</Link></Button>
+        </div>
+      </div>
+    </main>
+  );
 
   const nav = [
     { to: "/wallet", label: "Phone view", icon: Smartphone },
