@@ -49,6 +49,14 @@ async function call<T>(path: string, body: unknown): Promise<T> {
     body: payload,
     signal: AbortSignal.timeout(15_000),
   });
+  // Access refusals may be HTML from the provider's gateway, not API JSON.
+  // Never surface that body or retry order creation against another hostname.
+  if (res.status === 403) {
+    throw new Error("FixedFloat is refusing access from our swap service (403). Other available routes can still be used.");
+  }
+  if (res.status === 429) {
+    throw new Error("FixedFloat is receiving too many requests. Please try again shortly.");
+  }
   const text = await res.text();
   let json: { code?: number | string; msg?: string; data?: T } | null = null;
   try {
