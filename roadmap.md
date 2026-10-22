@@ -41,3 +41,4 @@
 - [ ] Cut APK and extension builds including the Vault EVM token-send fix (needs new release builds)
 - [ ] Real-device Vault end-to-end test on a throwaway seed: pair → tiny TXC send → sign by QR → broadcast (needs the new APK + the Vault device)
 
+- [done] TXC history disappearing: root cause was mempool.texitcoin.org indexer outage (502s/timeouts); wallet made it worse by caching empty lists on failure — fixed via fetchMergedAddressTxs for all five UTXO chains, publish to deliver

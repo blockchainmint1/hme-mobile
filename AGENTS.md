@@ -54,3 +54,6 @@ Registry/Hub use ecosystem-credential.server (current per-site HME convention); 
 
 ## EVM history
 - Shared web/APK/extension history rules live in src/lib/chains/AGENTS.md; read before edits. Why: durable caching and pagination protect costs and real payments.
+
+## UTXO history
+- Per-address history fetches merge through fetchMergedAddressTxs (src/lib/address-txs.ts); when every address fetch fails it throws so React Query keeps the last-known list. Why: an indexer outage must never overwrite good cached history with an empty list.
