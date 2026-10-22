@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Shared platform capabilities and layout
+- Desktop's locked state stays at /desktop and unlocks inline through the shared WalletProvider; why: hard navigation intentionally loses the ephemeral session key and must not bounce users into the mobile workspace.
 - Keep the capability compatibility helpers unrestricted across supported builds; why: existing callers share one feature set without store-specific switches.
 - Render the public footer inside the frame's content scroller; why: legal links must not pin over or reduce the readable homepage content.
 - Keep wallet Send/Receive outside the home content scroller and apply bottom safe-area spacing only once; hidden public footers must occupy no space. Why: phone actions must stay at the bottom without an extra gap.
