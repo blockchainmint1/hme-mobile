@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Diagnose FixedFloat HTTP 403 unreadable response on the live DOGE quote; verify provider access and distinguish access refusal from invalid quotes without changing wallet storage.
 - [x] Fix the 500,000 DOGE quote rejection: after-fee liquidity tolerance replaces feeless tolerance, retaining 3% protection and streaming. Eight regression tests pass; real node returns a quote with Bobby's paired payout; unlocked phone UI with simulated DOGE funds shows THORChain and FixedFloat offers. No funds sent.
 - [ ] Publish the after-fee quote fix so existing APKs/extensions use it (awaits publishing); phone quote retry controls require a packaged rebuild. Real Vault swap signing/broadcast still needs Bobby's device.
 - [x] Fix Vault LTC/DOGE swap payout/balances/offline signing and refresh/isolate saved exchange status without altering wallet storage. 35 tests passed; unlocked phone test used paired payout, simulated 2 LTC funds, refreshed completed provider status, hid another profile's order and reached unsigned Vault QR. Build OK. No real provider order or funded broadcast performed.
