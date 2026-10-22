@@ -328,6 +328,12 @@ function WalletLayout() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <Button asChild variant="ghost" size="icon" title="Desktop view">
+            <Link to="/desktop">
+              <Monitor className="h-5 w-5" />
+              <span className="sr-only">Desktop view</span>
+            </Link>
+          </Button>
           <Button asChild variant="ghost" size="icon" title="Settings">
             <Link to="/wallet/settings">
               <Cog className="h-5 w-5" />
