@@ -244,16 +244,13 @@ function WalletHome() {
     queryKey: ["txs", account.data?.external.map((a) => a.address).join(",")],
     enabled: !!account.data && activeChain === "txc",
     queryFn: async () => {
-      const all = await Promise.all(
-        [...(account.data?.external ?? []), ...(account.data?.internal ?? [])].map((a) =>
-          getAddressTxs(a.address).catch(() => [] as MempoolTx[]),
-        ),
+      const merged = await fetchMergedAddressTxs(
+        [...(account.data?.external ?? []), ...(account.data?.internal ?? [])].map((a) => a.address),
+        getAddressTxs,
       );
-      const map = new Map<string, MempoolTx>();
-      for (const list of all) for (const tx of list) map.set(tx.txid, tx);
       // Unconfirmed first (mempool.space returns block_time undefined for them),
       // then newest confirmed.
-      return [...map.values()].sort((a, b) => {
+      return merged.sort((a, b) => {
         if (a.status.confirmed !== b.status.confirmed) return a.status.confirmed ? 1 : -1;
         return (b.status.block_time ?? 0) - (a.status.block_time ?? 0);
       });
@@ -385,14 +382,11 @@ function WalletHome() {
     queryKey: ["isk-txs", iskAccount.data?.external.map((a) => a.address).join(",")],
     enabled: !!iskAccount.data && activeChain === "isk",
     queryFn: async () => {
-      const all = await Promise.all(
-        [...(iskAccount.data?.external ?? []), ...(iskAccount.data?.internal ?? [])].map((a) =>
-          getIskAddressTxs(a.address).catch(() => [] as IskMempoolTx[]),
-        ),
+      const merged = await fetchMergedAddressTxs(
+        [...(iskAccount.data?.external ?? []), ...(iskAccount.data?.internal ?? [])].map((a) => a.address),
+        getIskAddressTxs,
       );
-      const map = new Map<string, IskMempoolTx>();
-      for (const list of all) for (const tx of list) map.set(tx.txid, tx);
-      return [...map.values()].sort(
+      return merged.sort(
         (a, b) => (b.status.block_time ?? 0) - (a.status.block_time ?? 0),
       );
     },
