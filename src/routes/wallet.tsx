@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Settings as Cog, Download, Sparkles, Eye, Key } from "lucide-react";
+import { Plus, Settings as Cog, Download, Sparkles, Eye, Key, Monitor } from "lucide-react";
 import { scanAccount } from "@/lib/txc/scan";
 import { satsToTxc, formatFiat } from "@/lib/txc/units";
 import { getTxcPriceUsd } from "@/lib/txc/price.functions";
@@ -328,6 +328,12 @@ function WalletLayout() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <Button asChild variant="ghost" size="icon" title="Desktop view">
+            <Link to="/desktop">
+              <Monitor className="h-5 w-5" />
+              <span className="sr-only">Desktop view</span>
+            </Link>
+          </Button>
           <Button asChild variant="ghost" size="icon" title="Settings">
             <Link to="/wallet/settings">
               <Cog className="h-5 w-5" />
