@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
@@ -277,6 +278,9 @@ function RootComponent() {
   useEcosystemSites();
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const isDesktop = useRouterState({
+    select: (s) => s.location.pathname === "/desktop" || s.location.pathname.startsWith("/desktop/"),
+  });
 
   // Browser tabs often fail a lazy chunk import without ever reaching the
   // router's error boundary (e.g. during a navigation the promise just
